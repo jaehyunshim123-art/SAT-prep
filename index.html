@@ -3,17 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Brain Blast SAT</title>
-<meta name="description" content="Scroll through SAT grammar questions, keep a daily streak, and star your favorite characters in every sentence.">
+<title>SatWizz</title>
+<meta name="description" content="SatWizz: scroll through SAT grammar questions, keep a daily streak, and star your favorite characters in every sentence.">
+<meta name="application-name" content="SatWizz">
+<meta name="apple-mobile-web-app-title" content="SatWizz">
+<meta property="og:title" content="SatWizz">
+<meta property="og:description" content="Snackable SAT grammar practice with daily streaks and your favorite characters.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#eaeef8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1322" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fredoka:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 <div id="app"></div>
+<!-- Supabase client (defines window.supabase). If it fails to load, SatWizz runs in guest mode. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
 <script src="js/themes.js"></script>
 <script src="js/questions.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/onboarding.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

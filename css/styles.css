@@ -1,4 +1,4 @@
-/* Layout: one phone-shaped column. Sticky HUD on top, a vertical snap-scrolling
+/* SatWizz. Layout: one phone-shaped column. Sticky HUD on top, a vertical snap-scrolling
    question feed in the middle, tab bar at the bottom. */
 :root {
   --bg: #eaeef8;
@@ -18,9 +18,14 @@
   --bad-bg: #fde3e6;
   --blank: #ffe597;
   --shadow: 0 1px 0 rgba(22, 33, 58, 0.06), 0 8px 24px -12px rgba(22, 33, 58, 0.25);
+  --scrim: rgba(22, 33, 58, 0.55);
 
-  --font-display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
-  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* Space kept clear at the bottom of every scroll area so the last button
+     never sits under the tab bar (Tailwind pb-28 equivalent, plus the notch). */
+  --nav-clearance: calc(7rem + env(safe-area-inset-bottom, 0px));
 
   --r: 18px;
   padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
@@ -44,6 +49,7 @@
     --bad-bg: #3a1820;
     --blank: #5a4812;
     --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 28px -14px rgba(0, 0, 0, 0.8);
+    --scrim: rgba(3, 6, 14, 0.7);
     color-scheme: dark;
   }
 }
@@ -65,6 +71,7 @@
   --bad-bg: #3a1820;
   --blank: #5a4812;
   --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 10px 28px -14px rgba(0, 0, 0, 0.8);
+  --scrim: rgba(3, 6, 14, 0.7);
   color-scheme: dark;
 }
 
@@ -103,14 +110,28 @@ button { cursor: pointer; }
 }
 .brand {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.25rem;
-  letter-spacing: -0.01em;
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: -0.03em;
   margin-right: auto;
   white-space: nowrap;
 }
-.brand span { color: var(--flame); }
-.brand em { font-style: normal; }
+.brand span { color: var(--volt); }
+.acct {
+  flex: none;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: none;
+  background: var(--volt);
+  color: var(--volt-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.acct.signed-in { background: var(--surface); color: var(--good); border: 1px solid var(--line); padding: 0; font-size: 1rem; }
+.acct.warn { color: var(--flame); }
 .pill {
   display: inline-flex;
   align-items: center;
@@ -179,13 +200,15 @@ button { cursor: pointer; }
 .view { flex: 1; min-height: 0; }
 .feed {
   overflow-y: auto;
+  padding-bottom: var(--nav-clearance);
+  scroll-padding-bottom: var(--nav-clearance);
   scroll-snap-type: y mandatory;
   overscroll-behavior: contain;
   scrollbar-width: none;
   border-radius: var(--r);
 }
 .feed::-webkit-scrollbar { display: none; }
-.scrollview { overflow-y: auto; padding-block: 4px 24px; }
+.scrollview { overflow-y: auto; padding-block: 4px var(--nav-clearance); }
 
 /* ---------- Question card ---------- */
 .card {
@@ -484,6 +507,107 @@ button { cursor: pointer; }
 .tab .ico { font-size: 1.3rem; line-height: 1.2; }
 .tab[aria-selected="true"] { color: var(--ink); background: var(--surface); }
 
+.disclaimer {
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--muted);
+  text-align: center;
+  padding-block: 0 8px;
+  text-wrap: balance;
+}
+
+/* ---------- Account ---------- */
+.email { color: var(--ink); overflow-wrap: anywhere; }
+.sync-line { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--good); }
+.sync-line[data-status="error"] { color: var(--bad); }
+.sync-line[data-status="pending"], .sync-line[data-status="syncing"] { color: var(--muted); }
+
+/* ---------- Sign-up modal ---------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--scrim);
+  overflow-y: auto;
+  animation: fade 0.2s ease;
+}
+.modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 22px 20px 18px;
+  display: grid;
+  gap: 12px;
+  box-shadow: var(--shadow);
+  animation: rise 0.25s ease;
+}
+.modal h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.modal-brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-size: 1rem;
+}
+.modal-brand span { color: var(--volt); }
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.btn.google {
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--line);
+  border-bottom-width: 4px;
+  gap: 10px;
+}
+.btn:disabled { opacity: 0.6; cursor: default; }
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.auth-tabs button[aria-selected="true"] { border-color: var(--volt); color: var(--volt); background: var(--surface-2); }
+.form-msg { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--bad); min-height: 0; }
+.form-msg:empty { display: none; }
+.form-msg[data-kind="info"] { color: var(--good); }
+.linkbtn {
+  justify-self: center;
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  color: var(--volt);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fine { margin: 0; text-align: center; font-size: 0.75rem; color: var(--muted); }
+@keyframes fade { from { opacity: 0; } }
+
 /* ---------- Celebrations & toasts ---------- */
 .burst {
   position: fixed;
@@ -551,7 +675,6 @@ button { cursor: pointer; }
 }
 @media (max-width: 420px) {
   .hud { gap: 6px; }
-  .brand em { display: none; }
 }
 @media (max-width: 380px) {
   .brand { font-size: 1.05rem; }

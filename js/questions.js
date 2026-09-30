@@ -1,4 +1,4 @@
-// SAT Reading & Writing grammar questions.
+// SatWizz question bank: SAT Reading & Writing grammar questions.
 // "______" marks the blank; every choice replaces exactly that blank.
 // `answer` is the index of the correct choice (choices are shuffled on screen).
 // Domains follow the College Board's names for the digital SAT.
@@ -7,13 +7,15 @@
   const F = "Form, Structure, and Sense";
   const T = "Transitions";
 
-  window.BB_DOMAINS = [
+  const SW = (window.SatWizz = window.SatWizz || {});
+
+  SW.domains = [
     { id: B, short: "Boundaries" },
     { id: F, short: "Form & Sense" },
     { id: T, short: "Transitions" },
   ];
 
-  window.BB_QUESTIONS = [
+  SW.questions = [
     // ---------- Boundaries ----------
     {
       id: "b01", domain: B, skill: "Run-on sentences",

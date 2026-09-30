@@ -1,7 +1,11 @@
-// Casts that get swapped into every question.
+// SatWizz casts that get swapped into every question.
 // Tokens in questions: {A} {B} {C} (names), {A_his} / {A_him} (pronouns),
 // {PLACE}, {CRAFT}, {EVENT} (theme flavor, always used mid-sentence).
-window.BB_THEMES = [
+window.SatWizz = window.SatWizz || {};
+
+window.SatWizz.defaultThemeId = "everyday";
+
+window.SatWizz.themes = [
   {
     id: "everyday",
     label: "Everyday",
@@ -82,7 +86,9 @@ window.BB_THEMES = [
   },
 ];
 
-window.BB_PRONOUNS = {
+// Custom casts may pick any of these. Question templates only use the
+// possessive and object forms so verbs never have to change with "they".
+window.SatWizz.pronouns = {
   he: { his: "his", him: "him" },
   she: { his: "her", him: "her" },
   they: { his: "their", him: "them" },

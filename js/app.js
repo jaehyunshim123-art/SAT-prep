@@ -1,12 +1,17 @@
 (function () {
   "use strict";
 
-  const QUESTIONS = window.BB_QUESTIONS;
-  const THEMES = window.BB_THEMES;
-  const PRONOUNS = window.BB_PRONOUNS;
-  const DOMAINS = window.BB_DOMAINS;
+  const SW = window.SatWizz;
+  const QUESTIONS = SW.questions;
+  const THEMES = SW.themes;
+  const PRONOUNS = SW.pronouns;
+  const DOMAINS = SW.domains;
+  const auth = SW.auth;
+  const onboarding = SW.onboarding;
   const BY_ID = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
-  const STORE_KEY = "brainblast-sat.v1";
+  const STORE_KEY = "satwizz.v1";
+  const LEGACY_STORE_KEY = "brainblast-sat.v1"; // pre-rebrand saves
+  const SIGNUP_PROMPT_COMBO = 3;
   const GOALS = [5, 10, 20];
   const MAX_FREEZES = 2;
   const PROMPT_GRAMMAR = "Which choice completes the text so that it conforms to the conventions of Standard English?";
@@ -15,7 +20,7 @@
   // ---------- State ----------
   const DEFAULTS = {
     name: "",
-    themeId: "everyday",
+    themeId: SW.defaultThemeId,
     castChosen: false,
     custom: {
       people: [
@@ -39,13 +44,14 @@
     skills: {}, // skill -> { seen, right }
     missed: [], // question ids answered wrong and not yet fixed
     filter: "all",
+    guest: false, // chose "Continue as Guest", so don't prompt again on a combo
   };
 
   let S = load();
 
   function load() {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_STORE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
         return { ...structuredClone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
@@ -55,6 +61,7 @@
   }
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
+    auth.schedulePush(() => S);
   }
 
   // ---------- Dates ----------
@@ -181,10 +188,11 @@
   const app = $("#app");
   app.innerHTML = `
     <header class="hud">
-      <div class="brand">Brain<span>Blast</span><em> SAT</em></div>
+      <div class="brand" aria-label="SatWizz">Sat<span>Wizz</span></div>
       <span class="pill flame" id="hud-streak" title="Day streak"></span>
       <span class="pill combo" id="hud-combo" title="Correct in a row"></span>
       <span class="pill" id="hud-xp" title="Total XP"></span>
+      <button class="acct" id="hud-account" type="button"></button>
     </header>
     <div>
       <div class="goalbar" aria-hidden="true"><i id="goal-fill"></i></div>
@@ -198,12 +206,17 @@
       <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">⚡</span>Practice</button>
       <button class="tab" role="tab" data-view="streak" aria-selected="false"><span class="ico" aria-hidden="true">🔥</span>Streak</button>
       <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Personalize</button>
-    </nav>`;
+    </nav>
+    <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board.</footer>`;
 
   const feed = $("#view-feed");
   let currentView = "feed";
 
   app.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.view)));
+  $("#hud-account").addEventListener("click", () => {
+    if (auth.user()) show("you");
+    else openSignup("save");
+  });
 
   function show(view) {
     currentView = view;
@@ -224,6 +237,7 @@
     co.textContent = `⚡ ${S.combo}`;
     co.classList.toggle("hot", S.combo >= 3);
     $("#hud-xp").textContent = `${S.xp} XP`;
+    renderAccountButton();
 
     const n = today().n;
     $("#goal-fill").style.width = `${Math.min(100, (n / S.goal) * 100)}%`;
@@ -448,6 +462,11 @@
       celebrate("⚡", `${S.combo} in a row!`, S.combo >= 10 ? "You're unstoppable" : "Combo bonus: +5 XP each");
     }
     next.focus({ preventScroll: true });
+
+    // First time a guest hits a 3-in-a-row streak, offer to save it to an account.
+    if (correct && S.combo === SIGNUP_PROMPT_COMBO && !auth.user() && !S.guest && auth.available()) {
+      setTimeout(() => { if (!auth.user()) openSignup("combo"); }, 1500);
+    }
   }
 
   // Returns true when this answer just met today's goal.
@@ -567,6 +586,7 @@
 
     v.innerHTML = `
       <div class="stack">
+        <section class="panel" id="account-panel"></section>
         <section class="panel">
           <h2>Your cast</h2>
           <p class="muted">Names in every question switch to the cast you pick.</p>
@@ -598,11 +618,12 @@
         </section>
         <section class="panel">
           <h2>Start over</h2>
-          <p class="muted">Clears your streak, XP and stats on this device.</p>
+          <p class="muted">Clears your streak, XP and stats on this device${auth.user() ? " and in your account" : ""}.</p>
           <div class="row" id="reset-row"><button class="btn ghost" type="button" id="reset-btn">Reset progress</button></div>
         </section>
       </div>`;
 
+    renderAccountPanel();
     const grid = $("#you-casts", v);
     const all = [...THEMES, { id: "custom", label: "Custom", people: [] }];
     for (const t of all) {
@@ -666,9 +687,113 @@
     castTimer = setTimeout(refreshUnanswered, 150);
   }
 
+  // ---------- Accounts & sync ----------
+  const SYNC_LABEL = {
+    idle: "Synced",
+    pending: "Saving…",
+    syncing: "Saving…",
+    synced: "Synced",
+    error: "Couldn't sync. Retrying on your next answer.",
+  };
+
+  function openSignup(reason) {
+    onboarding.open({
+      reason,
+      onGuest: () => { S.guest = true; save(); },
+    });
+  }
+
+  function renderAccountButton() {
+    const btn = $("#hud-account");
+    const u = auth.user();
+    if (u) {
+      const st = auth.status();
+      btn.textContent = st === "error" ? "⚠︎" : "☁︎";
+      btn.classList.add("signed-in");
+      btn.classList.toggle("warn", st === "error");
+      btn.title = `Signed in as ${u.email}. ${SYNC_LABEL[st]}`;
+      btn.setAttribute("aria-label", `Account: ${u.email}. ${SYNC_LABEL[st]}`);
+    } else {
+      btn.textContent = "Save";
+      btn.classList.remove("signed-in", "warn");
+      btn.title = "Save progress to an account";
+      btn.setAttribute("aria-label", "Save progress");
+    }
+  }
+
+  function renderAccountPanel() {
+    const panel = $("#account-panel");
+    if (!panel) return;
+    const u = auth.user();
+    if (u) {
+      panel.innerHTML = `
+        <h2>Account</h2>
+        <p class="muted">Signed in as <b class="email">${esc(u.email || "your account")}</b></p>
+        <p class="sync-line" data-status="${auth.status()}">☁︎ ${esc(SYNC_LABEL[auth.status()])}</p>
+        <div class="row"><button class="btn ghost" type="button" id="signout-btn">Sign out</button></div>`;
+      $("#signout-btn", panel).addEventListener("click", async () => {
+        try {
+          await auth.signOut();
+          toast("Signed out. Progress on this device stays here.");
+        } catch (e) {
+          toast("Couldn't sign out. Check your connection and try again.");
+        }
+      });
+    } else {
+      panel.innerHTML = `
+        <h2>Save progress</h2>
+        <p class="muted">You're playing as a guest, so progress lives in this browser only. Sign up to sync your streak, XP and cast across devices.</p>
+        <div class="row"><button class="btn" type="button" id="save-progress-btn">Save Progress</button></div>`;
+      $("#save-progress-btn", panel).addEventListener("click", () => openSignup("save"));
+    }
+  }
+
+  // After sign-in: combine this device with the account, then push the result.
+  async function syncFromCloud(announce) {
+    try {
+      const cloud = await auth.pull();
+      Object.assign(S, auth.merge(S, cloud));
+      S.guest = false;
+      rollover();
+      save(); // writes locally and schedules the upload of the merged result
+      if (announce) toast(`Signed in as ${auth.user().email}. Progress synced.`);
+    } catch (e) {
+      console.warn("SatWizz: initial sync failed", e);
+      toast("Signed in, but syncing failed. We'll retry after your next answer.");
+    }
+    renderHud();
+    refreshUnanswered();
+    if (currentView === "streak") renderStreak();
+    if (currentView === "you") renderYou();
+  }
+
+  let syncedUserId = null;
+  auth.onChange((event, session) => {
+    if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+      if (onboarding.isOpen()) onboarding.close();
+      // Supabase can repeat SIGNED_IN (e.g. when the tab regains focus); merge once per user.
+      if (session.user.id === syncedUserId) return;
+      syncedUserId = session.user.id;
+      syncFromCloud(event === "SIGNED_IN");
+    } else if (event === "SIGNED_OUT") {
+      syncedUserId = null;
+      renderHud();
+      if (currentView === "you") renderYou();
+    }
+  });
+
+  auth.onStatus(() => {
+    renderAccountButton();
+    const line = document.querySelector(".sync-line");
+    if (line) {
+      line.dataset.status = auth.status();
+      line.textContent = `☁︎ ${SYNC_LABEL[auth.status()]}`;
+    }
+  });
+
   // ---------- Keyboard ----------
   document.addEventListener("keydown", (e) => {
-    if (currentView !== "feed" || e.target.closest("input, select, textarea")) return;
+    if (onboarding.isOpen() || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
     const card = activeCard;
     if (!card) return;
     const k = e.key.toLowerCase();
@@ -686,6 +811,7 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) renderHud(); });
 
   // ---------- Boot ----------
+  auth.init();
   renderHud();
   renderChips();
   resetFeed();
