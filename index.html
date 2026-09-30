@@ -4,14 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SatWizz</title>
-<meta name="description" content="SatWizz: scroll through SAT grammar questions, keep a daily streak, earn Sparks, and star your favorite characters in every sentence.">
+<meta name="description" content="SatWizz: a 9-chapter SAT grammar course with streaks, Sparks, friend streaks and live leaderboards.">
 <meta name="application-name" content="SatWizz">
 <meta name="apple-mobile-web-app-title" content="SatWizz">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta property="og:title" content="SatWizz">
-<meta property="og:description" content="Snackable SAT grammar practice with daily streaks and your favorite characters.">
+<meta property="og:description" content="Snackable SAT grammar practice with daily streaks, friend streaks and leaderboards.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#eaeef8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d1322" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap">
@@ -23,10 +28,23 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script src="js/themes.js"></script>
+<!-- Curriculum: one file per chapter, then the loader that orders them. -->
+<script src="js/curriculum/ch1.js"></script>
+<script src="js/curriculum/ch2.js"></script>
+<script src="js/curriculum/ch3.js"></script>
+<script src="js/curriculum/ch4.js"></script>
+<script src="js/curriculum/ch5.js"></script>
+<script src="js/curriculum/ch6.js"></script>
+<script src="js/curriculum/ch7.js"></script>
+<script src="js/curriculum/ch8.js"></script>
+<script src="js/curriculum/ch9.js"></script>
+<script src="js/curriculum/ch10.js"></script>
 <script src="js/questions.js"></script>
 <script src="js/rewards.js"></script>
+<script src="js/sfx.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/onboarding.js"></script>
+<script src="js/social-view.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

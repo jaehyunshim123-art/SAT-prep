@@ -12,6 +12,7 @@
   const SAVE_VERSION = 2;
   const auth = SW.auth;
   const onboarding = SW.onboarding;
+  const sfx = SW.sfx;
   const rewards = SW.rewards;
   const RULES = rewards.RULES;
   const BY_ID = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
@@ -66,6 +67,15 @@
     comboSavers: 0,
     avatar: SW.defaultAvatarId,
     unlockedAvatars: [],
+    // social
+    username: "", // @handle, claimed on first sign-in
+    displayName: "",
+    lbScope: "global", // leaderboard tab: "global" | "friends"
+    lbMetric: "xp", // rank by "xp" | "sparks"
+    // settings
+    muted: false,
+    haptics: true,
+    demo: false, // Demo Mode: everything unlocked, nothing synced
     // sync bookkeeping
     updatedAt: 0, // ms of the last change made on this device
     syncedUserId: null, // account this device last merged with
@@ -115,11 +125,11 @@
   }
 
   // touch=false for bookkeeping (day rollover) so a stale device doesn't look
-  // newer than the cloud when merging.
+  // newer than the cloud when merging. Demo Mode never reaches the cloud.
   function save(touch = true) {
     if (touch) S.updatedAt = Date.now();
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
-    auth.schedulePush(() => S);
+    if (!S.demo) auth.schedulePush(() => S);
   }
 
   // ---------- Dates ----------
@@ -300,7 +310,7 @@
   const app = $("#app");
   app.innerHTML = `
     <header class="hud">
-      <div class="brand" aria-label="SatWizz">Sat<span>Wizz</span></div>
+      <div class="brand" id="brand" aria-label="SatWizz">Sat<span>Wizz</span><em class="demo-badge" id="demo-badge" hidden>DEMO</em></div>
       <span class="pill flame" id="hud-streak" title="Day streak"></span>
       <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the Wizz Shop"></button>
       <span class="pill" id="hud-xp" title="Total XP"></span>
@@ -311,28 +321,31 @@
       <div class="goalbar" aria-hidden="true"><i id="goal-fill"></i></div>
       <div class="goalnote"><span id="goal-text"></span><span id="goal-risk"></span></div>
     </div>
+    <div class="alert-slot" id="alert-slot" aria-live="assertive"></div>
     <div id="feed-tools">
       <div class="focusbar" id="focusbar"></div>
       <button class="chapter-bar" id="chapter-bar" type="button" aria-haspopup="dialog"></button>
     </div>
     <main class="view feed" id="view-feed" aria-live="polite"></main>
     <main class="view scrollview" id="view-streak" hidden></main>
+    <main class="view scrollview ranks-view" id="view-ranks" hidden></main>
     <main class="view scrollview" id="view-shop" hidden></main>
     <main class="view scrollview" id="view-you" hidden></main>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">✏️</span>Practice</button>
       <button class="tab" role="tab" data-view="streak" aria-selected="false"><span class="ico" aria-hidden="true">🔥</span>Streak</button>
+      <button class="tab" role="tab" data-view="ranks" aria-selected="false"><span class="ico" aria-hidden="true">🏆</span>Ranks</button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
-      <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Personalize</button>
+      <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Profile</button>
     </nav>
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  const VIEWS = ["feed", "streak", "shop", "you"];
+  const VIEWS = ["feed", "streak", "ranks", "shop", "you"];
   let currentView = "feed";
   let streakTab = "streak"; // or "achievements"
 
-  app.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.view)));
+  app.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => { sfx.play("tap"); show(t.dataset.view); }));
   $("#hud-sparks").addEventListener("click", () => show("shop"));
   $("#hud-account").addEventListener("click", () => openSignup("save"));
   $("#hud-avatar").addEventListener("click", () => {
@@ -346,14 +359,70 @@
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
     $("#feed-tools").hidden = view !== "feed";
     if (view === "streak") renderStreak();
+    if (view === "ranks") ranks.render();
     if (view === "shop") renderShop();
     if (view === "you") renderYou();
   }
 
   function rerenderCurrent() {
     if (currentView === "streak") renderStreak();
+    if (currentView === "ranks") ranks.render();
     if (currentView === "shop") renderShop();
     if (currentView === "you") renderYou();
+  }
+
+  // Leaderboards & friends live in their own module (js/social-view.js).
+  const ranks = SW.socialView.mount({
+    container: $("#view-ranks"),
+    getState: () => S,
+    save: () => save(false),
+    esc,
+    toast,
+    openSignup,
+    avatarEmoji: (id) => (rewards.avatarById(id) || rewards.avatarById(SW.defaultAvatarId)).emoji,
+    sfx,
+    inviteUrl: () => (S.username ? `${location.origin}${location.pathname}?invite=${encodeURIComponent(S.username)}` : ""),
+  });
+
+  // ---------- Demo Mode (tap the logo 5 times) ----------
+  const DEMO_BACKUP_KEY = "satwizz.demo-backup";
+  let logoTaps = [];
+  $("#brand").addEventListener("click", () => {
+    const now = Date.now();
+    logoTaps = [...logoTaps.filter((t) => now - t < 2500), now];
+    if (logoTaps.length >= 5) {
+      logoTaps = [];
+      toggleDemo();
+    }
+  });
+
+  // Demo Mode unlocks every chapter and maxes Sparks for testing and demos.
+  // It saves your real progress first and restores it when you turn it off.
+  // Nothing is synced or posted to leaderboards while it's on.
+  function toggleDemo() {
+    if (!S.demo) {
+      try { localStorage.setItem(DEMO_BACKUP_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
+      S.demo = true;
+      S.unlockedChapters = CHAPTERS.map((c) => c.id);
+      S.sparks = 99999;
+      S.focus = RULES.maxFocus;
+      save(false);
+      toast("Demo Mode on: all chapters unlocked and Sparks maxed. Tap the logo 5 times to exit.");
+    } else {
+      let restored = null;
+      try { restored = JSON.parse(localStorage.getItem(DEMO_BACKUP_KEY) || "null"); } catch (e) { /* ignore */ }
+      S = restored ? normalize(restored) : { ...S, demo: false };
+      S.demo = false;
+      S.focus = RULES.maxFocus;
+      try { localStorage.removeItem(DEMO_BACKUP_KEY); } catch (e) { /* ignore */ }
+      save(false);
+      toast("Demo Mode off. Your real progress is back.");
+    }
+    sfx.play("combo");
+    ranks.invalidate();
+    renderHud(["sparks"]);
+    startChapter(isUnlocked(S.chapterId) || S.chapterId === REVIEW_ID ? S.chapterId : 1);
+    rerenderCurrent();
   }
 
   // ---------- HUD ----------
@@ -363,15 +432,20 @@
     el.classList.add("bump");
   }
 
+  // 12,345 → "12.3K" so big balances fit the header on phones.
+  const compactFmt = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+  const compact = (n) => (n >= 10000 ? compactFmt.format(n) : String(n));
+
   // bump: list of "streak" | "sparks"
   function renderHud(bump = []) {
     rollover();
     const st = $("#hud-streak");
     st.innerHTML = `🔥 ${S.streak}${atRisk() ? ' <span class="risk" title="Streak at risk">⌛</span>' : ""}`;
     st.classList.toggle("cold", S.streak === 0 || atRisk());
-    $("#hud-sparks").textContent = `⚡ ${S.sparks}`;
+    $("#hud-sparks").textContent = `⚡ ${compact(S.sparks)}`;
     $("#hud-sparks").setAttribute("aria-label", `${S.sparks} Sparks. Open the Wizz Shop`);
     $("#hud-xp").textContent = `${S.xp} XP`;
+    $("#demo-badge").hidden = !S.demo;
     renderAccountButton();
     renderFocus();
 
@@ -486,6 +560,8 @@
       }
       save();
       renderHud(["sparks"]);
+      setTimeout(() => sfx.play("complete"), 400);
+      sfx.buzz(50);
       celebrate("⭐", `Chapter ${ch.id} complete!`, `+${RULES.chapterSparks} ⚡ Sparks${unlocked ? ` · Chapter ${unlocked.id} unlocked` : ""}`);
     }
     feed.querySelector(".sentinel")?.remove();
@@ -612,7 +688,10 @@
         </ol>
         <div class="fb-slot"></div>
       </div>`;
-    card.querySelectorAll(".choice").forEach((b) => b.addEventListener("click", () => answer(card, Number(b.dataset.ci))));
+    card.querySelectorAll(".choice").forEach((b) => {
+      b.addEventListener("pointerdown", () => { if (!card._answered) sfx.play("tap"); });
+      b.addEventListener("click", () => answer(card, Number(b.dataset.ci)));
+    });
   }
 
   // Re-render cards that haven't been answered, and the lesson card, so a new
@@ -705,19 +784,34 @@
     // A Combo Saver keeps the combo, but not a "5 in a row" speed run.
     const fast = rewards.trackFastRun(fastRun, correct, Date.now());
 
+    // sound + haptics
+    const milestone = correct && [3, 5, 10, 15, 20, 25, 30, 40, 50].includes(S.combo);
+    sfx.play(correct ? (milestone ? "combo" : "correct") : "wrong");
+    if (correct) sfx.buzz(50);
+
     // feedback
     let tag;
     if (correct) tag = `+${xp} XP · +${sparks.total} ⚡${sparks.bonus ? " combo bonus" : ""}`;
     else if (card._review) tag = "Review keeps your Focus safe";
     else tag = focusLeft === 0 ? "Focus is out" : `−1 🛡️ · ${focusLeft} left`;
     if (savedCombo) tag += ` · Combo Saver kept ×${savedCombo}`;
+    const verdict = correct ? pickPraise() : "Not quite";
     const fb = h("div", { class: `feedback ${correct ? "ok" : "no"}` });
-    fb.innerHTML = `
-      <h3>${correct ? pickPraise() : "Not quite"}<small>${esc(tag)}</small></h3>
-      <p>${fill(q.why, cast, false)}</p>`;
-    card.querySelector(".fb-slot").append(fb);
     const next = h("button", { class: "btn wide next-row", type: "button" }, card._review ? "Continue" : "Next question ↓");
-    next.addEventListener("click", () => (card._review ? card._onDone?.() : scrollToNext(card)));
+    if (card._review) {
+      // Inside the Focus Break drawer: keep the explanation inline.
+      fb.innerHTML = `
+        <h3>${verdict}<small>${esc(tag)}</small></h3>
+        <p>${fill(q.notes[q.answer], cast, false)}</p>`;
+      next.addEventListener("click", () => card._onDone?.());
+    } else {
+      fb.innerHTML = `
+        <h3>${verdict}<small>${esc(tag)}</small></h3>
+        <button class="linkbtn why-btn" type="button">💡 Why? See every answer explained</button>`;
+      fb.querySelector(".why-btn").addEventListener("click", () => openExplain(card, ci, verdict, tag));
+      next.addEventListener("click", () => scrollToNext(card));
+    }
+    card.querySelector(".fb-slot").append(fb);
     card.querySelector(".card-inner").append(next);
 
     const goal = checkGoal();
@@ -726,22 +820,126 @@
     renderHud(goal || correct ? ["sparks", ...(goal ? ["streak"] : [])] : []);
     renderFocus(correct);
     renderChapterBar();
-    if (!card._review) afterFeedAnswer();
+    if (!card._review) {
+      afterFeedAnswer();
+      pingPractice();
+    }
 
     if (goal) celebrateGoal(goal);
-    if (correct && [3, 5, 10, 15, 20, 25, 30, 40, 50].includes(S.combo)) {
+    if (milestone) {
+      sfx.buzz(50);
       celebrate("⚡", `${S.combo} in a row!`, sparks.bonus ? `+${sparks.bonus} bonus Sparks` : "Keep the combo going");
     }
     newBadges.forEach(celebrateBadge);
-    next.focus({ preventScroll: true });
 
-    if (!card._review && !correct && focusLeft === 0) {
-      setTimeout(() => openFocusBreak(), 900);
+    if (card._review) {
+      next.focus({ preventScroll: true });
+      return;
     }
+    // Things that open their own dialog wait until the explanation is closed.
+    const after = [];
+    if (!correct && focusLeft === 0) after.push(() => openFocusBreak());
     // First time a guest hits a 3-in-a-row streak, offer to save it to an account.
     if (correct && S.combo === SIGNUP_PROMPT_COMBO && !auth.user() && !S.guest && auth.available()) {
-      setTimeout(() => { if (!auth.user() && !focusSheet) openSignup("combo"); }, 1500);
+      after.push(() => { if (!auth.user() && !focusSheet) openSignup("combo"); });
     }
+    openExplain(card, ci, verdict, tag, after);
+  }
+
+  // Tell the server you practiced (friend streaks, "practiced today"), at most
+  // every 30 minutes. Skipped for guests and in Demo Mode.
+  let lastPracticePing = 0;
+  function pingPractice() {
+    if (S.demo || !auth.user() || Date.now() - lastPracticePing < 30 * 60e3) return;
+    lastPracticePing = Date.now();
+    auth.recordPractice().then(() => ranks.invalidate());
+  }
+
+  // ---------- Slide-up explanation drawer ----------
+  // Opens after every feed answer: why the right answer works and why each
+  // other choice fails. `after` runs once it closes (Focus Break, sign-up).
+  let explainSheet = null;
+  let explainAfter = [];
+
+  function openExplain(card, picked, verdict, tag, after = []) {
+    if (explainSheet) closeExplain(false);
+    explainAfter = after;
+    const q = card._q;
+    const cast = castOf();
+    const correct = picked === q.answer;
+    const filled = fill(q.text, cast).replace("______", `<mark class="fill-in">${fill(q.choices[q.answer], cast, false)}</mark>`);
+    const rows = card._order.map((ci, pos) => {
+      const isAnswer = ci === q.answer;
+      const isPick = ci === picked;
+      const status = isAnswer ? "right" : isPick ? "wrong" : "other";
+      const label = isAnswer ? (isPick ? "Your answer · correct" : "Correct answer") : isPick ? "Your answer" : "";
+      return `
+        <li class="why-row ${status}">
+          <span class="letter" aria-hidden="true">${"ABCD"[pos]}</span>
+          <div class="why-body">
+            <b>${fill(q.choices[ci], cast, false)}</b>${label ? `<span class="why-tag">${label}</span>` : ""}
+            <p>${fill(q.notes[ci], cast, false)}</p>
+          </div>
+        </li>`;
+    });
+    // Correct answer first, then your pick, then the rest.
+    const order = card._order.map((ci, pos) => ({ ci, pos, rank: ci === q.answer ? 0 : ci === picked ? 1 : 2 }))
+      .sort((a, b) => a.rank - b.rank || a.pos - b.pos);
+    const shortcut = q.shortcut && SHORTCUT_TIPS[q.shortcut];
+
+    explainSheet = h("div", { class: "sheet-backdrop explain-backdrop" });
+    const sheet = h("div", { class: `sheet explain ${correct ? "ok" : "no"}`, role: "dialog", "aria-modal": "true", "aria-labelledby": "ex-title" });
+    sheet.innerHTML = `
+      <div class="grabber" aria-hidden="true"></div>
+      <div class="explain-head">
+        <span class="verdict-icon" aria-hidden="true">${correct ? "✓" : "✗"}</span>
+        <div><h2 id="ex-title">${verdict}</h2><small>${esc(tag)}</small></div>
+        <button class="linkbtn" type="button" data-close>Close</button>
+      </div>
+      <p class="explain-sentence">${filled}</p>
+      ${shortcut ? `<p class="shortcut-chip"><b>Shortcut ${esc(q.shortcut)}</b> ${esc(shortcut)}</p>` : ""}
+      <ol class="why-list">${order.map((o) => rows[o.pos]).join("")}</ol>
+      <button class="btn wide" type="button" data-next>Next question ↓</button>`;
+    explainSheet.append(sheet);
+    document.body.append(explainSheet);
+    explainSheet.addEventListener("mousedown", (e) => { if (e.target === explainSheet) closeExplain(); });
+    sheet.querySelector("[data-close]").addEventListener("click", () => closeExplain());
+    sheet.querySelector("[data-next]").addEventListener("click", () => {
+      closeExplain();
+      scrollToNext(card);
+    });
+    document.addEventListener("keydown", explainKeys, true);
+    sheet.querySelector("[data-next]").focus({ preventScroll: true });
+  }
+
+  const SHORTCUT_TIPS = {
+    "3:1": "Three choices share a number (singular or plural) and one doesn't. The odd one out is the answer.",
+    "2:1": "Cross out the non-verb. Of the three verbs left, two match in number. The odd one is the answer.",
+  };
+
+  function closeExplain(runAfter = true) {
+    if (!explainSheet) return;
+    document.removeEventListener("keydown", explainKeys, true);
+    explainSheet.remove();
+    explainSheet = null;
+    const pending = explainAfter;
+    explainAfter = [];
+    if (runAfter) pending.forEach((fn) => setTimeout(fn, 150));
+  }
+
+  function explainKeys(e) {
+    if (!explainSheet) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeExplain();
+    } else if (e.key === "Tab") {
+      const items = [...explainSheet.querySelectorAll("button:not(:disabled)")];
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    e.stopPropagation();
   }
 
   // Runs when the daily goal may have just been met. Returns what happened, or null.
@@ -1309,6 +1507,12 @@
     v.innerHTML = `
       <div class="stack">
         <section class="panel" id="account-panel"></section>
+        <section class="panel" id="settings-panel">
+          <h2>Settings</h2>
+          <label class="toggle"><input type="checkbox" id="set-sound" ${S.muted ? "" : "checked"}><span>Sound effects</span></label>
+          ${sfx.canVibrate() ? `<label class="toggle"><input type="checkbox" id="set-haptics" ${S.haptics ? "checked" : ""}><span>Vibration</span></label>` : ""}
+          <div id="set-push"></div>
+        </section>
         <section class="panel">
           <h2>Your cast</h2>
           <p class="muted">Names in every question switch to the cast you pick.</p>
@@ -1346,6 +1550,7 @@
       </div>`;
 
     renderAccountPanel();
+    renderSettings();
     const grid = $("#you-casts", v);
     const all = [...themesForPicker(), { id: "custom", label: "Custom", people: [] }];
     for (const t of all) {
@@ -1475,12 +1680,40 @@
         </div>
       </div>
       ${u
-        ? `<p class="sync-line" data-status="${auth.status()}">☁︎ ${esc(SYNC_LABEL[auth.status()])}</p>
+        ? `<form class="stack" id="profile-form" novalidate>
+             <div class="field">
+               <label for="p-name">Display name</label>
+               <input class="input" id="p-name" maxlength="30" autocomplete="nickname" value="${esc(S.displayName || auth.defaultDisplayName(u))}">
+             </div>
+             <div class="field">
+               <label for="p-user">Username</label>
+               <div class="handle-row"><span class="at" aria-hidden="true">@</span><input class="input" id="p-user" maxlength="20" autocapitalize="none" spellcheck="false" value="${esc(S.username)}"></div>
+               <small class="muted">Friends find you by this. 3–20 lowercase letters, numbers or _.</small>
+             </div>
+             <div class="row"><button class="btn ghost" type="submit">Save profile</button></div>
+           </form>
+           <p class="sync-line" data-status="${auth.status()}">☁︎ ${esc(SYNC_LABEL[auth.status()])}</p>
            <div class="row"><button class="btn ghost" type="button" id="signout-btn">Sign out</button></div>`
-        : `<p class="muted">Sign up to sync your streak, Sparks, unlocks, avatar and cast across devices.</p>
+        : `<p class="muted">Sign up to sync your streak, Sparks, unlocks, avatar and cast across devices, and to join leaderboards.</p>
            <div class="row"><button class="btn" type="button" id="save-progress-btn">Save Progress</button></div>`}
       <span class="label-sm">Profile picture</span>
       <div class="avatar-grid">${grid}</div>`;
+
+    $("#profile-form", panel)?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = $("#p-name", panel).value.replace(/\s+/g, " ").trim().slice(0, 30);
+      const handle = $("#p-user", panel).value.trim().replace(/^@/, "").toLowerCase();
+      if (!name) return toast("Add a display name.");
+      S.displayName = name;
+      try {
+        if (handle !== S.username) S.username = await auth.claimUsername(handle, S);
+        save();
+        ranks.invalidate();
+        toast("Profile saved");
+      } catch (err) {
+        toast(err.message);
+      }
+    });
 
     panel.querySelectorAll("[data-avatar]").forEach((b) => b.addEventListener("click", () => {
       const id = b.dataset.avatar;
@@ -1531,22 +1764,142 @@
     }
   }
 
+  // Settings: sound, vibration and Lock In push alerts.
+  async function renderSettings() {
+    const panel = $("#settings-panel");
+    if (!panel) return;
+    $("#set-sound", panel).addEventListener("change", (e) => {
+      S.muted = !e.target.checked;
+      sfx.setMuted(S.muted);
+      save(false);
+      sfx.play("tap");
+    });
+    $("#set-haptics", panel)?.addEventListener("change", (e) => {
+      S.haptics = e.target.checked;
+      sfx.setHaptics(S.haptics);
+      save(false);
+      sfx.buzz(50);
+    });
+    const slot = $("#set-push", panel);
+    if (!auth.user()) {
+      slot.innerHTML = '<p class="muted">🔔 Sign in to get Lock In alerts from friends.</p>';
+      return;
+    }
+    const state = await auth.pushState();
+    const label = {
+      enabled: "🔔 Lock In alerts are on for this device.",
+      default: "🔔 Get a notification when a friend tells you to Lock In.",
+      denied: "🔕 Notifications are blocked. Allow them in your browser's site settings.",
+      "needs-install": "🔔 On iPhone, add SatWizz to your Home Screen (Share → Add to Home Screen) to get Lock In alerts.",
+      unsupported: "🔕 This browser can't show notifications. You'll still see Lock In alerts in the app.",
+      "not-configured": "🔔 Lock In alerts show up in the app when you open it.",
+    }[state];
+    slot.innerHTML = `<p class="muted">${label}</p>${
+      state === "default" ? '<button class="btn ghost" type="button" id="push-toggle">Turn on alerts</button>' :
+      state === "enabled" ? '<button class="btn ghost" type="button" id="push-toggle">Turn off alerts</button>' : ""}`;
+    $("#push-toggle", slot)?.addEventListener("click", async () => {
+      try {
+        if (state === "enabled") {
+          await auth.disablePush();
+          toast("Lock In alerts turned off on this device.");
+        } else {
+          await auth.enablePush();
+          toast("Lock In alerts are on 🔔");
+        }
+      } catch (err) {
+        toast(err.message);
+      }
+      renderSettings();
+    });
+  }
+
+  // ---------- Lock In alerts (in-app) ----------
+  let unsubscribeLockIns = () => {};
+
+  function showLockInAlert(row) {
+    const slot = $("#alert-slot");
+    if (!row || slot.querySelector(`[data-alert="${row.id}"]`)) return;
+    const el = h("div", { class: "alert-banner", role: "alert", "data-alert": row.id });
+    el.innerHTML = `
+      <span class="alert-icon" aria-hidden="true">🔒</span>
+      <p>${esc(row.message)}</p>
+      <button class="mini-btn on" type="button" data-go>Practice</button>
+      <button class="alert-x" type="button" aria-label="Dismiss">✕</button>`;
+    const dismiss = () => {
+      el.remove();
+      auth.markLockInsRead([row.id]);
+    };
+    el.querySelector("[data-go]").addEventListener("click", () => { dismiss(); show("feed"); });
+    el.querySelector(".alert-x").addEventListener("click", dismiss);
+    slot.replaceChildren(el); // newest alert only; older unread ones stay unread
+    sfx.play("combo");
+    sfx.buzz(50);
+  }
+
+  async function startLockInAlerts() {
+    unsubscribeLockIns();
+    unsubscribeLockIns = auth.subscribeLockIns(showLockInAlert);
+    try {
+      const unread = await auth.unreadLockIns(); // newest first
+      if (unread.length) showLockInAlert(unread[0]);
+    } catch (e) { /* alerts are best-effort */ }
+  }
+
+  // ---------- Invite links (?invite=username) ----------
+  const INVITE_KEY = "satwizz.invite";
+  function captureInvite() {
+    try {
+      const params = new URLSearchParams(location.search);
+      const invite = (params.get("invite") || "").replace(/^@/, "").toLowerCase();
+      if (!/^[a-z0-9_]{3,20}$/.test(invite)) return;
+      sessionStorage.setItem(INVITE_KEY, invite);
+      params.delete("invite");
+      const qs = params.toString();
+      history.replaceState(null, "", location.pathname + (qs ? `?${qs}` : "") + location.hash);
+    } catch (e) { /* ignore */ }
+  }
+  const pendingInvite = () => { try { return sessionStorage.getItem(INVITE_KEY); } catch (e) { return null; } };
+
+  async function acceptPendingInvite() {
+    const invite = pendingInvite();
+    if (!invite || !auth.user()) return;
+    try { sessionStorage.removeItem(INVITE_KEY); } catch (e) { /* ignore */ }
+    if (invite === S.username) return;
+    try {
+      const row = await auth.sendFriendRequest(invite);
+      toast(row && row.status === "accepted" ? `You and @${invite} are now friends 🎉` : `Friend request sent to @${invite}`);
+      ranks.invalidate();
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+
   // After sign-in: combine this device with the account, then push the result.
   async function syncFromCloud(announce) {
-    try {
-      const u = auth.user();
-      const cloud = await auth.pull();
-      Object.assign(S, auth.merge(S, cloud, u.id));
-      S.syncedUserId = u.id;
-      S.guest = false;
-      rewards.checkBadges(S);
-      rollover();
-      save(); // writes locally and schedules the upload of the merged result
-      if (announce) toast(`Signed in as ${u.email}. Progress synced.`);
-    } catch (e) {
-      console.warn("SatWizz: initial sync failed", e);
-      toast("Signed in, but syncing failed. We'll retry after your next answer.");
+    const u = auth.user();
+    if (S.demo) {
+      toast("Signed in. Demo Mode is on, so nothing syncs until you turn it off.");
+    } else {
+      try {
+        const cloud = await auth.pull();
+        Object.assign(S, auth.merge(S, cloud, u.id));
+        S.syncedUserId = u.id;
+        S.guest = false;
+        rewards.checkBadges(S);
+        rollover();
+        const who = await auth.ensureUsername(S);
+        S.username = who.username;
+        S.displayName = who.displayName;
+        save(); // writes locally and schedules the upload of the merged result
+        if (announce) toast(`Signed in as @${S.username}. Progress synced.`);
+      } catch (e) {
+        console.warn("SatWizz: initial sync failed", e);
+        toast("Signed in, but syncing failed. We'll retry after your next answer.");
+      }
     }
+    startLockInAlerts();
+    acceptPendingInvite();
+    ranks.invalidate();
     renderHud();
     refreshCast();
     renderChapterBar();
@@ -1563,8 +1916,16 @@
       syncFromCloud(event === "SIGNED_IN");
     } else if (event === "SIGNED_OUT") {
       syncedSessionUser = null;
+      unsubscribeLockIns();
+      unsubscribeLockIns = () => {};
+      S.username = "";
+      save(false);
+      ranks.invalidate();
       renderHud();
-      if (currentView === "you") renderYou();
+      rerenderCurrent();
+    } else if (!session && event === "INITIAL_SESSION" && pendingInvite() && auth.available()) {
+      // Opened an invite link while signed out: ask them to sign in first.
+      openSignup("invite");
     }
   });
 
@@ -1579,7 +1940,7 @@
 
   // ---------- Keyboard ----------
   document.addEventListener("keydown", (e) => {
-    if (onboarding.isOpen() || focusSheet || chapterSheet || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
+    if (onboarding.isOpen() || focusSheet || chapterSheet || explainSheet || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
     const card = activeCard;
     if (!card) return;
     const k = e.key.toLowerCase();
@@ -1598,6 +1959,9 @@
 
   // ---------- Boot ----------
   S.focus = RULES.maxFocus; // 3 Focus Shields per session
+  sfx.setMuted(S.muted);
+  sfx.setHaptics(S.haptics);
+  captureInvite();
   auth.init();
   renderHud();
   startChapter(S.chapterId);

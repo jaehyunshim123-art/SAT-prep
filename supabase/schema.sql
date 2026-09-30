@@ -71,3 +71,227 @@ create policy "settings: update own" on public.user_settings
 
 alter table public.profiles drop constraint if exists profiles_combo_savers_check;
 alter table public.profiles add constraint profiles_combo_savers_check check (combo_savers between 0 and 3);
+
+
+-- ============================================================================
+-- Social: leaderboards, friends, friend streaks, Lock In alerts, push.
+-- ============================================================================
+
+-- Public card for leaderboards and friend search. Everything here is visible
+-- to every signed-in user, so it holds only what a leaderboard shows.
+create table if not exists public.user_public (
+  user_id          uuid primary key references auth.users (id) on delete cascade,
+  username         text unique check (username ~ '^[a-z0-9_]{3,20}$'),
+  display_name     text not null default 'SatWizz student' check (char_length(display_name) between 1 and 30),
+  avatar           text not null default 'fox',
+  total_xp         integer not null default 0 check (total_xp >= 0),
+  sparks           integer not null default 0 check (sparks >= 0),
+  current_streak   integer not null default 0 check (current_streak >= 0),
+  last_practice_at timestamptz, -- written only by record_practice()
+  updated_at       timestamptz not null default now()
+);
+create index if not exists user_public_xp_idx on public.user_public (total_xp desc);
+create index if not exists user_public_sparks_idx on public.user_public (sparks desc);
+
+alter table public.user_public enable row level security;
+drop policy if exists "user_public: read" on public.user_public;
+drop policy if exists "user_public: insert own" on public.user_public;
+drop policy if exists "user_public: update own" on public.user_public;
+create policy "user_public: read" on public.user_public
+  for select to authenticated using (true);
+create policy "user_public: insert own" on public.user_public
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "user_public: update own" on public.user_public
+  for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+-- Clients may not set last_practice_at themselves.
+revoke insert, update on public.user_public from anon, authenticated;
+grant select on public.user_public to authenticated;
+grant insert (user_id, username, display_name, avatar, total_xp, sparks, current_streak, updated_at)
+  on public.user_public to authenticated;
+grant update (user_id, username, display_name, avatar, total_xp, sparks, current_streak, updated_at)
+  on public.user_public to authenticated;
+
+-- One row per pair of users (user_low < user_high). Friend streak lives here.
+create table if not exists public.friendships (
+  id           bigint generated always as identity primary key,
+  user_low     uuid not null references auth.users (id) on delete cascade,
+  user_high    uuid not null references auth.users (id) on delete cascade,
+  requested_by uuid not null references auth.users (id) on delete cascade,
+  status       text not null default 'pending' check (status in ('pending', 'accepted')),
+  streak       integer not null default 0 check (streak >= 0),
+  streak_date  date, -- UTC day the friend streak last grew
+  created_at   timestamptz not null default now(),
+  check (user_low < user_high),
+  unique (user_low, user_high)
+);
+create index if not exists friendships_high_idx on public.friendships (user_high);
+
+alter table public.friendships enable row level security;
+drop policy if exists "friendships: read own" on public.friendships;
+drop policy if exists "friendships: delete own" on public.friendships;
+create policy "friendships: read own" on public.friendships
+  for select to authenticated using ((select auth.uid()) in (user_low, user_high));
+create policy "friendships: delete own" on public.friendships
+  for delete to authenticated using ((select auth.uid()) in (user_low, user_high));
+-- Inserts and updates only happen through the functions below.
+revoke insert, update on public.friendships from anon, authenticated;
+
+-- "Lock In" nudges between friends. Inserted by send_lock_in().
+create table if not exists public.lock_ins (
+  id         bigint generated always as identity primary key,
+  from_user  uuid not null references auth.users (id) on delete cascade,
+  to_user    uuid not null references auth.users (id) on delete cascade,
+  message    text not null,
+  created_at timestamptz not null default now(),
+  read_at    timestamptz
+);
+create index if not exists lock_ins_to_idx on public.lock_ins (to_user, created_at desc);
+
+alter table public.lock_ins enable row level security;
+drop policy if exists "lock_ins: read own" on public.lock_ins;
+drop policy if exists "lock_ins: mark read" on public.lock_ins;
+create policy "lock_ins: read own" on public.lock_ins
+  for select to authenticated using ((select auth.uid()) in (from_user, to_user));
+create policy "lock_ins: mark read" on public.lock_ins
+  for update to authenticated using ((select auth.uid()) = to_user) with check ((select auth.uid()) = to_user);
+revoke insert, update on public.lock_ins from anon, authenticated;
+grant update (read_at) on public.lock_ins to authenticated;
+
+-- Web Push subscriptions (one per browser/device).
+create table if not exists public.push_subscriptions (
+  id         bigint generated always as identity primary key,
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  endpoint   text not null unique,
+  p256dh     text not null,
+  auth       text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.push_subscriptions enable row level security;
+drop policy if exists "push: manage own" on public.push_subscriptions;
+create policy "push: manage own" on public.push_subscriptions
+  for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+-- Send a friend request by @username. If they already asked you, this accepts.
+create or replace function public.send_friend_request(target_username text)
+returns public.friendships
+language plpgsql security definer set search_path = public
+as $$
+declare
+  me     uuid := auth.uid();
+  target uuid;
+  result public.friendships;
+begin
+  if me is null then raise exception 'not_signed_in'; end if;
+  select user_id into target from public.user_public
+   where username = lower(ltrim(trim(target_username), '@'));
+  if target is null then raise exception 'user_not_found'; end if;
+  if target = me then raise exception 'cannot_friend_self'; end if;
+
+  insert into public.friendships (user_low, user_high, requested_by)
+  values (least(me, target), greatest(me, target), me)
+  on conflict (user_low, user_high) do update
+    set status = case
+      when public.friendships.status = 'pending' and public.friendships.requested_by <> me then 'accepted'
+      else public.friendships.status
+    end
+  returning * into result;
+  return result;
+end $$;
+
+-- Accept or decline a request sent to you. Declining (or unfriending) deletes the row.
+create or replace function public.respond_friend_request(request_id bigint, accept boolean)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+declare me uuid := auth.uid();
+begin
+  if me is null then raise exception 'not_signed_in'; end if;
+  if accept then
+    update public.friendships set status = 'accepted'
+     where id = request_id and status = 'pending' and requested_by <> me and me in (user_low, user_high);
+  else
+    delete from public.friendships where id = request_id and me in (user_low, user_high);
+  end if;
+  if not found then raise exception 'request_not_found'; end if;
+end $$;
+
+-- Call when the user practices. Marks them active and grows every friend
+-- streak where the friend also practiced within the last 24 hours
+-- (at most once per UTC day; a missed day restarts the streak at 1).
+create or replace function public.record_practice()
+returns void
+language plpgsql security definer set search_path = public
+as $$
+declare
+  me    uuid := auth.uid();
+  today date := (now() at time zone 'utc')::date;
+begin
+  if me is null then return; end if;
+  update public.user_public set last_practice_at = now() where user_id = me;
+
+  update public.friendships f
+     set streak = case when f.streak_date = today - 1 then f.streak + 1 else 1 end,
+         streak_date = today
+    from public.user_public p
+   where f.status = 'accepted'
+     and me in (f.user_low, f.user_high)
+     and p.user_id = case when f.user_low = me then f.user_high else f.user_low end
+     and p.last_practice_at > now() - interval '24 hours'
+     and f.streak_date is distinct from today;
+end $$;
+
+-- Nudge a friend. One per friend every 4 hours. Returns the stored alert;
+-- the lock-in Edge Function then pushes it to the friend's devices.
+create or replace function public.send_lock_in(target uuid)
+returns public.lock_ins
+language plpgsql security definer set search_path = public
+as $$
+declare
+  me       uuid := auth.uid();
+  today    date := (now() at time zone 'utc')::date;
+  pair     public.friendships;
+  sender   text;
+  days     integer;
+  result   public.lock_ins;
+begin
+  if me is null then raise exception 'not_signed_in'; end if;
+  select * into pair from public.friendships
+   where user_low = least(me, target) and user_high = greatest(me, target) and status = 'accepted';
+  if pair.id is null then raise exception 'not_friends'; end if;
+  if exists (select 1 from public.lock_ins
+              where from_user = me and to_user = target and created_at > now() - interval '4 hours') then
+    raise exception 'already_locked_in';
+  end if;
+
+  select display_name into sender from public.user_public where user_id = me;
+  days := case when pair.streak_date >= today - 1 then pair.streak else 0 end;
+
+  insert into public.lock_ins (from_user, to_user, message)
+  values (me, target, case
+    when days > 0 then format('%s told you to Lock In! Keep your %s-day streak alive.', coalesce(sender, 'A friend'), days)
+    else format('%s told you to Lock In! Start a streak together today.', coalesce(sender, 'A friend'))
+  end)
+  returning * into result;
+  return result;
+end $$;
+
+revoke execute on function public.send_friend_request(text) from public, anon;
+revoke execute on function public.respond_friend_request(bigint, boolean) from public, anon;
+revoke execute on function public.record_practice() from public, anon;
+revoke execute on function public.send_lock_in(uuid) from public, anon;
+grant execute on function public.send_friend_request(text) to authenticated;
+grant execute on function public.respond_friend_request(bigint, boolean) to authenticated;
+grant execute on function public.record_practice() to authenticated;
+grant execute on function public.send_lock_in(uuid) to authenticated;
+
+-- Live in-app Lock In banners (Supabase Realtime).
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'lock_ins'
+  ) then
+    alter publication supabase_realtime add table public.lock_ins;
+  end if;
+end $$;

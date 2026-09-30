@@ -1,126 +1,151 @@
 # SatWizz
 
-A mobile-first SAT grammar trainer. You work through a 9-chapter curriculum in a snap-scrolling feed, keep a daily streak, earn Sparks, and the names in every question change to a cast you pick.
+A mobile-first, gamified SAT grammar course. You work through a 9-chapter curriculum in a snap-scrolling feed, earn Sparks, keep daily and friend streaks, and climb live leaderboards. The names in every question change to a cast you pick.
 
 ## Curriculum
 
-Each chapter opens with an **Explanation Pause** card (the rules, ✓/✗ pattern chips and a worked example), then practice questions. A wrong answer comes back two cards later marked "↺ Try again". A chapter is complete once every question has been answered correctly. The first completion earns **+50 ⚡** and unlocks the next chapter.
+Each chapter opens with an **Explanation Pause** lesson card: the rules in plain language, ✓/✗ pattern chips and a worked example with your cast's names. Then come **20 practice questions** (180 in total).
+
+After each answer a **slide-up drawer** explains why the right answer works and why every other choice fails. A wrong answer comes back two cards later marked "↺ Try again". A chapter is complete once every question has been answered correctly. The first completion earns **+50 ⚡** and unlocks the next chapter.
 
 | # | Chapter | What it covers |
 |---|---|---|
-| 1 | Identifying Independent Clauses | Subject + main verb vs. fragments; which/that/who/whose clauses have no main verb |
-| 2 | Connecting Independent Clauses | Valid: `IC, conj IC` · `IC, DC` · `IC; IC` · `IC DC` · `DC, IC`. Invalid: `IC, conj DC` · `DC, DC` · `IC; DC` · `IC, LW, IC` · `IC; LW, DC` |
-| 3 | Subject-Verb Agreement | Prepositional-phrase traps, compound subjects, neither/nor, inverted sentences |
-| 4 | Verb vs. Non-Verb | Main (conjugated) verb vs. -ing participles and infinitives |
+| 1 | Identifying Independent Clauses | Subject + verb + complete thought vs. fragments; "hanging" words (Although, Because, While, Which…) |
+| 2 | Connecting Independent Clauses | Legal: `IC, conj IC` · `IC; IC` · `DC, IC` · `IC DC` · `IC, DC`. Illegal: `IC, IC` · `IC; DC` · `IC, conj DC` · `DC, DC`. Flexpos / linking-word (LW) rules: no `IC, LW, IC`, no `IC; LW, DC` |
+| 3 | Subject-Verb Agreement | Prepositional-phrase traps, along with, either/or, each/every, there is/are, flipped sentences, plus the **3:1 and 2:1 shortcuts** |
+| 4 | Verb vs. Non-Verb | Main verbs vs. -ing / "to" / "having" forms; 2:1 shortcut for verb spots |
 | 5 | Verb Tenses | Time clues, consistency, perfect tenses, past participles |
-| 6 | Transitions | Contrast, cause/effect, addition, example; no `, LW` splices, no `; LW` before a DC, no `IC; though, IC` |
-| 7 | Semicolons, Colons, Dashes | `IC; IC`, complex lists, colon/dash need an IC on the left, no dash before FANBOYS, `, which` |
-| 8 | Appositives & Non-Essential Clauses | Symmetrical `, … ,` / `— … —`; essential appositives take no commas |
-| 9 | Modifiers & Parallelism | Dangling/misplaced modifiers, A/B and list parallelism, logical comparisons |
-| Bonus | Pronouns & Possessives | Unlocks after Chapter 9 |
+| 6 | Transitions | Contrast, cause/effect, addition, example, sequence, summary; illegal connector setups like `IC; though, IC` |
+| 7 | Semicolons, Colons, Dashes | `IC; IC`, `A; B; and C` lists, colon/dash need an IC on the left, no dash before FANBOYS, `, which` |
+| 8 | Appositives & Non-Essential Clauses | Symmetrical `, … ,` / `— … —`; essential appositives ("The researcher {{NAME_1}}") take no commas |
+| 9 | Modifiers & Parallelism | The target rule for opening modifiers; A/B, list and comparison parallelism |
+| Bonus | Pronouns & Possessives | 10 questions; unlocks after Chapter 9 |
 
-**Chapter drawer.** Tap the chapter bar above the feed to open it. It shows each chapter's status (✓ done, ▶ current, 🔒 locked) and progress. You can jump to any unlocked chapter or replay a finished one. After you finish any chapter, **Mixed review** opens: endless questions from finished chapters, with missed ones first.
+**Ratio shortcuts** (taught in Chapters 3 and 4, where the answer choices are verbs):
+- **3:1:** if three choices are plural verbs and one is singular (or the reverse), the odd one out is the answer.
+- **2:1:** in a verb spot, cross out the choice that isn't a verb. Of the three left, two match in number and the odd one is the answer.
 
-## Features
+Every question where a shortcut applies is tagged, and `scripts/validate-content.js` checks the shortcut really leads to the right answer. The drawer shows a shortcut chip on those questions.
 
-- **Daily streak 🔥.** Hit your daily goal (5, 10 or 20 questions) to extend it. Until you do, an ⌛ shows the streak ends at midnight.
-- **Sparks ⚡.** Shown in the header. You earn +10 per correct answer, +5 on every 3rd answer in a row, +50 per chapter completed (first time) and +50 for your daily goal.
-- **Focus Shields 🛡️🛡️🛡️.** You get 3 per session. Each wrong answer costs one. At zero, a **Focus Break** drawer shows the chapter's rule summary. Then a 2-question review from the same chapter recharges all 3 (or skip it with a Focus Refill).
-- **Wizz Shop 🛍️.**
+**Chapter drawer.** Tap the chapter bar above the feed to see every chapter's status (✓ done, ▶ current, 🔒 locked) and progress. You can jump to any unlocked chapter. Mixed review (missed questions first) opens once you finish a chapter.
 
-  | Item | Price | What it does |
-  |---|---|---|
-  | Cast theme packs | 100 ⚡ each | New casts for every question |
-  | Aura Shield | 50 ⚡ | Protects your streak on a missed day (hold up to 5) |
-  | Aura Shield ×3 | 120 ⚡ | Three at a discount |
-  | Focus Refill | 30 ⚡ | Restores all Focus Shields without the review |
-  | Combo Saver | 40 ⚡ | The next wrong answer on a combo of 3+ keeps the combo |
-  | Double-Spark Wager | 50 ⚡ stake | Keep your streak 5 more days to win 100 ⚡ |
-  | Rare avatars | 100–300 ⚡ | Profile pictures |
+## Gamification
 
-- **Casts 🎭.** The default is **Everyday** (John, Jane and Sam). The packs are Wizard School, Football Legends, Hoops Legends, Anime Pack, Superhero Pack and Pop Icons. A **Custom** cast takes any three names, pronouns (he / she / they), a location, a skill and an event.
-- **Achievements.** Under Streak → Achievements you can unlock and wear titles: Spark Starter (3-day streak), Syntax Warlock (50 correct) and Lightning Fast (5 in a row in under 60 seconds).
-- **Profile pictures.** 12 free emoji avatars, plus 6 rare ones you unlock with Sparks.
-- **Accounts & cloud sync ☁︎.** Sign up with Google or email and password, or continue as a guest. The sign-up screen appears when you tap **Save** or the first time you get 3 in a row.
-- **Keyboard:** `A`–`D` or `1`–`4` to answer, `↓`/`Enter` for the next card.
+- **Sparks ⚡.** You earn +10 per correct answer, +5 on every 3rd answer in a row, +50 per chapter (first time) and +50 for your daily goal.
+- **Focus Shields 🛡️🛡️🛡️.** You get 3 per session. Each wrong answer costs one. At zero, a **Focus Break** drawer shows the chapter's rule summary, then a 2-question review recharges all three. A Focus Refill skips the review.
+- **Daily streak 🔥.** It grows each day you hit your goal (5, 10 or 20). **Aura Shields 💠** cover a missed day.
+- **Wizz Shop.** Theme packs (100 ⚡), Aura Shields (50 ⚡, or 3 for 120), Focus Refill, Combo Saver, the Double-Spark Wager and rare avatars.
+- **Achievements.** Wearable titles: Spark Starter, Syntax Warlock and Lightning Fast.
+- **Sound & haptics.** Web Audio effects: a crisp tap, a correct chime, a wrong thud, a combo sparkle and a chapter fanfare. There's no audio file to load. `navigator.vibrate(50)` fires on correct answers and combo milestones. Both can be turned off under Profile → Settings.
+- **Demo Mode.** Tap the SatWizz logo 5 times to unlock every chapter and max out Sparks for testing or demos. Your real progress is saved first and restored when you tap 5 times again. Nothing syncs or reaches the leaderboards while Demo Mode is on.
 
-## Content and brand rules
+## Social
 
-Cast names can include real people and characters, since names alone aren't copyrighted. Pack labels and flavor text avoid franchise titles, brand names and coined proprietary terms (for example, no league, award or studio trademarks). The footer says names are used for fun and imply no endorsement. Keep to the same rule when you add casts.
+- **Ranks tab.** **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.
+- **Friends.** Search by `@username` or share your invite link (`…/?invite=yourname`). Opening an invite while signed out asks you to sign in, then sends the request automatically. If both people send a request, it's accepted.
+- **Friend streaks 🔥.** A friend streak grows once per day when you and a friend both practice within 24 hours. Missing a day restarts it.
+- **Lock In 🔒.** Next to a friend who hasn't practiced today, send "*{name} told you to Lock In! Keep your 12-day streak alive.*" It arrives as a **push notification** on their devices and as an **in-app banner**, live if they have the app open. You can send it once per friend every 4 hours.
+- Every new account gets a username like `maya_4821`. You can change it and your display name under Profile.
 
 ## Run it
 
 It's a static site with no build step.
 
 ```sh
-python3 -m http.server 8000
-# then open http://localhost:8000
+python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
-Opening `index.html` directly also works for guest mode, but Google sign-in needs http(s).
+Without Supabase settings it runs in guest mode, and progress stays in `localStorage`.
 
-## Set up accounts (Supabase)
-
-Without this, SatWizz runs in guest-only mode, and progress stays in `localStorage`.
+## Set up Supabase (accounts, sync, leaderboards, friends)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql). It's safe to re-run. **Existing projects must re-run it** to add the chapter columns.
+2. In **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql). It's safe to re-run. **Existing projects must re-run it** to add the social tables.
+   - It creates `profiles` and `user_settings` (private sync), `user_public` (leaderboard cards), `friendships` (with the friend streak), `lock_ins` and `push_subscriptions`.
+   - It adds row-level security and the functions `send_friend_request`, `respond_friend_request`, `record_practice` and `send_lock_in`.
+   - It adds `lock_ins` to Supabase Realtime.
 3. Put the **Project URL** and **anon public key** (from **Project Settings → API**) in [`js/config.js`](js/config.js).
 4. In **Authentication → URL Configuration**, add your site's URL to **Redirect URLs**.
 5. For Google sign-in, enable **Authentication → Providers → Google** with an OAuth client from Google Cloud.
 
-**What syncs:**
-- `profiles` table: Sparks, streak, best streak, XP, Aura Shields, unlocked and completed chapters, unlocked themes, badges and avatars, Combo Savers and the wager.
-- `user_settings` table: cast, custom names, daily goal and avatar.
-- Focus Shields are per session and don't sync. Per-question progress inside a chapter, daily history and accuracy stats stay on the device.
+**What's public:** `user_public` holds only the display name, @username, avatar, XP, Sparks, streak and last-practice time. Every signed-in user can read it, because leaderboards and friend search need it. Everything else is readable only by its owner. Friendships can't be written directly: requests, accepts, streaks and Lock Ins all go through the checked SQL functions.
 
-**Signing in on a device that already has progress:**
-- Unlocks, completed chapters and badges are combined.
-- XP and best streak keep the higher value.
-- The streak comes from whichever side met its goal more recently.
-- Spendable balances: whichever side changed last wins for the same account. For guest progress, the higher balance is kept.
+## Set up Lock In push notifications
 
-The Sparks economy is enforced in the browser only. Row-level security limits whose row you can write, not what you write. To harden it, move purchases into Postgres functions that check prices on the server.
+Push needs HTTPS, a service worker (`sw.js`), the web app manifest and a small Supabase Edge Function that sends the notifications.
+
+1. Generate a VAPID key pair (once):
+   ```sh
+   npx web-push generate-vapid-keys
+   ```
+2. Put the **public** key in `js/config.js` → `vapidPublicKey`. Never put the private key in the repo.
+3. Store the keys as Edge Function secrets and deploy the function:
+   ```sh
+   supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com APP_URL=https://your-site/
+   supabase functions deploy lock-in
+   ```
+   The function lives in [`supabase/functions/lock-in/index.ts`](supabase/functions/lock-in/index.ts). It stores the alert through `send_lock_in` (as the signed-in user, so all the checks apply), pushes it to the friend's devices, and removes expired subscriptions.
+4. Each user turns alerts on from **Ranks → Friends League** or **Profile → Settings**.
+
+**Notes:**
+- **iPhone:** web push only works after **Share → Add to Home Screen** (iOS 16.4+). The app explains this when it detects Safari.
+- **Without the function:** if the function isn't deployed, Lock Ins still work as in-app banners.
 
 ## Project layout
 
 ```
-index.html          page shell, fonts, script order
-css/styles.css      all styles (light + dark theme)
-js/config.js        Supabase URL and anon key (empty = guest-only)
-js/questions.js     the 9-chapter curriculum (+ bonus): lessons and questions
-js/themes.js        casts (names, pronouns, flavor, prices) and avatars
-js/rewards.js       Sparks, shop items, Focus, Aura Shields, wager, badges (no DOM)
-js/auth.js          Supabase auth, session listener, cloud sync and merge
-js/onboarding.js    sign-up / log-in modal
-js/app.js           chapter feed, drawer, streaks, shop, personalization
-supabase/schema.sql tables and row-level security policies
+index.html                  page shell, fonts, manifest, script order
+manifest.webmanifest, sw.js installable app + push notifications
+icons/                      app, maskable, Apple touch and badge icons
+css/styles.css              all styles (light + dark)
+js/config.js                Supabase URL, anon key, VAPID public key
+js/themes.js                casts and avatars
+js/curriculum/ch1-ch10.js   one file per chapter: lesson + 20 questions with per-choice notes
+js/questions.js             orders the chapters and builds the question list
+js/rewards.js               Sparks, shop, Focus, Aura Shields, wager, badges (no DOM)
+js/sfx.js                   Web Audio sound effects + vibration
+js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push
+js/onboarding.js            sign-up / log-in modal
+js/social-view.js           Ranks tab: leaderboards, friend streaks, requests, invites
+js/app.js                   chapter feed, drawers, streaks, shop, profile, demo mode
+scripts/validate-content.js content checks for the curriculum
+supabase/schema.sql         tables, row-level security, social functions
+supabase/functions/lock-in  Edge Function that sends Lock In pushes
 ```
-
-All modules share one namespace, `window.SatWizz` (`SatWizz.chapters`, `SatWizz.questions`, `SatWizz.themes`, `SatWizz.auth`, ...).
 
 ## Adding questions
 
-Add a question to a chapter's `questions` array in `js/questions.js`:
+Add to a chapter's `questions` array in `js/curriculum/chN.js`, then run `node scripts/validate-content.js`:
 
 ```js
 {
-  id: "c3-8", skill: "Prepositional traps",
+  id: "c3-21", skill: "Prepositional traps", shortcut: "3:1", forms: ["s", "p", "p", "p"],
   text: "The list of {{NAME_1_POSS}} goals for {{EVENT}} ______ taped to the mirror.",
   choices: ["is", "are", "were", "have been"],
-  answer: 0,          // index of the correct choice (shuffled on screen)
-  why: "The subject is \"list\" (singular), so use \"is.\"",
+  answer: 0,
+  notes: [
+    "The subject is “list,” which is singular, so use “is.”",   // why the answer works
+    "“Are” matches “goals,” the trap.",                          // why each other choice fails
+    "“Were” is plural.",
+    "“Have been” is plural.",
+  ],
 }
 ```
 
 - `______` marks the blank. Each choice replaces exactly that blank.
 - Placeholders:
-  - `{{NAME_1}}`, `{{NAME_2}}`, `{{NAME_3}}`
-  - `{{NAME_n_POSS}}` (his / her / their) and `{{NAME_n_OBJ}}` (him / her / them)
-  - `{{LOCATION}}`, `{{EVENT}}`, `{{SKILL}}`
-- Use the flavor placeholders mid-sentence only, since they may start with a lowercase "the".
+  - `{{NAME_1}}`–`{{NAME_3}}`
+  - `{{NAME_n_POSS}}` / `{{NAME_n_OBJ}}` (his/her/their, him/her/them)
+  - `{{LOCATION}}`, `{{EVENT}}`, `{{SKILL}}` (mid-sentence only)
 - Never make a subject pronoun agree with a verb, because custom casts can use *they*.
-- Add `kind: "transition"` for logical-transition questions.
+- `kind: "transition"` switches to the logical-transition prompt.
+- `shortcut` + `forms` (s / p / x) mark 3:1 and 2:1 questions.
+
+## Content and brand rules
+
+Cast names may include real people and characters, since names alone aren't copyrighted. Labels and flavor text avoid franchise titles, brand names and coined proprietary terms, and the footer says names imply no endorsement.
+
+The Sparks economy and leaderboards are enforced in the browser. Row-level security limits whose row you can write, not what you write. For competitive stakes, move XP and Sparks changes into server-side functions.
 
 ---
 

@@ -160,13 +160,37 @@
     const u = user();
     if (!u) return;
     const rows = toRows(state, u);
-    const [a, b] = await Promise.all([
+    const [a, b, c] = await Promise.all([
       client.from("profiles").upsert(rows.profile, { onConflict: "user_id" }),
       client.from("user_settings").upsert(rows.settings, { onConflict: "user_id" }),
+      client.from("user_public").upsert(publicRow(state, u), { onConflict: "user_id" }),
     ]);
     if (a.error) throw a.error;
     if (b.error) throw b.error;
+    if (c.error) throw c.error;
   }
+
+  // The leaderboard card. Username is only sent once it has been claimed, so a
+  // sync never overwrites it with an empty value.
+  function publicRow(state, u) {
+    const row = {
+      user_id: u.id,
+      display_name: cleanDisplayName(state.displayName) || defaultDisplayName(u),
+      avatar: state.avatar,
+      total_xp: Math.max(0, Math.round(state.xp || 0)),
+      sparks: Math.max(0, Math.round(state.sparks || 0)),
+      current_streak: Math.max(0, Math.round(state.streak || 0)),
+      updated_at: new Date().toISOString(),
+    };
+    if (state.username) row.username = state.username;
+    return row;
+  }
+
+  const cleanDisplayName = (s) => String(s || "").replace(/\s+/g, " ").trim().slice(0, 30);
+  const defaultDisplayName = (u) => {
+    const local = String((u && u.email) || "").split("@")[0].replace(/[._-]+/g, " ").trim();
+    return cleanDisplayName(local ? local.charAt(0).toUpperCase() + local.slice(1) : "SatWizz student");
+  };
 
   // Debounced push; call after every local save.
   let pushTimer;
@@ -274,6 +298,261 @@
     return out;
   }
 
+  // ======================================================================
+  // Social: usernames, friends, friend streaks, leaderboards, Lock In.
+  // All of these need a signed-in user; they throw friendly Errors.
+  // ======================================================================
+  const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+  const PUBLIC_COLS = "user_id, username, display_name, avatar, total_xp, sparks, current_streak, last_practice_at";
+  const FRIENDLY = {
+    user_not_found: "No one has that username. Check the spelling.",
+    cannot_friend_self: "That's your own username.",
+    not_friends: "You can only Lock In friends.",
+    already_locked_in: "You already sent a Lock In. Try again in a few hours.",
+    request_not_found: "That request is no longer there.",
+    not_signed_in: "Sign in first.",
+  };
+
+  function friendly(err) {
+    const msg = (err && (err.message || err.error)) || String(err || "");
+    const code = Object.keys(FRIENDLY).find((k) => msg.includes(k));
+    if (code) return new Error(FRIENDLY[code]);
+    if (err && err.code === "23505") return new Error("That username is taken.");
+    if (/failed to fetch|network/i.test(msg)) return new Error("Couldn't reach the server. Check your connection.");
+    return new Error(msg || "Something went wrong. Try again.");
+  }
+
+  function me() {
+    requireClient();
+    const u = user();
+    if (!u) throw new Error(FRIENDLY.not_signed_in);
+    return u;
+  }
+
+  const normalizeUsername = (s) => String(s || "").trim().replace(/^@/, "").toLowerCase();
+
+  // Claim or change your @username. Returns the saved username.
+  async function claimUsername(name, state) {
+    const u = me();
+    const username = normalizeUsername(name);
+    if (!USERNAME_RE.test(username)) throw new Error("Use 3–20 lowercase letters, numbers or underscores.");
+    const row = { ...publicRow(state, u), username };
+    const { error } = await client.from("user_public").upsert(row, { onConflict: "user_id" });
+    if (error) throw friendly(error);
+    return username;
+  }
+
+  // Returns { username, displayName } for the signed-in user, giving a new
+  // account a username like "maya_4821" so friends can find it.
+  async function ensureUsername(state) {
+    const u = me();
+    const { data } = await client.from("user_public").select("username, display_name").eq("user_id", u.id).maybeSingle();
+    const displayName = (data && data.display_name) || cleanDisplayName(state.displayName) || defaultDisplayName(u);
+    if (data && data.username) return { username: data.username, displayName };
+    const base = (String(u.email || "").split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "") || "wizz").slice(0, 14).padEnd(3, "x");
+    for (let i = 0; i < 6; i++) {
+      const candidate = `${base}_${Math.floor(1000 + Math.random() * 9000)}`;
+      try {
+        return { username: await claimUsername(candidate, { ...state, displayName }), displayName };
+      } catch (e) {
+        if (!/taken/.test(e.message)) throw e;
+      }
+    }
+    throw new Error("Couldn't pick a username. Choose one in Profile.");
+  }
+
+  async function searchUsers(query) {
+    const u = me();
+    const q = normalizeUsername(query).replace(/[^a-z0-9_]/g, "");
+    if (q.length < 2) return [];
+    const { data, error } = await client.from("user_public").select(PUBLIC_COLS)
+      .ilike("username", `${q}%`).neq("user_id", u.id).order("username").limit(8);
+    if (error) throw friendly(error);
+    return data || [];
+  }
+
+  async function sendFriendRequest(username) {
+    me();
+    const { data, error } = await client.rpc("send_friend_request", { target_username: normalizeUsername(username) });
+    if (error) throw friendly(error);
+    return data; // friendships row; status "accepted" if they had already asked you
+  }
+
+  async function respondFriendRequest(id, accept) {
+    me();
+    const { error } = await client.rpc("respond_friend_request", { request_id: id, accept });
+    if (error) throw friendly(error);
+  }
+
+  const utcDay = (d = new Date()) => d.toISOString().slice(0, 10);
+  const utcYesterday = () => utcDay(new Date(Date.now() - 864e5));
+
+  // Friends with their public cards and the shared streak.
+  async function listFriends() {
+    const u = me();
+    const { data: rows, error } = await client.from("friendships").select("*");
+    if (error) throw friendly(error);
+    const otherId = (f) => (f.user_low === u.id ? f.user_high : f.user_low);
+    const ids = [...new Set((rows || []).map(otherId))];
+    let cards = [];
+    if (ids.length) {
+      const res = await client.from("user_public").select(PUBLIC_COLS).in("user_id", ids);
+      if (res.error) throw friendly(res.error);
+      cards = res.data || [];
+    }
+    const byId = Object.fromEntries(cards.map((c) => [c.user_id, c]));
+    const alive = (f) => f.streak_date && f.streak_date >= utcYesterday();
+    const out = { friends: [], incoming: [], outgoing: [] };
+    for (const f of rows || []) {
+      const profile = byId[otherId(f)] || { user_id: otherId(f), display_name: "Friend", avatar: "fox" };
+      const lastAt = profile.last_practice_at ? Date.parse(profile.last_practice_at) : 0;
+      const entry = {
+        id: f.id,
+        profile,
+        streak: alive(f) ? f.streak : 0,
+        practicedRecently: Date.now() - lastAt < 20 * 3600e3, // "active" for Lock In purposes
+        lastPracticeAt: lastAt || null,
+      };
+      if (f.status === "accepted") out.friends.push(entry);
+      else if (f.requested_by === u.id) out.outgoing.push(entry);
+      else out.incoming.push(entry);
+    }
+    out.friends.sort((a, b) => b.streak - a.streak || (b.profile.total_xp || 0) - (a.profile.total_xp || 0));
+    return out;
+  }
+
+  // scope: "global" (top 50) or "friends"; metric: "xp" or "sparks".
+  async function leaderboard(scope, metric, mine) {
+    const u = me();
+    const col = metric === "sparks" ? "sparks" : "total_xp";
+    let rows;
+    if (scope === "friends") {
+      const { data: fr, error } = await client.from("friendships").select("user_low, user_high").eq("status", "accepted");
+      if (error) throw friendly(error);
+      const ids = [u.id, ...(fr || []).map((f) => (f.user_low === u.id ? f.user_high : f.user_low))];
+      const res = await client.from("user_public").select(PUBLIC_COLS).in("user_id", ids).order(col, { ascending: false });
+      if (res.error) throw friendly(res.error);
+      rows = res.data || [];
+    } else {
+      const res = await client.from("user_public").select(PUBLIC_COLS).order(col, { ascending: false }).limit(50);
+      if (res.error) throw friendly(res.error);
+      rows = res.data || [];
+    }
+    // Your rank = 1 + number of people strictly ahead of you.
+    let myRank = rows.findIndex((r) => r.user_id === u.id) + 1 || null;
+    if (!myRank && scope === "global" && mine != null) {
+      const { count, error } = await client.from("user_public").select("user_id", { count: "exact", head: true }).gt(col, mine);
+      if (!error && typeof count === "number") myRank = count + 1;
+    }
+    return { rows, myRank, column: col };
+  }
+
+  // Marks you active and grows friend streaks. Cheap; the app throttles it.
+  async function recordPractice() {
+    if (!client || !user()) return;
+    const { error } = await client.rpc("record_practice");
+    if (error) console.warn("SatWizz: record_practice failed", error);
+  }
+
+  // Lock In a friend: the Edge Function stores the alert and pushes it. If the
+  // function isn't deployed, fall back to storing it (in-app alert only).
+  async function sendLockIn(friendId) {
+    me();
+    const { data, error } = await client.functions.invoke("lock-in", { body: { friendId } });
+    if (!error) return { pushed: (data && data.sent) > 0, message: data && data.message };
+    let status = 0;
+    let body = null;
+    try {
+      status = error.context && error.context.status;
+      body = error.context && typeof error.context.json === "function" ? await error.context.json() : null;
+    } catch (e) { /* not JSON */ }
+    if (body && body.error && status >= 400 && status < 500 && status !== 404) throw friendly(body);
+    // Not deployed (404) or unreachable: store it directly so it still shows in-app.
+    const res = await client.rpc("send_lock_in", { target: friendId });
+    if (res.error) throw friendly(res.error);
+    return { pushed: false, message: res.data && res.data.message };
+  }
+
+  async function unreadLockIns() {
+    const u = me();
+    const { data, error } = await client.from("lock_ins").select("*")
+      .eq("to_user", u.id).is("read_at", null).order("created_at", { ascending: false }).limit(5);
+    if (error) throw friendly(error);
+    return data || [];
+  }
+
+  async function markLockInsRead(ids) {
+    if (!ids.length) return;
+    me();
+    const { error } = await client.from("lock_ins").update({ read_at: new Date().toISOString() }).in("id", ids);
+    if (error) console.warn("SatWizz: couldn't mark Lock In read", error);
+  }
+
+  // Live in-app alerts while the app is open. Returns an unsubscribe function.
+  function subscribeLockIns(onAlert) {
+    const u = user();
+    if (!client || !u || typeof client.channel !== "function") return () => {};
+    const channel = client
+      .channel(`lock-ins-${u.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "lock_ins", filter: `to_user=eq.${u.id}` },
+        (payload) => onAlert(payload.new))
+      .subscribe();
+    return () => client.removeChannel(channel);
+  }
+
+  // ---------- Web Push ----------
+  const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+  // unsupported | not-configured | needs-install | default | denied | enabled
+  async function pushState() {
+    if (!cfg.vapidPublicKey) return "not-configured";
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      return isIOS() && !isStandalone() ? "needs-install" : "unsupported";
+    }
+    if (Notification.permission === "denied") return "denied";
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg && (await reg.pushManager.getSubscription());
+      if (sub && Notification.permission === "granted") return "enabled";
+    } catch (e) { /* treat as not enabled */ }
+    return "default";
+  }
+
+  function urlBase64ToUint8Array(base64) {
+    const padded = (base64 + "=".repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(padded);
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  }
+
+  // Must be called from a tap (browsers require a user gesture for the prompt).
+  async function enablePush() {
+    me();
+    const state = await pushState();
+    if (state === "needs-install") throw new Error("On iPhone, add SatWizz to your Home Screen first (Share → Add to Home Screen), then turn alerts on there.");
+    if (state === "unsupported") throw new Error("This browser doesn't support notifications.");
+    if (state === "not-configured") throw new Error("Push alerts aren't set up on this copy of SatWizz yet.");
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") throw new Error("Notifications are blocked. Allow them in your browser settings to get Lock In alerts.");
+    const reg = await navigator.serviceWorker.register("sw.js");
+    await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) ||
+      (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(cfg.vapidPublicKey) }));
+    const { endpoint, keys } = sub.toJSON();
+    const { error } = await client.from("push_subscriptions")
+      .upsert({ user_id: user().id, endpoint, p256dh: keys.p256dh, auth: keys.auth }, { onConflict: "endpoint" });
+    if (error) throw friendly(error);
+    return "enabled";
+  }
+
+  async function disablePush() {
+    const reg = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    const sub = reg && (await reg.pushManager.getSubscription());
+    if (!sub) return;
+    if (client && user()) await client.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+    await sub.unsubscribe();
+  }
+
   SW.auth = {
     init,
     available,
@@ -290,5 +569,22 @@
     merge,
     status: getStatus,
     onStatus,
+    defaultDisplayName,
+    // social
+    claimUsername,
+    ensureUsername,
+    searchUsers,
+    sendFriendRequest,
+    respondFriendRequest,
+    listFriends,
+    leaderboard,
+    recordPractice,
+    sendLockIn,
+    unreadLockIns,
+    markLockInsRead,
+    subscribeLockIns,
+    pushState,
+    enablePush,
+    disablePush,
   };
 })();

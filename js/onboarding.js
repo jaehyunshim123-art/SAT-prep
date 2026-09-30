@@ -1,5 +1,5 @@
 // SatWizz sign-up / log-in modal. Exposes window.SatWizz.onboarding.
-// open({ reason, onGuest }) shows the overlay; reason is "save" or "combo".
+// open({ reason, onGuest }) shows the overlay; reason is "save", "combo" or "invite".
 (function () {
   "use strict";
 
@@ -14,6 +14,10 @@
     combo: {
       title: "3 in a row! Don't lose that streak",
       body: "Make a free account so your streak and XP follow you to any phone or laptop.",
+    },
+    invite: {
+      title: "A friend invited you 🔥",
+      body: "Sign in to accept their friend request, start a friend streak and see where you rank.",
     },
   };
 
