@@ -6,14 +6,17 @@
   const THEMES = SW.themes;
   const PRONOUNS = SW.pronouns;
   const DOMAINS = SW.domains;
+  const TIPS = SW.tips;
   const auth = SW.auth;
   const onboarding = SW.onboarding;
+  const rewards = SW.rewards;
+  const RULES = rewards.RULES;
   const BY_ID = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
   const STORE_KEY = "satwizz.v1";
   const LEGACY_STORE_KEY = "brainblast-sat.v1"; // pre-rebrand saves
   const SIGNUP_PROMPT_COMBO = 3;
   const GOALS = [5, 10, 20];
-  const MAX_FREEZES = 2;
+  const REVIEW_LENGTH = 2;
   const PROMPT_GRAMMAR = "Which choice completes the text so that it conforms to the conventions of Standard English?";
   const PROMPT_TRANSITION = "Which choice completes the text with the most logical transition?";
 
@@ -39,27 +42,60 @@
     streak: 0,
     bestStreak: 0,
     lastDone: null, // date key of the last day the goal was met
-    freezes: 0,
+    freezes: 0, // Aura Shields (synced as streak_freezes)
     days: {}, // dateKey -> { n, c, done, frozen }
     skills: {}, // skill -> { seen, right }
     missed: [], // question ids answered wrong and not yet fixed
     filter: "all",
     guest: false, // chose "Continue as Guest", so don't prompt again on a combo
+    // gamification
+    sparks: 0,
+    focus: RULES.maxFocus,
+    focusDay: null, // Focus refills to full once per day
+    unlockedThemes: [],
+    badges: [],
+    title: null, // equipped badge id
+    wager: null,
+    totalCorrect: 0,
+    comboSavers: 0,
+    avatar: SW.defaultAvatarId,
+    unlockedAvatars: [],
+    // sync bookkeeping
+    updatedAt: 0, // ms of the last change made on this device
+    syncedUserId: null, // account this device last merged with
   };
 
   let S = load();
 
+  function normalize(saved) {
+    const s = { ...structuredClone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
+    if (!Array.isArray(s.unlockedThemes)) s.unlockedThemes = [];
+    if (!Array.isArray(s.badges)) s.badges = [];
+    if (!Array.isArray(s.missed)) s.missed = [];
+    if (!Array.isArray(s.unlockedAvatars)) s.unlockedAvatars = [];
+    if (!SW.avatars.some((a) => a.id === s.avatar)) s.avatar = SW.defaultAvatarId;
+    // Saves from before Sparks existed: count correct answers from skill stats.
+    if (typeof saved.totalCorrect !== "number") {
+      s.totalCorrect = Object.values(s.skills || {}).reduce((n, k) => n + (k.right || 0), 0);
+    }
+    // Anyone already using a cast that became a paid pack keeps it.
+    const current = THEMES.find((t) => t.id === s.themeId);
+    if (current && current.price && !s.unlockedThemes.includes(current.id)) s.unlockedThemes.push(current.id);
+    return s;
+  }
+
   function load() {
     try {
       const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_STORE_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        return { ...structuredClone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
-      }
+      if (raw) return normalize(JSON.parse(raw));
     } catch (e) { /* storage unavailable: start fresh */ }
     return structuredClone(DEFAULTS);
   }
-  function save() {
+
+  // touch=false for bookkeeping (day rollover) so a stale device doesn't look
+  // newer than the cloud when merging.
+  function save(touch = true) {
+    if (touch) S.updatedAt = Date.now();
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
     auth.schedulePush(() => S);
   }
@@ -73,26 +109,37 @@
   const dayDiff = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 864e5);
   const today = () => (S.days[todayKey()] ||= { n: 0, c: 0 });
 
-  // Handles missed days: spend streak freezes if there are enough, otherwise reset.
+  // New day: refill Focus. Missed days: spend Aura Shields if there are
+  // enough, otherwise the streak (and any wager) is lost.
   function rollover() {
-    if (!S.lastDone || S.streak === 0) return;
     const t = todayKey();
-    const gap = dayDiff(S.lastDone, t);
-    if (gap <= 1) return;
-    const missedDays = gap - 1;
-    if (S.freezes >= missedDays) {
-      for (let i = 1; i <= missedDays; i++) {
-        const k = addDays(S.lastDone, i);
-        S.days[k] = { ...(S.days[k] || { n: 0, c: 0 }), frozen: true };
-      }
-      S.freezes -= missedDays;
-      S.lastDone = addDays(t, -1);
-      toast(`🧊 ${missedDays === 1 ? "A streak freeze" : missedDays + " streak freezes"} saved your ${S.streak}-day streak`);
-    } else {
-      toast(`Your ${S.streak}-day streak ended. Start a new one today.`);
-      S.streak = 0;
+    let changed = false;
+    if (S.focusDay !== t) {
+      S.focusDay = t;
+      S.focus = RULES.maxFocus;
+      changed = true;
     }
-    save();
+    if (S.lastDone && S.streak > 0) {
+      const gap = dayDiff(S.lastDone, t);
+      if (gap > 1) {
+        const missedDays = gap - 1;
+        if (S.freezes >= missedDays) {
+          for (let i = 1; i <= missedDays; i++) {
+            const k = addDays(S.lastDone, i);
+            S.days[k] = { ...(S.days[k] || { n: 0, c: 0 }), frozen: true };
+          }
+          S.freezes -= missedDays;
+          S.lastDone = addDays(t, -1);
+          toast(`💠 ${missedDays === 1 ? "An Aura Shield" : missedDays + " Aura Shields"} saved your ${S.streak}-day streak`);
+        } else {
+          const lost = rewards.loseWager(S);
+          toast(`Your ${S.streak}-day streak ended${lost ? ` and your ${lost.stake} ⚡ wager was lost` : ""}. Start a new one today.`);
+          S.streak = 0;
+        }
+        changed = true;
+      }
+    }
+    if (changed) save(false);
   }
 
   const doneToday = () => S.lastDone === todayKey();
@@ -110,7 +157,8 @@
         event: c.event.trim() || fallback.event,
       };
     }
-    return THEMES.find((t) => t.id === themeId) || THEMES[0];
+    const t = THEMES.find((x) => x.id === themeId);
+    return t && rewards.isThemeUnlocked(S, t.id) ? t : THEMES[0];
   }
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
@@ -128,6 +176,32 @@
       return flavor != null ? esc(flavor) : m;
     });
   }
+
+  // Free casts first, then packs by price.
+  const themesForPicker = () => THEMES.slice().sort((a, b) => (a.price || 0) - (b.price || 0));
+
+  // A cast button for the welcome card and the Personalize view.
+  function castButton(t, onPick) {
+    const locked = !rewards.isThemeUnlocked(S, t.id);
+    const sub = t.id === "custom" ? "Type any names you like" : t.people.map((p) => p.name).join(", ");
+    const b = h("button", {
+      class: `cast-btn${locked ? " locked" : ""}`,
+      type: "button",
+      "data-id": t.id,
+      "aria-pressed": String(t.id === S.themeId),
+    }, `<b>${esc(t.label)}</b><span>${locked ? `🔒 ${t.price} ⚡ in the Wizz Shop` : esc(sub)}</span>`);
+    b.addEventListener("click", () => {
+      if (locked) {
+        show("shop");
+        toast(`Unlock ${t.label} in the Wizz Shop for ${t.price} ⚡`);
+        return;
+      }
+      onPick(t);
+    });
+    return b;
+  }
+
+  const currentAvatar = () => rewards.avatarById(S.avatar) || rewards.avatarById(SW.defaultAvatarId);
 
   // ---------- Question queue ----------
   const shuffle = (arr) => {
@@ -183,6 +257,7 @@
     if (html) el.innerHTML = html;
     return el;
   };
+  const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ---------- App shell ----------
   const app = $("#app");
@@ -190,68 +265,102 @@
     <header class="hud">
       <div class="brand" aria-label="SatWizz">Sat<span>Wizz</span></div>
       <span class="pill flame" id="hud-streak" title="Day streak"></span>
-      <span class="pill combo" id="hud-combo" title="Correct in a row"></span>
+      <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the Wizz Shop"></button>
       <span class="pill" id="hud-xp" title="Total XP"></span>
-      <button class="acct" id="hud-account" type="button"></button>
+      <button class="avatar sm" id="hud-avatar" type="button"></button>
+      <button class="acct" id="hud-account" type="button">Save</button>
     </header>
     <div>
       <div class="goalbar" aria-hidden="true"><i id="goal-fill"></i></div>
       <div class="goalnote"><span id="goal-text"></span><span id="goal-risk"></span></div>
     </div>
-    <div class="chips" id="chips" role="toolbar" aria-label="Question filter"></div>
+    <div id="feed-tools">
+      <div class="focusbar" id="focusbar"></div>
+      <div class="chips" id="chips" role="toolbar" aria-label="Question filter"></div>
+    </div>
     <main class="view feed" id="view-feed" aria-live="polite"></main>
     <main class="view scrollview" id="view-streak" hidden></main>
+    <main class="view scrollview" id="view-shop" hidden></main>
     <main class="view scrollview" id="view-you" hidden></main>
     <nav class="tabs" role="tablist">
-      <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">⚡</span>Practice</button>
+      <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">✏️</span>Practice</button>
       <button class="tab" role="tab" data-view="streak" aria-selected="false"><span class="ico" aria-hidden="true">🔥</span>Streak</button>
+      <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
       <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Personalize</button>
     </nav>
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board.</footer>`;
 
   const feed = $("#view-feed");
+  const VIEWS = ["feed", "streak", "shop", "you"];
   let currentView = "feed";
+  let streakTab = "streak"; // or "achievements"
 
   app.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.view)));
-  $("#hud-account").addEventListener("click", () => {
-    if (auth.user()) show("you");
-    else openSignup("save");
+  $("#hud-sparks").addEventListener("click", () => show("shop"));
+  $("#hud-account").addEventListener("click", () => openSignup("save"));
+  $("#hud-avatar").addEventListener("click", () => {
+    show("you");
+    $("#view-you").scrollTop = 0;
   });
 
   function show(view) {
     currentView = view;
     app.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.view === view)));
-    for (const v of ["feed", "streak", "you"]) $(`#view-${v}`).hidden = v !== view;
-    $("#chips").hidden = view !== "feed";
+    for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
+    $("#feed-tools").hidden = view !== "feed";
     if (view === "streak") renderStreak();
+    if (view === "shop") renderShop();
     if (view === "you") renderYou();
   }
 
+  function rerenderCurrent() {
+    if (currentView === "streak") renderStreak();
+    if (currentView === "shop") renderShop();
+    if (currentView === "you") renderYou();
+  }
+
   // ---------- HUD ----------
-  function renderHud(bump) {
+  function bumpEl(el) {
+    el.classList.remove("bump");
+    void el.offsetWidth;
+    el.classList.add("bump");
+  }
+
+  // bump: list of "streak" | "sparks"
+  function renderHud(bump = []) {
     rollover();
     const st = $("#hud-streak");
     st.innerHTML = `🔥 ${S.streak}${atRisk() ? ' <span class="risk" title="Streak at risk">⌛</span>' : ""}`;
     st.classList.toggle("cold", S.streak === 0 || atRisk());
-    const co = $("#hud-combo");
-    co.textContent = `⚡ ${S.combo}`;
-    co.classList.toggle("hot", S.combo >= 3);
+    $("#hud-sparks").textContent = `⚡ ${S.sparks}`;
+    $("#hud-sparks").setAttribute("aria-label", `${S.sparks} Sparks. Open the Wizz Shop`);
     $("#hud-xp").textContent = `${S.xp} XP`;
     renderAccountButton();
+    renderFocus();
 
     const n = today().n;
     $("#goal-fill").style.width = `${Math.min(100, (n / S.goal) * 100)}%`;
     $("#goal-text").textContent = doneToday()
       ? `Daily goal done · ${n} answered today`
-      : `${n} / ${S.goal} for today's streak`;
+      : `${n} / ${S.goal} today · +${RULES.dailyGoalSparks} ⚡ at goal`;
     $("#goal-risk").textContent = atRisk() ? "⌛ Streak ends at midnight" : "";
 
-    if (bump) {
-      const el = bump === "streak" ? st : co;
-      el.classList.remove("bump");
-      void el.offsetWidth;
-      el.classList.add("bump");
-    }
+    if (bump.includes("streak")) bumpEl(st);
+    if (bump.includes("sparks")) bumpEl($("#hud-sparks"));
+  }
+
+  // Focus Shields + combo, shown above the question feed.
+  function renderFocus(bumpCombo) {
+    const bar = $("#focusbar");
+    const shields = Array.from({ length: RULES.maxFocus }, (_, i) =>
+      `<span class="shield${i < S.focus ? "" : " lost"}" aria-hidden="true">🛡️</span>`).join("");
+    bar.innerHTML = `
+      <span class="label-sm">Focus</span>
+      <span class="shields" role="img" aria-label="${S.focus} of ${RULES.maxFocus} Focus Shields">${shields}</span>
+      ${S.focus === 0 ? '<button class="mini-btn" type="button" id="restore-focus">Restore Focus</button>' : ""}
+      <span class="combo${S.combo >= 3 ? " hot" : ""}" id="combo-pill" title="Correct answers in a row">×${S.combo}<span class="combo-word"> combo</span></span>`;
+    $("#restore-focus", bar)?.addEventListener("click", () => openFocusBreak());
+    if (bumpCombo) bumpEl($("#combo-pill", bar));
   }
 
   function renderChips() {
@@ -294,7 +403,10 @@
         if (!feed.querySelector(".empty")) feed.append(emptyCard());
         break;
       }
-      feed.append(questionCard(next.q, next.isRetry));
+      cardCount++;
+      const card = makeCard(next.q, { isRetry: next.isRetry, label: `#${cardCount}` });
+      visObs.observe(card);
+      feed.append(card);
     }
     // keep a sentinel at the end so the feed never runs out
     feed.querySelector(".sentinel")?.remove();
@@ -333,10 +445,8 @@
       grid.querySelectorAll(".cast-btn").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === S.themeId)));
       inner.querySelector("#welcome-preview").innerHTML = fill(QUESTIONS[0].text.replace("______", castOf().craft + ". By"), castOf());
     };
-    for (const t of THEMES) {
-      const b = h("button", { class: "cast-btn", type: "button", "data-id": t.id }, `<b>${esc(t.label)}</b><span>${esc(t.people.map((p) => p.name).join(", "))}</span>`);
-      b.addEventListener("click", () => { S.themeId = t.id; save(); paint(); refreshUnanswered(); });
-      grid.append(b);
+    for (const t of themesForPicker()) {
+      grid.append(castButton(t, () => { S.themeId = t.id; save(); paint(); refreshUnanswered(); }));
     }
     paint();
     inner.querySelector(".btn").addEventListener("click", () => {
@@ -348,16 +458,16 @@
     return card;
   }
 
-  function questionCard(q, isRetry) {
-    cardCount++;
-    const order = shuffle([0, 1, 2, 3]);
-    const card = h("section", { class: "card", "data-qid": q.id });
+  // A question card. opts: { isRetry, label, review, onDone }
+  function makeCard(q, opts = {}) {
+    const card = h("section", { class: `card${opts.review ? " review-card" : ""}`, "data-qid": q.id });
     card._q = q;
-    card._order = order;
-    card._isRetry = isRetry;
-    card._num = cardCount;
+    card._order = shuffle([0, 1, 2, 3]);
+    card._isRetry = Boolean(opts.isRetry);
+    card._label = opts.label || "";
+    card._review = Boolean(opts.review);
+    card._onDone = opts.onDone || null;
     paintCard(card);
-    visObs.observe(card);
     return card;
   }
 
@@ -371,7 +481,7 @@
           <span class="domain">${esc(domainShort)}</span>
           <span>${esc(q.skill)}</span>
           ${card._isRetry ? '<span class="retry-tag">↺ Try again</span>' : ""}
-          <span class="num">#${card._num}</span>
+          <span class="num">${esc(card._label)}</span>
         </div>
         <p class="passage">${fill(q.text, cast).replace("______", '<span class="blank" role="img" aria-label="blank"></span>')}</p>
         <p class="prompt">${q.domain === "Transitions" ? PROMPT_TRANSITION : PROMPT_GRAMMAR}</p>
@@ -394,13 +504,22 @@
   function scrollToNext(card) {
     const next = card.nextElementSibling;
     if (next && next.classList.contains("card")) {
-      next.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      next.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
       next.querySelector(".choice, .btn")?.focus({ preventScroll: true });
     }
   }
 
+  // ---------- Answering ----------
+  const fastRun = []; // timestamps of the current correct run (Lightning Fast badge)
+  let lastWrong = null; // question that cost the last Focus Shield
+
   function answer(card, ci) {
     if (card._answered) return;
+    // With no Focus left, the feed waits for a Focus Break review.
+    if (!card._review && S.focus === 0) {
+      openFocusBreak();
+      return;
+    }
     card._answered = true;
     const q = card._q;
     const correct = ci === q.answer;
@@ -428,67 +547,229 @@
     sk.seen++;
     if (correct) sk.right++;
 
-    let gained = 0;
+    let xp = 0;
+    let sparks = null;
+    let focusLeft = S.focus;
+    let savedCombo = 0; // combo kept by a Combo Saver
     if (correct) {
       S.combo++;
       S.bestCombo = Math.max(S.bestCombo, S.combo);
-      gained = 10 + (S.combo >= 3 ? 5 : 0) + (card._isRetry ? 5 : 0);
+      S.totalCorrect++;
+      xp = 10 + (S.combo >= 3 ? 5 : 0) + (card._isRetry ? 5 : 0);
+      sparks = rewards.sparksForCorrect(S.combo);
+      rewards.earn(S, sparks.total);
       S.missed = S.missed.filter((id) => id !== q.id);
     } else {
-      S.combo = 0;
+      savedCombo = rewards.useComboSaver(S) ? S.combo : 0;
+      S.combo = savedCombo;
       if (!S.missed.includes(q.id)) S.missed.push(q.id);
-      retries.push({ id: q.id, due: served + 3 });
+      if (!card._review) {
+        retries.push({ id: q.id, due: served + 3 });
+        focusLeft = rewards.loseFocus(S);
+        lastWrong = q;
+      }
     }
-    S.xp += gained;
+    S.xp += xp;
+    // A Combo Saver keeps the combo, but not a "5 in a row" speed run.
+    const fast = rewards.trackFastRun(fastRun, correct, Date.now());
 
-    const slot = card.querySelector(".fb-slot");
+    // feedback
+    let tag;
+    if (correct) tag = `+${xp} XP · +${sparks.total} ⚡${sparks.bonus ? " combo bonus" : ""}`;
+    else if (card._review) tag = "Review keeps your Focus safe";
+    else tag = focusLeft === 0 ? "Focus is out" : `−1 🛡️ · ${focusLeft} left`;
+    if (savedCombo) tag += ` · Combo Saver kept ×${savedCombo}`;
     const fb = h("div", { class: `feedback ${correct ? "ok" : "no"}` });
     fb.innerHTML = `
-      <h3>${correct ? pickPraise() : "Not quite"}<small>${correct ? `+${gained} XP` : "It'll come back soon"}</small></h3>
+      <h3>${correct ? pickPraise() : "Not quite"}<small>${esc(tag)}</small></h3>
       <p>${fill(q.why, cast, false)}</p>`;
-    slot.append(fb);
-    const next = h("button", { class: "btn wide next-row", type: "button" }, "Next question ↓");
-    next.addEventListener("click", () => scrollToNext(card));
+    card.querySelector(".fb-slot").append(fb);
+    const next = h("button", { class: "btn wide next-row", type: "button" }, card._review ? "Continue" : "Next question ↓");
+    next.addEventListener("click", () => (card._review ? card._onDone?.() : scrollToNext(card)));
     card.querySelector(".card-inner").append(next);
 
-    const streakUp = checkGoal();
+    const goal = checkGoal();
+    const newBadges = rewards.checkBadges(S, { fastRun: fast });
     save();
-    renderHud(streakUp ? "streak" : correct ? "combo" : null);
+    renderHud(goal || correct ? ["sparks", ...(goal ? ["streak"] : [])] : []);
+    renderFocus(correct);
     renderChips();
 
-    if (streakUp) {
-      celebrate("🔥", `${S.streak}-day streak!`, S.streak % 7 === 0 && S.freezes > 0 ? "You earned a streak freeze 🧊" : "Daily goal complete");
-    } else if (correct && [3, 5, 10, 15, 20, 25, 30, 40, 50].includes(S.combo)) {
-      celebrate("⚡", `${S.combo} in a row!`, S.combo >= 10 ? "You're unstoppable" : "Combo bonus: +5 XP each");
+    if (goal) celebrateGoal(goal);
+    if (correct && [3, 5, 10, 15, 20, 25, 30, 40, 50].includes(S.combo)) {
+      celebrate("⚡", `${S.combo} in a row!`, sparks.bonus ? `+${sparks.bonus} bonus Sparks` : "Keep the combo going");
     }
+    newBadges.forEach(celebrateBadge);
     next.focus({ preventScroll: true });
 
+    if (!card._review && !correct && focusLeft === 0) {
+      setTimeout(() => openFocusBreak(), 900);
+    }
     // First time a guest hits a 3-in-a-row streak, offer to save it to an account.
     if (correct && S.combo === SIGNUP_PROMPT_COMBO && !auth.user() && !S.guest && auth.available()) {
-      setTimeout(() => { if (!auth.user()) openSignup("combo"); }, 1500);
+      setTimeout(() => { if (!auth.user() && !focusSheet) openSignup("combo"); }, 1500);
     }
   }
 
-  // Returns true when this answer just met today's goal.
+  // Runs when the daily goal may have just been met. Returns what happened, or null.
   function checkGoal() {
     const t = todayKey();
     const d = today();
-    if (d.n < S.goal || S.lastDone === t) return false;
+    if (d.n < S.goal || S.lastDone === t) return null;
     S.streak = S.lastDone && dayDiff(S.lastDone, t) === 1 ? S.streak + 1 : 1;
     S.lastDone = t;
     d.done = true;
     S.bestStreak = Math.max(S.bestStreak, S.streak);
-    if (S.streak % 7 === 0 && S.freezes < MAX_FREEZES) S.freezes++;
-    return true;
+    const aura = rewards.earnAuraForStreak(S);
+    rewards.earn(S, RULES.dailyGoalSparks);
+    const wager = rewards.settleWager(S);
+    return { aura, wager };
+  }
+
+  function celebrateGoal(goal) {
+    const extra = goal.aura ? " · free Aura Shield 💠" : "";
+    celebrate("🔥", `${S.streak}-day streak!`, `Daily goal done: +${RULES.dailyGoalSparks} ⚡${extra}`);
+    if (goal.wager?.won) celebrate("🎲", "Wager won!", `+${goal.wager.payout} ⚡ Sparks`);
+    else if (goal.wager && !goal.wager.lost) toast(`🎲 Wager: day ${goal.wager.days} of ${goal.wager.of}`);
+  }
+
+  function celebrateBadge(b) {
+    celebrate(b.icon, `Title unlocked: ${b.title}`, "Wear it from Streak → Achievements");
   }
 
   const PRAISE = ["Correct!", "Nailed it!", "Clean!", "Exactly right!", "Boom!", "Sharp!"];
   const pickPraise = () => PRAISE[Math.floor(Math.random() * PRAISE.length)];
 
+  // ---------- Focus Break ----------
+  let focusSheet = null;
+  let focusReturn = null;
+
+  function pickReview(base) {
+    const others = QUESTIONS.filter((q) => q.id !== base.id);
+    const sameSkill = shuffle(others.filter((q) => q.skill === base.skill));
+    const sameDomain = shuffle(others.filter((q) => q.domain === base.domain && q.skill !== base.skill));
+    return [...sameSkill, ...sameDomain, ...shuffle(others)].slice(0, REVIEW_LENGTH);
+  }
+
+  function openFocusBreak() {
+    if (focusSheet || onboarding.isOpen()) return;
+    const base = lastWrong || BY_ID[S.missed[S.missed.length - 1]] || QUESTIONS[0];
+    const tip = TIPS[base.skill];
+    focusReturn = document.activeElement;
+
+    focusSheet = h("div", { class: "sheet-backdrop" });
+    const sheet = h("div", { class: "sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "fb-title" });
+    focusSheet.append(sheet);
+    document.body.append(focusSheet);
+    focusSheet.addEventListener("mousedown", (e) => { if (e.target === focusSheet) closeFocusBreak(); });
+    document.addEventListener("keydown", focusKeys, true);
+
+    const header = (step) => `
+      <div class="grabber" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <span class="label-sm">Focus Break${step ? ` · ${step}` : ""}</span>
+        <button class="linkbtn" type="button" data-close>Not now</button>
+      </div>`;
+    const wireClose = () => sheet.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeFocusBreak));
+
+    // Step 1: tip card
+    sheet.innerHTML = `
+      ${header("")}
+      <h2 id="fb-title">Focus is out. Take a breath.</h2>
+      <p class="muted">Here's a quick tip on what tripped you up. Then answer ${REVIEW_LENGTH} review questions to restore all ${RULES.maxFocus} shields.</p>
+      <article class="tip-card">
+        <span class="label-sm">${esc(base.skill)}</span>
+        <p class="tip-text">${esc(tip ? tip.tip : "Read the whole sentence before you pick. Check what comes right before and after the blank.")}</p>
+        ${tip && tip.ex ? `<p class="tip-ex">${esc(tip.ex)}</p>` : ""}
+      </article>
+      <button class="btn wide" type="button" id="fb-start">Start ${REVIEW_LENGTH}-question review</button>
+      ${S.sparks >= RULES.focusRefillPrice
+        ? `<button class="btn ghost wide" type="button" id="fb-refill">Skip review · Focus Refill ${RULES.focusRefillPrice} ⚡</button>`
+        : `<button class="btn ghost wide" type="button" disabled>Focus Refill needs ${RULES.focusRefillPrice - S.sparks} more ⚡</button>`}`;
+    wireClose();
+    $("#fb-start", sheet).addEventListener("click", () => runReview(sheet, pickReview(base), 0, header, wireClose));
+    $("#fb-refill", sheet)?.addEventListener("click", () => {
+      const res = rewards.buyFocusRefill(S);
+      if (!res.ok) return;
+      save();
+      renderHud(["sparks"]);
+      closeFocusBreak();
+      toast(`🛡️ Focus refilled for ${res.spent} ⚡`);
+    });
+    $("#fb-start", sheet).focus();
+  }
+
+  function runReview(sheet, questions, i, header, wireClose) {
+    if (i >= questions.length) {
+      rewards.restoreFocus(S);
+      save();
+      renderFocus();
+      sheet.innerHTML = `
+        ${header("Done")}
+        <div class="restored">
+          <span class="restored-shields" aria-hidden="true">🛡️🛡️🛡️</span>
+          <h2 id="fb-title">Focus restored</h2>
+          <p class="muted">All ${RULES.maxFocus} shields are back. Keep going.</p>
+        </div>
+        <button class="btn wide" type="button" data-close>Back to practice</button>`;
+      wireClose();
+      sheet.querySelector(".btn").focus();
+      return;
+    }
+    sheet.innerHTML = `
+      ${header(`Review ${i + 1} of ${questions.length}`)}
+      <h2 id="fb-title" class="sr-only">Review question ${i + 1}</h2>
+      <div class="review-slot"></div>`;
+    wireClose();
+    const card = makeCard(questions[i], {
+      review: true,
+      label: `R${i + 1}`,
+      onDone: () => runReview(sheet, questions, i + 1, header, wireClose),
+    });
+    $(".review-slot", sheet).append(card);
+    card.querySelector(".choice").focus();
+  }
+
+  function closeFocusBreak() {
+    if (!focusSheet) return;
+    document.removeEventListener("keydown", focusKeys, true);
+    focusSheet.remove();
+    focusSheet = null;
+    focusReturn?.focus?.({ preventScroll: true });
+  }
+
+  function focusKeys(e) {
+    if (!focusSheet) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeFocusBreak();
+    } else if (e.key === "Tab") {
+      const items = [...focusSheet.querySelectorAll("button:not(:disabled)")];
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    e.stopPropagation(); // keep the feed's shortcuts out of the drawer
+  }
+
   // ---------- Celebration & toast ----------
+  // Celebrations queue so a streak, a badge and a combo don't pile up at once.
+  const burstQueue = [];
+  let bursting = false;
+
   function celebrate(emoji, title, sub) {
+    burstQueue.push({ emoji, title, sub });
+    if (!bursting) nextBurst();
+  }
+
+  function nextBurst() {
+    const item = burstQueue.shift();
+    if (!item) { bursting = false; return; }
+    bursting = true;
     const wrap = h("div", { class: "burst", role: "status" });
-    wrap.innerHTML = `<div class="burst-card"><span class="e" aria-hidden="true">${emoji}</span><b>${esc(title)}</b><span>${esc(sub)}</span></div>`;
+    wrap.innerHTML = `<div class="burst-card"><span class="e" aria-hidden="true">${item.emoji}</span><b>${esc(item.title)}</b><span>${esc(item.sub)}</span></div>`;
     document.body.append(wrap);
     const colors = ["var(--flame)", "var(--flame-2)", "var(--volt)", "var(--good)", "var(--ice)"];
     for (let i = 0; i < 26; i++) {
@@ -502,7 +783,7 @@
       document.body.append(c);
       setTimeout(() => c.remove(), 1400);
     }
-    setTimeout(() => wrap.remove(), 2000);
+    setTimeout(() => { wrap.remove(); nextBurst(); }, 2000);
   }
 
   let toastTimer;
@@ -514,10 +795,25 @@
     toastTimer = setTimeout(() => t.remove(), 3200);
   }
 
-  // ---------- Streak view ----------
+  // ---------- Streak view (Streak | Achievements) ----------
   function renderStreak() {
     rollover();
     const v = $("#view-streak");
+    const switcher = `
+      <div class="seg subtabs" role="tablist" aria-label="Streak sections">
+        <button type="button" role="tab" data-sub="streak" aria-selected="${streakTab === "streak"}">Streak</button>
+        <button type="button" role="tab" data-sub="achievements" aria-selected="${streakTab === "achievements"}">Achievements <span class="count">${S.badges.length}/${rewards.BADGES.length}</span></button>
+      </div>`;
+    v.innerHTML = `<div class="stack">${switcher}${streakTab === "streak" ? streakHtml() : achievementsHtml()}</div>`;
+    v.querySelectorAll("[data-sub]").forEach((b) => b.addEventListener("click", () => { streakTab = b.dataset.sub; renderStreak(); }));
+    v.querySelectorAll("[data-wear]").forEach((b) => b.addEventListener("click", () => {
+      S.title = S.title === b.dataset.wear ? null : b.dataset.wear;
+      save();
+      renderStreak();
+    }));
+  }
+
+  function streakHtml() {
     const t = todayKey();
     const n = today().n;
     let status;
@@ -532,43 +828,240 @@
       const k = addDays(t, i);
       const rec = S.days[k];
       const cls = rec?.done ? "done" : rec?.frozen ? "frozen" : "";
-      const icon = rec?.done ? "🔥" : rec?.frozen ? "🧊" : "";
+      const icon = rec?.done ? "🔥" : rec?.frozen ? "💠" : "";
       week.push(`<div class="d ${i === 0 ? "today" : ""}"><span class="dot ${cls}">${icon}</span>${names[parseKey(k).getDay()]}</div>`);
     }
 
     const totals = Object.values(S.days).reduce((a, d) => ({ n: a.n + d.n, c: a.c + d.c }), { n: 0, c: 0 });
     const acc = totals.n ? Math.round((totals.c / totals.n) * 100) + "%" : "–";
+    const title = S.title && rewards.badgeById(S.title);
+    const wp = rewards.wagerProgress(S);
+
+    return `
+      <section class="panel flame-hero">
+        ${title ? `<span class="title-chip">${title.icon} ${esc(title.title)}</span>` : ""}
+        <span class="emoji" aria-hidden="true">${S.streak > 0 ? "🔥" : "🪵"}</span>
+        <div class="big ${S.streak === 0 ? "cold" : ""}">${S.streak}</div>
+        <div class="label">day streak</div>
+        <p class="status ${warn ? "warn" : ""}">${esc(status)}</p>
+      </section>
+      <section class="panel">
+        <span class="label-sm">Last 7 days</span>
+        <div class="week">${week.join("")}</div>
+        <div class="goalbar" aria-hidden="true"><i style="width:${Math.min(100, (n / S.goal) * 100)}%"></i></div>
+        <p class="muted">${Math.min(n, S.goal)} of ${S.goal} questions for today</p>
+      </section>
+      <section class="panel">
+        <div class="freeze-row">
+          <span class="ice" aria-hidden="true">${"💠".repeat(S.freezes) || "–"}</span>
+          <p><b>${S.freezes} of ${RULES.maxAura} Aura Shields.</b> Each one covers a missed day automatically. You get one free every ${RULES.auraEarnEvery} streak days, or buy one in the Wizz Shop.</p>
+        </div>
+        ${wp ? `<p class="muted">🎲 Double-Spark Wager: day ${wp.days} of ${wp.of}</p>` : ""}
+      </section>
+      <section class="panel">
+        <span class="label-sm">Records</span>
+        <div class="stats">
+          <div class="stat"><b>${S.bestStreak}</b><span>Best day streak</span></div>
+          <div class="stat"><b>${S.bestCombo}</b><span>Best in a row</span></div>
+          <div class="stat"><b>${S.xp}</b><span>Total XP</span></div>
+          <div class="stat"><b>${acc}</b><span>Accuracy (${totals.n} answered)</span></div>
+        </div>
+      </section>`;
+  }
+
+  function achievementsHtml() {
+    const rows = rewards.BADGES.map((b) => {
+      const got = S.badges.includes(b.id);
+      const p = b.progress(S);
+      const wearing = S.title === b.id;
+      return `
+        <article class="badge${got ? "" : " locked"}">
+          <span class="badge-icon" aria-hidden="true">${got ? b.icon : "🔒"}</span>
+          <div class="badge-info">
+            <b>${esc(b.title)}</b>
+            <span>${esc(b.desc)}</span>
+            ${got ? "" : `<div class="bar" aria-hidden="true"><i style="width:${(p.value / p.of) * 100}%"></i></div><small>${esc(p.label)}</small>`}
+          </div>
+          ${got ? `<button class="mini-btn${wearing ? " on" : ""}" type="button" data-wear="${b.id}" aria-pressed="${wearing}">${wearing ? "Wearing" : "Wear title"}</button>` : ""}
+        </article>`;
+    }).join("");
+    return `
+      <section class="panel">
+        <h2>Achievements</h2>
+        <p class="muted">Unlock titles by hitting milestones. Wear one to show it on your streak card.</p>
+        <div class="badge-list">${rows}</div>
+      </section>`;
+  }
+
+  // ---------- Wizz Shop ----------
+  let armed = null; // id of the buy button waiting for a second tap
+  let armTimer;
+
+  function renderShop() {
+    rollover();
+    const v = $("#view-shop");
+    const packs = THEMES.filter((t) => t.price > 0);
+    const wp = rewards.wagerProgress(S);
+    const auraRoom = RULES.maxAura - S.freezes;
+
+    const buyBtn = (id, price, opts = {}) => {
+      if (opts.state) return `<button class="buy" type="button" disabled>${esc(opts.state)}</button>`;
+      if (S.sparks < price) return `<button class="buy" type="button" disabled>Need ${price - S.sparks} more</button>`;
+      const confirm = armed === id;
+      return `<button class="buy${confirm ? " confirm" : ""}" type="button" data-buy="${id}">${confirm ? `Confirm ${price} ⚡` : `${price} ⚡`}</button>`;
+    };
+
+    const packRows = packs.map((t) => {
+      const owned = rewards.isThemeUnlocked(S, t.id);
+      const inUse = S.themeId === t.id;
+      const action = owned
+        ? (inUse ? '<button class="buy" type="button" disabled>In use</button>' : `<button class="buy owned" type="button" data-use="${t.id}">Use</button>`)
+        : buyBtn(`theme:${t.id}`, t.price);
+      return `
+        <article class="shop-item">
+          <span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>
+          <div class="shop-info"><b>${esc(t.label)}</b><span>${esc(t.people.map((p) => p.name).join(", "))}</span></div>
+          ${action}
+        </article>`;
+    }).join("");
+
+    const avatarRows = SW.avatars.filter((a) => a.price > 0).map((a) => {
+      const owned = rewards.isAvatarUnlocked(S, a.id);
+      const action = owned
+        ? (S.avatar === a.id ? '<button class="buy" type="button" disabled>In use</button>' : `<button class="buy owned" type="button" data-wear-avatar="${a.id}">Use</button>`)
+        : buyBtn(`avatar:${a.id}`, a.price);
+      return `
+        <article class="shop-item">
+          <span class="avatar md" aria-hidden="true">${a.emoji}</span>
+          <div class="shop-info"><b>${esc(a.label)}</b><span>${owned ? "Owned" : "Profile picture"}</span></div>
+          ${action}
+        </article>`;
+    }).join("");
 
     v.innerHTML = `
       <div class="stack">
-        <section class="panel flame-hero">
-          <span class="emoji" aria-hidden="true">${S.streak > 0 ? "🔥" : "🪵"}</span>
-          <div class="big ${S.streak === 0 ? "cold" : ""}">${S.streak}</div>
-          <div class="label">day streak</div>
-          <p class="status ${warn ? "warn" : ""}">${esc(status)}</p>
+        <section class="panel wallet">
+          <span class="label-sm">Wizz Shop</span>
+          <div class="wallet-num"><span aria-hidden="true">⚡</span> ${S.sparks} <small>Sparks</small></div>
+          <ul class="earn-list">
+            <li><b>+${RULES.sparksPerCorrect}</b> each correct answer</li>
+            <li><b>+${RULES.comboBonus}</b> bonus every ${RULES.comboEvery} in a row</li>
+            <li><b>+${RULES.dailyGoalSparks}</b> for your daily goal</li>
+          </ul>
         </section>
         <section class="panel">
-          <span class="label-sm">Last 7 days</span>
-          <div class="week">${week.join("")}</div>
-          <div class="goalbar" aria-hidden="true"><i style="width:${Math.min(100, (n / S.goal) * 100)}%"></i></div>
-          <p class="muted">${Math.min(n, S.goal)} of ${S.goal} questions for today</p>
+          <h2>Theme packs</h2>
+          <p class="muted">New casts for every question.</p>
+          <div class="shop-list">${packRows}</div>
         </section>
         <section class="panel">
-          <div class="freeze-row">
-            <span class="ice" aria-hidden="true">${"🧊".repeat(S.freezes) || "–"}</span>
-            <p><b>${S.freezes} of ${MAX_FREEZES} streak freezes.</b> A freeze covers one missed day automatically. You earn one every 7 days of streak.</p>
+          <h2>Power-ups</h2>
+          <div class="shop-list">
+            <article class="shop-item">
+              <span class="shop-icon" aria-hidden="true">💠</span>
+              <div class="shop-info"><b>Aura Shield</b><span>Protects your streak on a day you miss practice. Used automatically. You have ${S.freezes} of ${RULES.maxAura}.</span></div>
+              ${buyBtn("aura", RULES.auraPrice, { state: S.freezes >= RULES.maxAura ? "Full" : "" })}
+            </article>
+            <article class="shop-item">
+              <span class="shop-icon" aria-hidden="true">💠<sup>×${RULES.auraBundleSize}</sup></span>
+              <div class="shop-info"><b>Aura Shield ×${RULES.auraBundleSize}</b><span>Costs ${RULES.auraPrice * RULES.auraBundleSize - RULES.auraBundlePrice} ⚡ less than buying ${RULES.auraBundleSize} one at a time. Needs room for ${RULES.auraBundleSize}.</span></div>
+              ${buyBtn("aura3", RULES.auraBundlePrice, { state: auraRoom < RULES.auraBundleSize ? (auraRoom ? `Room for ${auraRoom}` : "Full") : "" })}
+            </article>
+            <article class="shop-item">
+              <span class="shop-icon" aria-hidden="true">🛡️</span>
+              <div class="shop-info"><b>Focus Refill</b><span>Restores all ${RULES.maxFocus} Focus Shields right away, no review needed. Focus: ${S.focus} of ${RULES.maxFocus}.</span></div>
+              ${buyBtn("focus", RULES.focusRefillPrice, { state: S.focus >= RULES.maxFocus ? "Full" : "" })}
+            </article>
+            <article class="shop-item">
+              <span class="shop-icon" aria-hidden="true">🔗</span>
+              <div class="shop-info"><b>Combo Saver</b><span>The next wrong answer on a combo of ${RULES.comboSaverMin}+ keeps your combo. Used automatically. You have ${S.comboSavers} of ${RULES.maxComboSavers}.</span></div>
+              ${buyBtn("saver", RULES.comboSaverPrice, { state: S.comboSavers >= RULES.maxComboSavers ? "Full" : "" })}
+            </article>
+            <article class="shop-item">
+              <span class="shop-icon" aria-hidden="true">🎲</span>
+              <div class="shop-info">
+                <b>Double-Spark Wager</b>
+                <span>Bet ${RULES.wagerStake} ⚡. Keep your streak going ${RULES.wagerDays} more days to win ${RULES.wagerPayout} ⚡. If the streak breaks, you lose the bet.</span>
+                ${wp ? `<div class="bar" aria-hidden="true"><i style="width:${(wp.days / wp.of) * 100}%"></i></div><small>Day ${wp.days} of ${wp.of}${doneToday() ? "" : " · finish today's goal to count today"}</small>` : ""}
+              </div>
+              ${buyBtn("wager", RULES.wagerStake, { state: wp ? "Active" : "" })}
+            </article>
           </div>
         </section>
         <section class="panel">
-          <span class="label-sm">Records</span>
-          <div class="stats">
-            <div class="stat"><b>${S.bestStreak}</b><span>Best day streak</span></div>
-            <div class="stat"><b>${S.bestCombo}</b><span>Best in a row</span></div>
-            <div class="stat"><b>${S.xp}</b><span>Total XP</span></div>
-            <div class="stat"><b>${acc}</b><span>Accuracy (${totals.n} answered)</span></div>
-          </div>
+          <h2>Avatars</h2>
+          <p class="muted">Rare profile pictures. Pick yours under Personalize.</p>
+          <div class="shop-list">${avatarRows}</div>
         </section>
       </div>`;
+
+    v.querySelectorAll("[data-buy]").forEach((b) => b.addEventListener("click", () => onBuy(b.dataset.buy)));
+    v.querySelectorAll("[data-wear-avatar]").forEach((b) => b.addEventListener("click", () => {
+      setAvatar(b.dataset.wearAvatar);
+      renderShop();
+    }));
+    v.querySelectorAll("[data-use]").forEach((b) => b.addEventListener("click", () => {
+      S.themeId = b.dataset.use;
+      S.castChosen = true;
+      save();
+      refreshUnanswered();
+      renderShop();
+      toast(`Cast switched to ${THEMES.find((t) => t.id === b.dataset.use).label}`);
+    }));
+  }
+
+  // First tap arms the button, second tap buys.
+  function onBuy(id) {
+    if (armed !== id) {
+      armed = id;
+      clearTimeout(armTimer);
+      armTimer = setTimeout(() => { armed = null; if (currentView === "shop") renderShop(); }, 3000);
+      renderShop();
+      $(`#view-shop [data-buy="${id}"]`)?.focus();
+      return;
+    }
+    armed = null;
+    clearTimeout(armTimer);
+    let res;
+    if (id.startsWith("theme:")) {
+      res = rewards.buyTheme(S, id.slice(6));
+      if (res.ok) {
+        S.themeId = res.theme.id;
+        S.castChosen = true;
+        refreshUnanswered();
+        celebrate(res.theme.icon || "🎭", `${res.theme.label} unlocked`, "Your questions now use this cast");
+      }
+    } else if (id.startsWith("avatar:")) {
+      res = rewards.buyAvatar(S, id.slice(7));
+      if (res.ok) {
+        S.avatar = res.avatar.id;
+        celebrate(res.avatar.emoji, `${res.avatar.label} unlocked`, "It's your new profile picture");
+      }
+    } else if (id === "aura") {
+      res = rewards.buyAura(S);
+      if (res.ok) toast(`💠 Aura Shield added. You have ${S.freezes} of ${RULES.maxAura}.`);
+    } else if (id === "aura3") {
+      res = rewards.buyAuraBundle(S);
+      if (res.ok) toast(`💠 ${RULES.auraBundleSize} Aura Shields added. You have ${S.freezes} of ${RULES.maxAura}.`);
+    } else if (id === "focus") {
+      res = rewards.buyFocusRefill(S);
+      if (res.ok) toast("🛡️ Focus refilled.");
+    } else if (id === "saver") {
+      res = rewards.buyComboSaver(S);
+      if (res.ok) toast(`🔗 Combo Saver ready. You have ${S.comboSavers} of ${RULES.maxComboSavers}.`);
+    } else if (id === "wager") {
+      rollover();
+      res = rewards.placeWager(S, todayKey());
+      if (res.ok) toast(`🎲 Wager placed. Keep your streak for ${RULES.wagerDays} more days to win ${RULES.wagerPayout} ⚡.`);
+    }
+    if (res && !res.ok) {
+      toast(res.reason === "short" ? `You need ${res.need} more Sparks.`
+        : res.reason === "room" ? `You only have room for ${res.room} more Aura Shields.`
+        : "That isn't available right now.");
+    }
+    save();
+    renderHud(["sparks"]);
+    renderShop();
   }
 
   // ---------- Personalize view ----------
@@ -618,18 +1111,16 @@
         </section>
         <section class="panel">
           <h2>Start over</h2>
-          <p class="muted">Clears your streak, XP and stats on this device${auth.user() ? " and in your account" : ""}.</p>
+          <p class="muted">Clears your streak, XP, Sparks, purchases and stats on this device${auth.user() ? " and in your account" : ""}.</p>
           <div class="row" id="reset-row"><button class="btn ghost" type="button" id="reset-btn">Reset progress</button></div>
         </section>
       </div>`;
 
     renderAccountPanel();
     const grid = $("#you-casts", v);
-    const all = [...THEMES, { id: "custom", label: "Custom", people: [] }];
+    const all = [...themesForPicker(), { id: "custom", label: "Custom", people: [] }];
     for (const t of all) {
-      const sub = t.id === "custom" ? "Type any names you like" : t.people.map((p) => p.name).join(", ");
-      const b = h("button", { class: "cast-btn", type: "button", "data-id": t.id, "aria-pressed": String(t.id === S.themeId) }, `<b>${esc(t.label)}</b><span>${esc(sub)}</span>`);
-      b.addEventListener("click", () => {
+      grid.append(castButton(t, () => {
         S.themeId = t.id;
         S.castChosen = true;
         save();
@@ -637,8 +1128,7 @@
         $("#custom-box", v).hidden = t.id !== "custom";
         preview();
         castChanged();
-      });
-      grid.append(b);
+      }));
     }
 
     const preview = () => {
@@ -658,11 +1148,13 @@
 
     $("#goal-seg", v).querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
       S.goal = Number(b.dataset.g);
-      const up = checkGoal();
+      const goal = checkGoal();
+      const newBadges = rewards.checkBadges(S);
       save();
       $("#goal-seg", v).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      renderHud(up ? "streak" : null);
-      if (up) celebrate("🔥", `${S.streak}-day streak!`, "Daily goal complete");
+      renderHud(goal ? ["streak", "sparks"] : []);
+      if (goal) celebrateGoal(goal);
+      newBadges.forEach(celebrateBadge);
     }));
 
     $("#reset-btn", v).addEventListener("click", () => {
@@ -670,7 +1162,9 @@
       row.innerHTML = '<button class="btn danger" type="button" id="reset-yes">Yes, erase everything</button><button class="btn ghost" type="button" id="reset-no">Keep my progress</button>';
       $("#reset-no", v).addEventListener("click", renderYou);
       $("#reset-yes", v).addEventListener("click", () => {
+        const keepUser = S.syncedUserId;
         S = structuredClone(DEFAULTS);
+        S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
         save();
         renderHud();
         renderChips();
@@ -703,34 +1197,102 @@
     });
   }
 
-  function renderAccountButton() {
-    const btn = $("#hud-account");
-    const u = auth.user();
-    if (u) {
-      const st = auth.status();
-      btn.textContent = st === "error" ? "⚠︎" : "☁︎";
-      btn.classList.add("signed-in");
-      btn.classList.toggle("warn", st === "error");
-      btn.title = `Signed in as ${u.email}. ${SYNC_LABEL[st]}`;
-      btn.setAttribute("aria-label", `Account: ${u.email}. ${SYNC_LABEL[st]}`);
-    } else {
-      btn.textContent = "Save";
-      btn.classList.remove("signed-in", "warn");
-      btn.title = "Save progress to an account";
-      btn.setAttribute("aria-label", "Save progress");
-    }
+  function setAvatar(id) {
+    if (!rewards.isAvatarUnlocked(S, id)) return;
+    S.avatar = id;
+    save();
+    renderAccountButton();
   }
 
+  // HUD: avatar (opens Profile) plus a "Save" pill for guests.
+  // Signed in, the pill is replaced by a sync dot on the avatar.
+  function renderAccountButton() {
+    const u = auth.user();
+    const av = $("#hud-avatar");
+    const st = auth.status();
+    av.innerHTML = `${currentAvatar().emoji}${u ? `<i class="sync-dot" data-status="${st}"></i>` : ""}`;
+    av.setAttribute("aria-label", u
+      ? `Profile: ${u.email}. ${SYNC_LABEL[st]}`
+      : "Profile (guest)");
+    av.title = u ? `${u.email} · ${SYNC_LABEL[st]}` : "Your profile";
+    const btn = $("#hud-account");
+    btn.hidden = Boolean(u);
+    btn.title = "Save progress to an account";
+    btn.setAttribute("aria-label", "Save progress");
+  }
+
+  // Personalize → Profile: avatar, title, account and avatar picker.
   function renderAccountPanel() {
     const panel = $("#account-panel");
     if (!panel) return;
     const u = auth.user();
+    const title = S.title && rewards.badgeById(S.title);
+    const av = currentAvatar();
+    const grid = SW.avatars.map((a) => {
+      const owned = rewards.isAvatarUnlocked(S, a.id);
+      const id = `avatar:${a.id}`;
+      const armedHere = armed === id;
+      return `<button type="button" class="avatar-pick${owned ? "" : " locked"}${armedHere ? " confirm" : ""}"
+        data-avatar="${a.id}" aria-pressed="${S.avatar === a.id}"
+        aria-label="${esc(a.label)}${owned ? "" : `, locked, ${a.price} Sparks`}">
+        <span class="emoji" aria-hidden="true">${a.emoji}</span>
+        ${owned ? "" : `<small>${armedHere ? "Confirm" : `🔒 ${a.price}`}</small>`}
+      </button>`;
+    }).join("");
+
+    panel.innerHTML = `
+      <div class="profile-head">
+        <span class="avatar lg" aria-hidden="true">${av.emoji}</span>
+        <div class="profile-meta">
+          <h2>${u ? "Profile" : "Guest"}</h2>
+          ${u ? `<p class="muted">Signed in as <b class="email">${esc(u.email || "your account")}</b></p>` : '<p class="muted">Progress lives in this browser only.</p>'}
+          ${title ? `<span class="title-chip">${title.icon} ${esc(title.title)}</span>` : ""}
+        </div>
+      </div>
+      ${u
+        ? `<p class="sync-line" data-status="${auth.status()}">☁︎ ${esc(SYNC_LABEL[auth.status()])}</p>
+           <div class="row"><button class="btn ghost" type="button" id="signout-btn">Sign out</button></div>`
+        : `<p class="muted">Sign up to sync your streak, Sparks, unlocks, avatar and cast across devices.</p>
+           <div class="row"><button class="btn" type="button" id="save-progress-btn">Save Progress</button></div>`}
+      <span class="label-sm">Profile picture</span>
+      <div class="avatar-grid">${grid}</div>`;
+
+    panel.querySelectorAll("[data-avatar]").forEach((b) => b.addEventListener("click", () => {
+      const id = b.dataset.avatar;
+      if (rewards.isAvatarUnlocked(S, id)) {
+        armed = null;
+        setAvatar(id);
+        renderAccountPanel();
+        return;
+      }
+      const a = rewards.avatarById(id);
+      if (S.sparks < a.price) {
+        toast(`${a.label} costs ${a.price} ⚡. You need ${a.price - S.sparks} more.`);
+        return;
+      }
+      // same two-tap confirm as the shop
+      const key = `avatar:${id}`;
+      if (armed !== key) {
+        armed = key;
+        clearTimeout(armTimer);
+        armTimer = setTimeout(() => { armed = null; renderAccountPanel(); }, 3000);
+        renderAccountPanel();
+        panel.querySelector(`[data-avatar="${id}"]`)?.focus();
+        return;
+      }
+      armed = null;
+      clearTimeout(armTimer);
+      const res = rewards.buyAvatar(S, id);
+      if (res.ok) {
+        S.avatar = id;
+        save();
+        renderHud(["sparks"]);
+        celebrate(a.emoji, `${a.label} unlocked`, "It's your new profile picture");
+      }
+      renderAccountPanel();
+    }));
+
     if (u) {
-      panel.innerHTML = `
-        <h2>Account</h2>
-        <p class="muted">Signed in as <b class="email">${esc(u.email || "your account")}</b></p>
-        <p class="sync-line" data-status="${auth.status()}">☁︎ ${esc(SYNC_LABEL[auth.status()])}</p>
-        <div class="row"><button class="btn ghost" type="button" id="signout-btn">Sign out</button></div>`;
       $("#signout-btn", panel).addEventListener("click", async () => {
         try {
           await auth.signOut();
@@ -740,10 +1302,6 @@
         }
       });
     } else {
-      panel.innerHTML = `
-        <h2>Save progress</h2>
-        <p class="muted">You're playing as a guest, so progress lives in this browser only. Sign up to sync your streak, XP and cast across devices.</p>
-        <div class="row"><button class="btn" type="button" id="save-progress-btn">Save Progress</button></div>`;
       $("#save-progress-btn", panel).addEventListener("click", () => openSignup("save"));
     }
   }
@@ -751,32 +1309,34 @@
   // After sign-in: combine this device with the account, then push the result.
   async function syncFromCloud(announce) {
     try {
+      const u = auth.user();
       const cloud = await auth.pull();
-      Object.assign(S, auth.merge(S, cloud));
+      Object.assign(S, auth.merge(S, cloud, u.id));
+      S.syncedUserId = u.id;
       S.guest = false;
+      rewards.checkBadges(S);
       rollover();
       save(); // writes locally and schedules the upload of the merged result
-      if (announce) toast(`Signed in as ${auth.user().email}. Progress synced.`);
+      if (announce) toast(`Signed in as ${u.email}. Progress synced.`);
     } catch (e) {
       console.warn("SatWizz: initial sync failed", e);
       toast("Signed in, but syncing failed. We'll retry after your next answer.");
     }
     renderHud();
     refreshUnanswered();
-    if (currentView === "streak") renderStreak();
-    if (currentView === "you") renderYou();
+    rerenderCurrent();
   }
 
-  let syncedUserId = null;
+  let syncedSessionUser = null;
   auth.onChange((event, session) => {
     if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
       if (onboarding.isOpen()) onboarding.close();
       // Supabase can repeat SIGNED_IN (e.g. when the tab regains focus); merge once per user.
-      if (session.user.id === syncedUserId) return;
-      syncedUserId = session.user.id;
+      if (session.user.id === syncedSessionUser) return;
+      syncedSessionUser = session.user.id;
       syncFromCloud(event === "SIGNED_IN");
     } else if (event === "SIGNED_OUT") {
-      syncedUserId = null;
+      syncedSessionUser = null;
       renderHud();
       if (currentView === "you") renderYou();
     }
@@ -793,7 +1353,7 @@
 
   // ---------- Keyboard ----------
   document.addEventListener("keydown", (e) => {
-    if (onboarding.isOpen() || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
+    if (onboarding.isOpen() || focusSheet || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
     const card = activeCard;
     if (!card) return;
     const k = e.key.toLowerCase();

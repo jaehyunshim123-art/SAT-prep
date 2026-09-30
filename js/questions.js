@@ -354,4 +354,40 @@
       why: "The second sentence sums up the first in simpler terms, which is a restatement.",
     },
   ];
+
+  // Quick tips shown on the Focus Break card, keyed by `skill`.
+  // `ex` is a short right/wrong pair.
+  SW.tips = {
+    "Run-on sentences": { tip: "Two complete sentences can't be glued with just a comma. Use a period, a semicolon, or a comma plus FANBOYS (for, and, nor, but, or, yet, so).", ex: "✗ I studied, I passed. ✓ I studied, so I passed." },
+    "Semicolons": { tip: "A semicolon works like a soft period: there must be a complete sentence on both sides.", ex: "✓ The bus was late; we walked. ✗ The bus was late; because of traffic." },
+    "Colons": { tip: "A colon needs a complete sentence before it. What comes after explains or lists.", ex: "✓ Bring one thing: water. ✗ Bring things like: water." },
+    "Dashes": { tip: "Dashes come in pairs around extra info, just like commas. Open with a dash, close with a dash.", ex: "✓ My coach—a former champ—smiled. ✗ My coach—a former champ, smiled." },
+    "Nonessential elements": { tip: "Extra info you could delete needs punctuation on both sides. Cover it with your thumb: the sentence should still work.", ex: "✓ Sam, who loves chess, won. ✗ Sam, who loves chess won." },
+    "Essential elements": { tip: "If the words identify which one you mean, they're essential. No commas.", ex: "✓ The author Toni Morrison won. ✗ The author, Toni Morrison, won (unless there's only one author)." },
+    "Items in a series": { tip: "When list items already have commas inside, separate the items with semicolons.", ex: "✓ Austin, Texas; Reno, Nevada; and Boise, Idaho" },
+    "Conjunctive adverbs": { tip: "Words like however, therefore and moreover can't join sentences alone. Use a semicolon before and a comma after.", ex: "✓ It rained; however, we played." },
+    "End punctuation": { tip: "An indirect question reports a question. It ends with a period.", ex: "✓ She asked whether it was open. ✗ She asked whether it was open?" },
+    "Introductory clauses": { tip: "When a sentence starts with a dependent clause (Because, When, If...), put a comma before the main clause.", ex: "✓ When the bell rang, we left." },
+    "Subject–verb commas": { tip: "Never put a single comma between a subject and its verb, no matter how long the subject is.", ex: "✓ The notes on my desk are gone. ✗ The notes on my desk, are gone." },
+    "Plural possessives": { tip: "Make it plural first, then add the apostrophe. Twins → twins'. Children → children's.", ex: "✓ the players' lockers (many players)" },
+    "Its vs. it's": { tip: "It's = it is. Its = belonging to it. Try swapping in \"it is\"; if that sounds wrong, use its.", ex: "✓ The team lost its best player." },
+    "Singular possessives": { tip: "One owner: add apostrophe + s.", ex: "✓ Maya's plan ✗ Mayas plan" },
+    "Plurals": { tip: "Plain plurals never take an apostrophe. Only use one when something belongs to the noun.", ex: "✓ three records ✗ three record's" },
+    "Subject–verb agreement": { tip: "Find the real subject. Skip prepositional phrases (of the..., in the...) and phrases like along with.", ex: "✓ The box of pens is here. ✗ The box of pens are here." },
+    "Pronoun–antecedent agreement": { tip: "A pronoun must match the noun it points to. Plural nouns take they, them, their.", ex: "✓ The fans waved their flags." },
+    "Pronoun case": { tip: "Cover the other person to test it. \"Chose me\" sounds right, so \"chose Sam and me\" is right.", ex: "✓ between you and me ✗ between you and I" },
+    "Relative pronouns": { tip: "Who is for subjects, whom for objects (after prepositions too). Whose shows ownership.", ex: "✓ to whom it may concern ✓ the girl whose bike broke" },
+    "Verb tense": { tip: "Look for time clues like last year, now or by next week, and match the tense to them.", ex: "✓ Yesterday she ran. ✗ Yesterday she runs." },
+    "Verb forms": { tip: "After has, have, had or would have, use the past participle (gone, run, written).", ex: "✓ would have gone ✗ would have went" },
+    "Finite verbs": { tip: "Every sentence needs a real main verb. -ing words and to + verb can't do that job alone.", ex: "✓ The list was long. ✗ The list being long." },
+    "Modifiers": { tip: "An opening phrase describes whatever comes right after the comma. Put the person or thing it describes there.", ex: "✓ Tired, Leo slept. ✗ Tired, the bed looked great to Leo." },
+    "Parallel structure": { tip: "Items in a list or comparison should have the same form.", ex: "✓ running, jumping, and swimming ✗ running, jumping, and to swim" },
+    "Logical comparisons": { tip: "Compare like with like: a score to a score, not a score to a person.", ex: "✓ Her score beat Tom's. ✗ Her score beat Tom." },
+    "Contrast": { tip: "When the second idea goes against the first, use however, nevertheless, by contrast or instead.", ex: "It was cold. However, we swam." },
+    "Cause and effect": { tip: "When the second idea is a result of the first, use therefore, as a result or consequently.", ex: "She practiced daily. As a result, she improved." },
+    "Examples": { tip: "When the second sentence gives a specific case of the first, use for example or for instance.", ex: "He loves sports. For instance, he plays tennis." },
+    "Sequence": { tip: "Steps in order take first, next, then, finally.", ex: "First, read the prompt. Next, underline the key words." },
+    "Addition": { tip: "When the second idea adds to the first in the same direction, use moreover, additionally or furthermore.", ex: "She won the race. Moreover, she set a record." },
+    "Restatement": { tip: "When the second sentence says the same thing more simply, use in other words or that is.", ex: "He never stops working. In other words, he's driven." },
+  };
 })();
