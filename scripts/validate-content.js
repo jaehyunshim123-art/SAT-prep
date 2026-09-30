@@ -4,7 +4,7 @@
 // [[underlined]] segment), 4 distinct choices, a valid answer, a note per
 // choice and only known placeholders; 3:1 / 2:1 shortcut questions really
 // have the odd one out as the answer.
-// Vocab Vault: the same checks, plus a definition, root and context clue,
+// Vocab Vault: the same checks, plus a definition, root, context clue, synonyms/antonyms,
 // and the right target for each format (blank vs. underlined word).
 const repo = require("path").resolve(__dirname, "..");
 global.window = {};
@@ -69,6 +69,11 @@ for (const w of SW.vocab.WORDS) {
   const tag = `vocab:${w.id}`;
   checkCommon(tag, w, [w.clue]);
   for (const k of ["word", "pos", "definition", "root", "clue"]) if (!w[k]) bad.push(`${tag}: missing ${k}`);
+  for (const k of ["synonyms", "antonyms"]) {
+    if (!Array.isArray(w[k]) || w[k].length < 2) bad.push(`${tag}: needs at least 2 ${k} for the flashcard back`);
+    else if (w[k].some((x) => x.toLowerCase() === w.word.toLowerCase())) bad.push(`${tag}: ${k} include the word itself`);
+  }
+  if (w.synonyms && w.antonyms && w.synonyms.some((x) => w.antonyms.includes(x))) bad.push(`${tag}: a word is both a synonym and an antonym`);
   if (w.format === "blank") {
     if (!w.text.includes("______")) bad.push(`${tag}: blank format needs ______`);
     if (w.choices[w.answer] !== w.word) bad.push(`${tag}: correct choice should be the word itself`);

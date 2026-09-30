@@ -1343,6 +1343,127 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
   animation: rise 0.25s ease;
 }
 
+/* ---------- Vocab Vault: modes + flashcards ---------- */
+.mode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mode-btn {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  border-bottom-width: 4px;
+  background: var(--surface-2);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+.mode-btn b { font-family: var(--font-display); font-size: 1rem; }
+.mode-btn small { color: var(--muted); font-size: 0.75rem; font-weight: 600; }
+.mode-btn .mode-ico { font-size: 1.5rem; line-height: 1.2; }
+.mode-btn.primary { background: var(--volt); border-color: var(--volt); color: var(--volt-ink); }
+.mode-btn.primary small { color: inherit; opacity: 0.85; }
+.mode-btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+.fc-flag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--flame);
+  background: var(--spark-bg);
+}
+.fc-stage { perspective: 1400px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.fc-drag { position: relative; transition: transform 0.25s ease; will-change: transform; --got: 0; --later: 0; }
+.fc-drag.dragging { transition: none; }
+.fc-drag.fly-right { transform: translateX(130%) rotate(16deg); opacity: 0; transition: transform 0.24s ease-in, opacity 0.24s ease-in; }
+.fc-drag.fly-left { transform: translateX(-130%) rotate(-16deg); opacity: 0; transition: transform 0.24s ease-in, opacity 0.24s ease-in; }
+.fc-stamp {
+  position: absolute;
+  top: 18px;
+  z-index: 2;
+  padding: 4px 12px;
+  border: 3px solid currentColor;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  background: var(--surface);
+  pointer-events: none;
+}
+.fc-stamp.got { left: 16px; color: var(--good); opacity: var(--got); transform: rotate(-10deg); }
+.fc-stamp.later { right: 16px; color: var(--flame); opacity: var(--later); transform: rotate(10deg); }
+.fc {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 22px;
+}
+.fc:focus-visible { outline: 3px solid var(--volt); outline-offset: 4px; }
+.fc-inner {
+  position: relative;
+  display: block;
+  height: clamp(250px, calc(100vh - 360px), 440px); /* leaves room for the buttons above the nav */
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.fc.flipped .fc-inner { transform: rotateY(180deg); }
+.fc-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 20px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow-y: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.fc-front { background: linear-gradient(160deg, var(--surface) 55%, var(--surface-2)); }
+.fc-back { transform: rotateY(180deg); }
+.fc-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fc-word {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 9vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.fc-word.sm { font-size: 1.5rem; }
+.fc-pos { color: var(--muted); font-style: italic; font-weight: 600; }
+.fc-context {
+  margin-top: auto;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border-left: 4px solid var(--volt);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.fc-hl { background: var(--blank); color: var(--ink); padding: 0 3px; border-radius: 4px; }
+.fc-hint { align-self: center; color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+.fc-def { font-size: 1.1rem; font-weight: 600; line-height: 1.4; }
+.fc-row { display: grid; gap: 2px; font-size: 0.92rem; line-height: 1.4; }
+.fc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fc-actions .btn { padding-inline: 10px; white-space: nowrap; }
+.fc-actions .btn small { font-weight: 700; opacity: 0.85; }
+.fc-help { text-align: center; }
+@media (hover: none) { .kbd-hint { display: none; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition: none !important; }
   .confetti { display: none; }
@@ -1360,4 +1481,11 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
 @media (max-width: 380px) {
   .brand { font-size: 1.05rem; }
   .passage { font-size: 1.05rem; }
+}
+@media (max-width: 340px) {
+  /* Smallest phones (320px): tighten the header so every pill fits. */
+  .hud { gap: 4px; }
+  .brand { font-size: 0.98rem; }
+  .pill { padding: 3px 6px; }
+  .acct { padding: 0 7px; }
 }

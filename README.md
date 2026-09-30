@@ -43,14 +43,25 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 
 ## Vocab Vault
 
-The **Vocab** tab (`js/vocab.js`) teaches 30 SAT words in two Words-in-Context formats:
-- 20 are "fill the blank" (the most logical and precise word);
+The **Vocab** tab (`js/vocab.js`) teaches 30 high-frequency SAT words in two modes.
+
+**🃏 Flashcards.** A deck of 10 cards that flip in 3D.
+- **Front:** the word, its part of speech and its context sentence, filled in with your cast and highlighted.
+- **Back:** the definition, synonyms, antonyms and root breakdown.
+- **Controls:** tap to flip. Swipe right or tap **Got It**, swipe left or tap **Review Later**. On a keyboard, Space flips and →/← choose.
+- **Got It** earns +5 ⚡, once per word per day.
+- **Review Later** brings the card back once at the end of the deck and flags the word 🔁.
+- Flagged words lead the next deck and the next sprint. A sprint miss also flags a word, and a correct sprint answer or Got It clears the flag.
+- Flashcards don't change tiers: only sprints do.
+
+**⚡ Daily 5-Word Sprint.** Words-in-Context questions in two formats:
+- 20 words are "fill the blank" (the most logical and precise word);
 - 10 are "As used in the text, what does *X* most nearly mean?", with the word underlined.
 
-- **Daily Sprint:** 5 cards. It serves words due for review first (lowest tier first), then new words, then mastered ones for review.
+- **Daily Sprint:** 5 cards. It serves flagged words first, then words due for review (lowest tier first), then new words, then mastered ones for review.
 - **Spaced repetition:** 3 tiers, **Novice 🌱 → Practitioner ⚡ → Master 👑**. A correct answer moves a word up one tier, at most once per day, so reaching Master takes practice on separate days. A wrong answer drops the word back to Novice and slides up a breakdown with the definition, root word, context clue and a note on every choice.
 - **Rewards:**
-  - +5 ⚡ per correct card;
+  - +5 ⚡ per correct sprint card (and per flashcard Got It, once per word per day);
   - +25 ⚡ the first time a word reaches Master;
   - +20 ⚡ for finishing a sprint (once per day).
 
@@ -130,7 +141,7 @@ js/config.js                Supabase URL, anon key, VAPID public key
 js/themes.js                casts and avatars
 js/questions.js             curriculum framework: chapter plan, official stems, addChapter/build API
 js/curriculum/ch1-ch10.js   one file per chapter: lesson + 20 questions with per-choice notes
-js/vocab.js                 Vocab Vault: words, spaced-repetition tiers, sprint UI
+js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
 js/rewards.js               Sparks, shop, Focus, Aura Shields, wager, badges (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push

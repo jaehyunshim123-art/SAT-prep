@@ -369,7 +369,7 @@
   }
 
   function rerenderCurrent() {
-    if (currentView === "vocab" && !vocab.inSprint()) vocab.render();
+    if (currentView === "vocab" && !vocab.busy()) vocab.render();
     if (currentView === "ranks") ranks.render();
     if (currentView === "shop") renderShop();
     if (currentView === "you") renderYou();
