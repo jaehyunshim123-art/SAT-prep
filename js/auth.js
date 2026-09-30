@@ -122,7 +122,8 @@
         streak_freezes: state.freezes,
         last_goal_date: state.lastDone,
         sparks: state.sparks,
-        focus_shields: state.focus,
+        unlocked_chapters: state.unlockedChapters,
+        completed_chapters: state.completedChapters,
         unlocked_themes: state.unlockedThemes,
         unlocked_badges: state.badges,
         spark_wager: state.wager,
@@ -201,9 +202,9 @@
   // Combines this device's state with what the account already has.
   // - XP and best streak keep the higher value; the current streak comes from
   //   whichever side met its daily goal more recently.
-  // - Unlocked themes and badges are combined.
-  // - Unlocked avatars are combined too.
-  // - Sparks, Focus, Combo Savers and the wager are spendable, so taking the max would undo
+  // - Unlocked and completed chapters, themes, badges and avatars are combined.
+  // - Focus Shields are per session and never synced.
+  // - Sparks, Combo Savers and the wager are spendable, so taking the max would undo
   //   purchases. If this device last synced with the same account, the newer
   //   side wins. Otherwise (guest progress, another account) keep the higher
   //   balance so nothing earned is lost.
@@ -225,6 +226,11 @@
       }
       out.bestStreak = Math.max(local.bestStreak || 0, p.best_streak || 0, out.streak || 0, local.streak || 0);
 
+      const chapterIds = new Set((SW.chapters || []).map((c) => c.id));
+      const chapters = (a, b) => [...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])]
+        .filter((id) => chapterIds.has(id)).sort((x, y) => x - y);
+      out.unlockedChapters = chapters([1, ...(local.unlockedChapters || [])], p.unlocked_chapters);
+      out.completedChapters = chapters(local.completedChapters, p.completed_chapters);
       out.unlockedThemes = union(local.unlockedThemes, p.unlocked_themes);
       out.badges = union(local.badges, p.unlocked_badges);
       const avatarIds = new Set((SW.avatars || []).map((a) => a.id));
@@ -236,7 +242,6 @@
         if (sameAccount) {
           if (cloudNewer) {
             out.sparks = clampInt(p.sparks, 0, 1e9);
-            out.focus = clampInt(p.focus_shields, 0, 3);
             out.wager = cleanWager(p.spark_wager);
             out.comboSavers = clampInt(p.combo_savers, 0, 3);
           }

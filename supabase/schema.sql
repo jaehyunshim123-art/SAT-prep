@@ -15,7 +15,11 @@ create table if not exists public.profiles (
 
 -- Gamification columns. Safe to re-run on an existing project.
 alter table public.profiles add column if not exists sparks integer not null default 0;
+-- Unused since Focus Shields became per-session; kept so older clients don't break.
 alter table public.profiles add column if not exists focus_shields integer not null default 3;
+-- Curriculum progress (chapter ids 1-10; chapter 1 is always unlocked).
+alter table public.profiles add column if not exists unlocked_chapters integer[] not null default '{1}';
+alter table public.profiles add column if not exists completed_chapters integer[] not null default '{}';
 alter table public.profiles add column if not exists unlocked_themes text[] not null default '{}';
 alter table public.profiles add column if not exists unlocked_badges text[] not null default '{}';
 -- { stake, startStreak, target, placedOn } while a Double-Spark Wager is active

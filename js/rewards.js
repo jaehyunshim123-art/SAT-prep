@@ -12,6 +12,7 @@
     comboBonus: 5, // paid on every 3rd answer in a row (3, 6, 9...)
     comboEvery: 3,
     dailyGoalSparks: 50,
+    chapterSparks: 50, // first completion of each chapter
     maxFocus: 3,
     maxAura: 5,
     auraPrice: 50,

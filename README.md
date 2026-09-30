@@ -1,73 +1,86 @@
 # SatWizz
 
-A Duolingo-style SAT grammar trainer. You scroll through a feed of questions, keep a daily streak like Snapchat, and the names in every question change to characters you pick.
+A mobile-first SAT grammar trainer. You work through a 9-chapter curriculum in a snap-scrolling feed, keep a daily streak, earn Sparks, and the names in every question change to a cast you pick.
+
+## Curriculum
+
+Each chapter opens with an **Explanation Pause** card (the rules, ✓/✗ pattern chips and a worked example), then practice questions. A wrong answer comes back two cards later marked "↺ Try again". A chapter is complete once every question has been answered correctly. The first completion earns **+50 ⚡** and unlocks the next chapter.
+
+| # | Chapter | What it covers |
+|---|---|---|
+| 1 | Identifying Independent Clauses | Subject + main verb vs. fragments; which/that/who/whose clauses have no main verb |
+| 2 | Connecting Independent Clauses | Valid: `IC, conj IC` · `IC, DC` · `IC; IC` · `IC DC` · `DC, IC`. Invalid: `IC, conj DC` · `DC, DC` · `IC; DC` · `IC, LW, IC` · `IC; LW, DC` |
+| 3 | Subject-Verb Agreement | Prepositional-phrase traps, compound subjects, neither/nor, inverted sentences |
+| 4 | Verb vs. Non-Verb | Main (conjugated) verb vs. -ing participles and infinitives |
+| 5 | Verb Tenses | Time clues, consistency, perfect tenses, past participles |
+| 6 | Transitions | Contrast, cause/effect, addition, example; no `, LW` splices, no `; LW` before a DC, no `IC; though, IC` |
+| 7 | Semicolons, Colons, Dashes | `IC; IC`, complex lists, colon/dash need an IC on the left, no dash before FANBOYS, `, which` |
+| 8 | Appositives & Non-Essential Clauses | Symmetrical `, … ,` / `— … —`; essential appositives take no commas |
+| 9 | Modifiers & Parallelism | Dangling/misplaced modifiers, A/B and list parallelism, logical comparisons |
+| Bonus | Pronouns & Possessives | Unlocks after Chapter 9 |
+
+**Chapter drawer.** Tap the chapter bar above the feed to open it. It shows each chapter's status (✓ done, ▶ current, 🔒 locked) and progress. You can jump to any unlocked chapter or replay a finished one. After you finish any chapter, **Mixed review** opens: endless questions from finished chapters, with missed ones first.
 
 ## Features
 
-- **Scrolling question feed.** Full-screen cards snap one at a time, like short videos. Each card is an SAT-style "Standard English Conventions" question with four choices, instant feedback, and an explanation. The feed never runs out: questions reshuffle, and any you miss come back a few cards later.
-- **Filter by skill.** Tap *Boundaries*, *Form & Sense*, *Transitions*, or *Missed* to drill one area. These are the College Board's own domain names for the digital SAT.
-- **Daily streak 🔥 (Snapchat-style).** Hit your daily goal (5, 10, or 20 questions) to extend your streak. If you haven't hit it yet today, an ⌛ shows that the streak ends at midnight.
-- **Aura Shields 💠.** Each one covers a missed day automatically. You get one free every 7 streak days or buy them in the shop. You can hold up to 5.
-- **Combo.** Counts correct answers in a row. At 3 or more in a row, each answer earns bonus XP, and milestones set off a celebration.
-- **Sparks ⚡.** The in-app currency, shown in the header. You earn +10 per correct answer, +5 bonus on every 3rd answer in a row (3, 6, 9...) and +50 for hitting your daily goal.
-- **Wizz Shop 🛍️.** Spend Sparks on:
+- **Daily streak 🔥.** Hit your daily goal (5, 10 or 20 questions) to extend it. Until you do, an ⌛ shows the streak ends at midnight.
+- **Sparks ⚡.** Shown in the header. You earn +10 per correct answer, +5 on every 3rd answer in a row, +50 per chapter completed (first time) and +50 for your daily goal.
+- **Focus Shields 🛡️🛡️🛡️.** You get 3 per session. Each wrong answer costs one. At zero, a **Focus Break** drawer shows the chapter's rule summary. Then a 2-question review from the same chapter recharges all 3 (or skip it with a Focus Refill).
+- **Wizz Shop 🛍️.**
 
   | Item | Price | What it does |
   |---|---|---|
-  | Anime Pack / Marvel Pack | 100 / 200 ⚡ | New casts for every question |
-  | Aura Shield | 50 ⚡ | Covers one missed day (max 5) |
-  | Aura Shield ×3 | 120 ⚡ | Three shields at a discount |
+  | Cast theme packs | 100 ⚡ each | New casts for every question |
+  | Aura Shield | 50 ⚡ | Protects your streak on a missed day (hold up to 5) |
+  | Aura Shield ×3 | 120 ⚡ | Three at a discount |
   | Focus Refill | 30 ⚡ | Restores all Focus Shields without the review |
-  | Combo Saver | 40 ⚡ | The next wrong answer on a combo of 3+ keeps the combo (hold up to 3) |
-  | Double-Spark Wager | 50 ⚡ stake | Keep your streak 5 more days to win 100 ⚡. A broken streak loses the bet. |
+  | Combo Saver | 40 ⚡ | The next wrong answer on a combo of 3+ keeps the combo |
+  | Double-Spark Wager | 50 ⚡ stake | Keep your streak 5 more days to win 100 ⚡ |
   | Rare avatars | 100–300 ⚡ | Profile pictures |
 
-- **Focus Shields 🛡️🛡️🛡️.** Each wrong answer costs one shield. At zero, a **Focus Break** drawer shows a grammar tip for the skill you missed. Finish a 2-question review, or use a Focus Refill, to get all 3 back. Focus also refills each day.
-- **Achievements.** Under Streak → Achievements you can unlock titles and wear one:
-  - *Spark Starter*: reach a 3-day streak.
-  - *Syntax Warlock*: answer 50 questions correctly.
-  - *Lightning Fast*: get 5 right in a row in under 60 seconds.
-- **Profile pictures.** Pick one of 12 free emoji avatars, or unlock 6 rare ones with Sparks. Tap your avatar in the header to change it.
-- **Personalization 🎭.** Pick a cast: Everyday, Harry Potter, Football stars (Ronaldo, Messi, Aitana), Basketball (LeBron, Steph, Caitlin), Superheroes, or Pop icons. You can also build a **Custom** cast with any three names, pronouns (he / she / they), a place, a skill, and a big event. Every question, answer choice, and explanation updates right away.
-- **Skill check.** Shows your accuracy for each grammar skill, weakest first.
-- **Accounts & cloud sync ☁︎.** Sign up with Google or email and password to sync your streak, XP, Sparks, Aura Shields, Focus, unlocks, badges, avatar, cast and daily goal across devices. You can also keep playing as a guest. The sign-up screen appears when you tap **Save** or the first time you get 3 in a row.
-- Keyboard shortcuts: `A`–`D` or `1`–`4` to answer, `↓`/`Enter` for the next card.
+- **Casts 🎭.** The default is **Everyday** (John, Jane and Sam). The packs are Wizard School, Football Legends, Hoops Legends, Anime Pack, Superhero Pack and Pop Icons. A **Custom** cast takes any three names, pronouns (he / she / they), a location, a skill and an event.
+- **Achievements.** Under Streak → Achievements you can unlock and wear titles: Spark Starter (3-day streak), Syntax Warlock (50 correct) and Lightning Fast (5 in a row in under 60 seconds).
+- **Profile pictures.** 12 free emoji avatars, plus 6 rare ones you unlock with Sparks.
+- **Accounts & cloud sync ☁︎.** Sign up with Google or email and password, or continue as a guest. The sign-up screen appears when you tap **Save** or the first time you get 3 in a row.
+- **Keyboard:** `A`–`D` or `1`–`4` to answer, `↓`/`Enter` for the next card.
 
-Progress is always saved in the browser's `localStorage`. When you're signed in, it's also synced to Supabase. Per-day history, per-skill stats and missed questions stay on the device.
+## Content and brand rules
+
+Cast names can include real people and characters, since names alone aren't copyrighted. Pack labels and flavor text avoid franchise titles, brand names and coined proprietary terms (for example, no league, award or studio trademarks). The footer says names are used for fun and imply no endorsement. Keep to the same rule when you add casts.
 
 ## Run it
 
-It's a static site with no build step and no dependencies.
+It's a static site with no build step.
 
 ```sh
-# any static server works, e.g.
 python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-You can also open `index.html` directly in a browser. That works for guest mode, but Google sign-in needs http(s).
+Opening `index.html` directly also works for guest mode, but Google sign-in needs http(s).
 
 ## Set up accounts (Supabase)
 
-Without this step, SatWizz runs in guest-only mode.
+Without this, SatWizz runs in guest-only mode, and progress stays in `localStorage`.
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql). It's safe to re-run, and **existing projects must re-run it** to add the Sparks, shop, badge and avatar columns. It creates the `profiles` and `user_settings` tables and row-level security policies, so each user can only read and write their own rows.
-3. Copy the **Project URL** and **anon public key** from **Project Settings → API** into [`js/config.js`](js/config.js). The anon key is meant to be public.
-4. In **Authentication → URL Configuration**, add your site's URL (for example `http://localhost:8000/` or your GitHub Pages URL) to **Redirect URLs**.
-5. For Google sign-in, enable **Authentication → Providers → Google** and paste in an OAuth client ID and secret from Google Cloud.
+2. In **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql). It's safe to re-run. **Existing projects must re-run it** to add the chapter columns.
+3. Put the **Project URL** and **anon public key** (from **Project Settings → API**) in [`js/config.js`](js/config.js).
+4. In **Authentication → URL Configuration**, add your site's URL to **Redirect URLs**.
+5. For Google sign-in, enable **Authentication → Providers → Google** with an OAuth client from Google Cloud.
 
-When you sign in on a device that already has progress, SatWizz combines the two:
+**What syncs:**
+- `profiles` table: Sparks, streak, best streak, XP, Aura Shields, unlocked and completed chapters, unlocked themes, badges and avatars, Combo Savers and the wager.
+- `user_settings` table: cast, custom names, daily goal and avatar.
+- Focus Shields are per session and don't sync. Per-question progress inside a chapter, daily history and accuracy stats stay on the device.
 
+**Signing in on a device that already has progress:**
+- Unlocks, completed chapters and badges are combined.
 - XP and best streak keep the higher value.
-- The current streak comes from whichever side met its daily goal more recently.
-- Unlocked themes, avatars and badges are combined.
-- Sparks, Focus, Combo Savers and the wager can be spent, so they don't simply take the higher value. On a device that last synced with the same account, whichever side changed more recently wins. Guest progress being linked to an account keeps the higher Sparks balance.
-- Saved settings (cast, daily goal, avatar) replace the device's.
+- The streak comes from whichever side met its goal more recently.
+- Spendable balances: whichever side changed last wins for the same account. For guest progress, the higher balance is kept.
 
-The Sparks economy is enforced in the browser only. A determined user could edit their own row, because row-level security only limits *whose* row you can write. If that matters, move purchases into Postgres functions (RPC) that check prices on the server.
-
-To put it online, enable **GitHub Pages** for this repo (Settings → Pages → deploy from the branch root).
+The Sparks economy is enforced in the browser only. Row-level security limits whose row you can write, not what you write. To harden it, move purchases into Postgres functions that check prices on the server.
 
 ## Project layout
 
@@ -75,34 +88,39 @@ To put it online, enable **GitHub Pages** for this repo (Settings → Pages → 
 index.html          page shell, fonts, script order
 css/styles.css      all styles (light + dark theme)
 js/config.js        Supabase URL and anon key (empty = guest-only)
-js/themes.js        casts (names, pronouns, flavor words, prices) and avatars
-js/questions.js     the question bank and a grammar tip per skill
+js/questions.js     the 9-chapter curriculum (+ bonus): lessons and questions
+js/themes.js        casts (names, pronouns, flavor, prices) and avatars
 js/rewards.js       Sparks, shop items, Focus, Aura Shields, wager, badges (no DOM)
-js/auth.js          Supabase auth methods, session listener, cloud sync and merge
+js/auth.js          Supabase auth, session listener, cloud sync and merge
 js/onboarding.js    sign-up / log-in modal
-js/app.js           feed, streaks, XP, personalization, local storage
+js/app.js           chapter feed, drawer, streaks, shop, personalization
 supabase/schema.sql tables and row-level security policies
 ```
 
-All modules share one global namespace, `window.SatWizz` (`SatWizz.questions`, `SatWizz.themes`, `SatWizz.auth`, `SatWizz.onboarding`, ...).
+All modules share one namespace, `window.SatWizz` (`SatWizz.chapters`, `SatWizz.questions`, `SatWizz.themes`, `SatWizz.auth`, ...).
 
 ## Adding questions
 
-Add an object to `SW.questions` in `js/questions.js`:
+Add a question to a chapter's `questions` array in `js/questions.js`:
 
 ```js
 {
-  id: "f26", domain: F, skill: "Subject–verb agreement",
-  text: "The list of {A_his} goals ______ taped to the mirror.",
+  id: "c3-8", skill: "Prepositional traps",
+  text: "The list of {{NAME_1_POSS}} goals for {{EVENT}} ______ taped to the mirror.",
   choices: ["is", "are", "were", "have been"],
-  answer: 0,                       // index of the correct choice
+  answer: 0,          // index of the correct choice (shuffled on screen)
   why: "The subject is \"list\" (singular), so use \"is.\"",
 }
 ```
 
 - `______` marks the blank. Each choice replaces exactly that blank.
-- Name tokens: `{A}`, `{B}`, `{C}`. Pronoun tokens: `{A_his}` (his / her / their) and `{A_him}` (him / her / them). Flavor tokens: `{PLACE}`, `{CRAFT}`, `{EVENT}`. Use flavor tokens mid-sentence only, because they may start with a lowercase "the."
-- Don't make a subject pronoun agree with a verb (for example "{A} ... she is"), because custom casts can use *they*.
+- Placeholders:
+  - `{{NAME_1}}`, `{{NAME_2}}`, `{{NAME_3}}`
+  - `{{NAME_n_POSS}}` (his / her / their) and `{{NAME_n_OBJ}}` (him / her / them)
+  - `{{LOCATION}}`, `{{EVENT}}`, `{{SKILL}}`
+- Use the flavor placeholders mid-sentence only, since they may start with a lowercase "the".
+- Never make a subject pronoun agree with a verb, because custom casts can use *they*.
+- Add `kind: "transition"` for logical-transition questions.
 
 ---
 

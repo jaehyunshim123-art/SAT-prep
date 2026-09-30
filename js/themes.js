@@ -1,10 +1,17 @@
 // SatWizz casts that get swapped into every question.
-// Tokens in questions: {A} {B} {C} (names), {A_his} / {A_him} (pronouns),
-// {PLACE}, {CRAFT}, {EVENT} (theme flavor, always used mid-sentence).
+// Placeholders map to cast fields: {{NAME_1..3}} -> people, {{LOCATION}} -> place,
+// {{SKILL}} -> craft, {{EVENT}} -> event. Flavor is always used mid-sentence.
 // `price` is in Sparks; 0 means free. Paid packs are sold in the Wizz Shop.
+//
+// Content rule: names are fine, but no franchise titles, brand names or coined
+// proprietary terms (no "Hogwarts", "Quidditch", "Avengers", league or award
+// trademarks), and nothing that implies endorsement.
 window.SatWizz = window.SatWizz || {};
 
 window.SatWizz.defaultThemeId = "everyday";
+
+// Packs that were free before version 2 of the save format; older saves keep them.
+window.SatWizz.legacyFreeThemes = ["wizard", "football", "hoops", "pop"];
 
 window.SatWizz.themes = [
   {
@@ -12,11 +19,11 @@ window.SatWizz.themes = [
     icon: "🎒",
     price: 0,
     label: "Everyday",
-    tagline: "Classmates you might actually know",
+    tagline: "John, Jane and Sam",
     people: [
-      { name: "Maya", pro: "she" },
-      { name: "Jordan", pro: "he" },
-      { name: "Priya", pro: "she" },
+      { name: "John", pro: "he" },
+      { name: "Jane", pro: "she" },
+      { name: "Sam", pro: "they" },
     ],
     place: "the library",
     craft: "public speaking",
@@ -25,9 +32,9 @@ window.SatWizz.themes = [
   {
     id: "wizard",
     icon: "🪄",
-    price: 0,
-    label: "Harry Potter",
-    tagline: "Hogwarts, but make it grammar",
+    price: 100,
+    label: "Wizard School",
+    tagline: "Harry, Hermione and Ron",
     people: [
       { name: "Harry", pro: "he" },
       { name: "Hermione", pro: "she" },
@@ -35,13 +42,13 @@ window.SatWizz.themes = [
     ],
     place: "the Great Hall",
     craft: "potion-making",
-    event: "the Quidditch final",
+    event: "the broomstick final",
   },
   {
     id: "football",
     icon: "⚽",
-    price: 0,
-    label: "Football stars",
+    price: 100,
+    label: "Football Legends",
     tagline: "Ronaldo, Messi and Aitana",
     people: [
       { name: "Ronaldo", pro: "he" },
@@ -50,13 +57,13 @@ window.SatWizz.themes = [
     ],
     place: "the training ground",
     craft: "free kicks",
-    event: "the Champions League final",
+    event: "the European final",
   },
   {
     id: "hoops",
     icon: "🏀",
-    price: 0,
-    label: "Basketball",
+    price: 100,
+    label: "Hoops Legends",
     tagline: "LeBron, Steph and Caitlin",
     people: [
       { name: "LeBron", pro: "he" },
@@ -83,25 +90,25 @@ window.SatWizz.themes = [
     event: "the tournament final",
   },
   {
-    id: "heroes", // was the free "Superheroes" cast; anyone already using it keeps it
+    id: "heroes",
     icon: "🦸",
-    price: 200,
-    label: "Marvel Pack",
+    price: 100,
+    label: "Superhero Pack",
     tagline: "Peter, Wanda and Tony",
     people: [
       { name: "Peter", pro: "he" },
       { name: "Wanda", pro: "she" },
       { name: "Tony", pro: "he" },
     ],
-    place: "Avengers Tower",
+    place: "the hero tower",
     craft: "web-slinging",
     event: "the final battle",
   },
   {
     id: "pop",
     icon: "🎤",
-    price: 0,
-    label: "Pop icons",
+    price: 100,
+    label: "Pop Icons",
     tagline: "Taylor, Beyoncé and Olivia",
     people: [
       { name: "Taylor", pro: "she" },
@@ -110,7 +117,7 @@ window.SatWizz.themes = [
     ],
     place: "the recording studio",
     craft: "songwriting",
-    event: "the Grammys",
+    event: "the awards show",
   },
 ];
 

@@ -5,8 +5,11 @@
   const QUESTIONS = SW.questions;
   const THEMES = SW.themes;
   const PRONOUNS = SW.pronouns;
-  const DOMAINS = SW.domains;
-  const TIPS = SW.tips;
+  const CHAPTERS = SW.chapters;
+  const chapterById = SW.chapterById;
+  const CORE_CHAPTERS = SW.CORE_CHAPTERS;
+  const REVIEW_ID = "review"; // mixed review of completed chapters
+  const SAVE_VERSION = 2;
   const auth = SW.auth;
   const onboarding = SW.onboarding;
   const rewards = SW.rewards;
@@ -46,12 +49,15 @@
     days: {}, // dateKey -> { n, c, done, frozen }
     skills: {}, // skill -> { seen, right }
     missed: [], // question ids answered wrong and not yet fixed
-    filter: "all",
     guest: false, // chose "Continue as Guest", so don't prompt again on a combo
+    // curriculum
+    chapterId: 1, // current chapter (1-10) or "review"
+    unlockedChapters: [1],
+    completedChapters: [],
+    chapterCorrect: {}, // chapterId -> question ids answered correctly
     // gamification
     sparks: 0,
-    focus: RULES.maxFocus,
-    focusDay: null, // Focus refills to full once per day
+    focus: RULES.maxFocus, // refilled at the start of every session
     unlockedThemes: [],
     badges: [],
     title: null, // equipped badge id
@@ -63,6 +69,7 @@
     // sync bookkeeping
     updatedAt: 0, // ms of the last change made on this device
     syncedUserId: null, // account this device last merged with
+    v: SAVE_VERSION,
   };
 
   let S = load();
@@ -78,7 +85,22 @@
     if (typeof saved.totalCorrect !== "number") {
       s.totalCorrect = Object.values(s.skills || {}).reduce((n, k) => n + (k.right || 0), 0);
     }
-    // Anyone already using a cast that became a paid pack keeps it.
+    // Saves from before the curriculum: drop old question ids and filters.
+    s.missed = s.missed.filter((id) => BY_ID[id]);
+    delete s.filter;
+    delete s.focusDay;
+    const validChapter = (id) => Number.isInteger(id) && chapterById(id);
+    s.unlockedChapters = [...new Set([1, ...(s.unlockedChapters || []).filter(validChapter)])];
+    s.completedChapters = [...new Set((s.completedChapters || []).filter(validChapter))];
+    if (!s.chapterCorrect || typeof s.chapterCorrect !== "object") s.chapterCorrect = {};
+    if (s.chapterId !== REVIEW_ID && !s.unlockedChapters.includes(s.chapterId)) s.chapterId = 1;
+    // Packs that used to be free stay free for anyone who played before v2,
+    // and anyone already using a cast that became paid keeps it.
+    if ((saved.v || 1) < SAVE_VERSION) {
+      const played = (saved.xp || 0) > 0 || (saved.totalCorrect || 0) > 0 || Object.keys(saved.days || {}).length > 0;
+      if (played) SW.legacyFreeThemes.forEach((id) => { if (!s.unlockedThemes.includes(id)) s.unlockedThemes.push(id); });
+      s.v = SAVE_VERSION;
+    }
     const current = THEMES.find((t) => t.id === s.themeId);
     if (current && current.price && !s.unlockedThemes.includes(current.id)) s.unlockedThemes.push(current.id);
     return s;
@@ -109,16 +131,11 @@
   const dayDiff = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 864e5);
   const today = () => (S.days[todayKey()] ||= { n: 0, c: 0 });
 
-  // New day: refill Focus. Missed days: spend Aura Shields if there are
-  // enough, otherwise the streak (and any wager) is lost.
+  // Missed days: spend Aura Shields if there are enough, otherwise the streak
+  // (and any wager) is lost.
   function rollover() {
     const t = todayKey();
     let changed = false;
-    if (S.focusDay !== t) {
-      S.focusDay = t;
-      S.focus = RULES.maxFocus;
-      changed = true;
-    }
     if (S.lastDone && S.streak > 0) {
       const gap = dayDiff(S.lastDone, t);
       if (gap > 1) {
@@ -163,16 +180,17 @@
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 
-  // Swaps {A}, {B_his}, {PLACE} etc. for the chosen cast. Returns HTML.
+  // Swaps {{NAME_1}}, {{NAME_2_POSS}}, {{LOCATION}} etc. for the chosen cast.
+  // Returns HTML; names are highlighted unless mark=false.
+  const PLACEHOLDER = /\{\{(?:NAME_([123])(?:_(POSS|OBJ))?|(LOCATION|EVENT|SKILL))\}\}/g;
   function fill(template, cast = castOf(), mark = true) {
-    const idx = { A: 0, B: 1, C: 2 };
-    return esc(template).replace(/\{([A-Z]+)(?:_(his|him))?\}/g, (m, key, form) => {
-      if (key in idx) {
-        const p = cast.people[idx[key]];
-        if (form) return esc(PRONOUNS[p.pro][form]);
+    return esc(template).replace(PLACEHOLDER, (m, n, form, flavorKey) => {
+      if (n) {
+        const p = cast.people[Number(n) - 1];
+        if (form) return esc(PRONOUNS[p.pro][form === "POSS" ? "his" : "him"]);
         return mark ? `<span class="cast">${esc(p.name)}</span>` : esc(p.name);
       }
-      const flavor = { PLACE: cast.place, CRAFT: cast.craft, EVENT: cast.event }[key];
+      const flavor = { LOCATION: cast.place, SKILL: cast.craft, EVENT: cast.event }[flavorKey];
       return flavor != null ? esc(flavor) : m;
     });
   }
@@ -213,36 +231,55 @@
     return a;
   };
 
-  let deck = [];
-  let retries = []; // { id, due }
+  // A chapter runs through a queue of its questions. Wrong answers go back
+  // into the queue, so the chapter is complete once every question has been
+  // answered correctly. Mixed review never runs out.
+  let queue = []; // { id, isRetry }
   let served = 0;
   let lastId = null;
+  let completeShown = false;
 
-  function pool() {
-    if (S.filter === "missed") return S.missed.filter((id) => BY_ID[id]);
-    if (S.filter === "all") return QUESTIONS.map((q) => q.id);
-    return QUESTIONS.filter((q) => q.domain === S.filter).map((q) => q.id);
+  const inReview = () => S.chapterId === REVIEW_ID;
+  const currentChapter = () => (inReview() ? null : chapterById(S.chapterId));
+  const correctIn = (chId) => (S.chapterCorrect[chId] ||= []);
+  const isUnlocked = (chId) => S.unlockedChapters.includes(chId);
+  const isComplete = (chId) => S.completedChapters.includes(chId);
+  // Mixed review opens once any core chapter is complete.
+  const reviewOpen = () => S.completedChapters.some((id) => !chapterById(id).bonus);
+
+  function buildQueue() {
+    const ch = currentChapter();
+    if (ch) {
+      const done = new Set(correctIn(ch.id));
+      // In progress: only what's left. Replay of a finished chapter: everything.
+      const ids = ch.questions.map((q) => q.id).filter((id) => isComplete(ch.id) || !done.has(id));
+      queue = shuffle(ids).map((id) => ({ id, isRetry: false }));
+    } else {
+      queue = [];
+    }
+  }
+
+  // Mixed review: missed questions first, then a shuffle of completed chapters.
+  function refillReview() {
+    const pool = QUESTIONS.filter((q) => isComplete(q.chapterId)).map((q) => q.id);
+    const missed = shuffle(S.missed.filter((id) => pool.includes(id)));
+    const rest = shuffle(pool.filter((id) => !missed.includes(id)));
+    queue.push(...[...missed, ...rest].map((id) => ({ id, isRetry: false })));
+    if (queue.length > 1 && queue[0].id === lastId) queue.push(queue.shift());
   }
 
   function nextQuestion() {
-    const r = retries.findIndex((x) => x.due <= served && x.id !== lastId);
-    let id;
-    let isRetry = false;
-    if (r !== -1) {
-      id = retries.splice(r, 1)[0].id;
-      isRetry = true;
-    } else {
-      const p = pool();
-      if (!p.length) return null;
-      if (!deck.length) {
-        deck = shuffle(p);
-        if (deck.length > 1 && deck[deck.length - 1] === lastId) deck.unshift(deck.pop());
-      }
-      id = deck.pop();
-    }
+    if (inReview() && !queue.length) refillReview();
+    const next = queue.shift();
+    if (!next) return null;
     served++;
-    lastId = id;
-    return { q: BY_ID[id], isRetry };
+    lastId = next.id;
+    return { q: BY_ID[next.id], isRetry: next.isRetry };
+  }
+
+  // Wrong answer: see it again two cards later (or at the end of a short queue).
+  function requeue(id) {
+    queue.splice(Math.min(2, queue.length), 0, { id, isRetry: true });
   }
 
   // ---------- DOM helpers ----------
@@ -276,7 +313,7 @@
     </div>
     <div id="feed-tools">
       <div class="focusbar" id="focusbar"></div>
-      <div class="chips" id="chips" role="toolbar" aria-label="Question filter"></div>
+      <button class="chapter-bar" id="chapter-bar" type="button" aria-haspopup="dialog"></button>
     </div>
     <main class="view feed" id="view-feed" aria-live="polite"></main>
     <main class="view scrollview" id="view-streak" hidden></main>
@@ -288,7 +325,7 @@
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
       <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Personalize</button>
     </nav>
-    <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board.</footer>`;
+    <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
   const VIEWS = ["feed", "streak", "shop", "you"];
@@ -363,17 +400,22 @@
     if (bumpCombo) bumpEl($("#combo-pill", bar));
   }
 
-  function renderChips() {
-    const opts = [{ id: "all", short: "All skills" }, ...DOMAINS, { id: "missed", short: `Missed (${S.missed.length})` }];
-    const bar = $("#chips");
-    bar.innerHTML = "";
-    for (const o of opts) {
-      bar.append(h("button", {
-        class: "chip",
-        "aria-pressed": String(S.filter === o.id),
-        onclick: () => { S.filter = o.id; save(); renderChips(); resetFeed(); },
-      }, esc(o.short)));
+  // "Ch 3 · Subject-Verb Agreement · 4/7 ▾" above the feed; opens the drawer.
+  function renderChapterBar() {
+    const bar = $("#chapter-bar");
+    const ch = currentChapter();
+    if (!ch) {
+      bar.innerHTML = `<span class="ch-num">Mix</span><span class="ch-title">Mixed review</span><span class="ch-count">${S.missed.length} missed</span><span class="ch-caret" aria-hidden="true">▾</span>`;
+      bar.setAttribute("aria-label", "Mixed review. Choose a chapter");
+      return;
     }
+    const done = Math.min(correctIn(ch.id).length, ch.questions.length);
+    bar.innerHTML = `
+      <span class="ch-num">${ch.bonus ? "Bonus" : `Ch ${ch.id}`}</span>
+      <span class="ch-title">${esc(ch.short)}</span>
+      <span class="ch-count">${isComplete(ch.id) ? "✓" : `${done}/${ch.questions.length}`}</span>
+      <span class="ch-caret" aria-hidden="true">▾</span>`;
+    bar.setAttribute("aria-label", `Chapter ${ch.id}: ${ch.title}. ${done} of ${ch.questions.length} correct. Choose a chapter`);
   }
 
   // ---------- Feed ----------
@@ -384,31 +426,36 @@
     for (const e of entries) if (e.isIntersecting) activeCard = e.target;
   }, { root: feed, threshold: 0.6 });
 
-  function resetFeed() {
+  // Opens a chapter (or mixed review): Explanation Pause, then its questions.
+  function startChapter(id) {
+    if (id !== REVIEW_ID && !isUnlocked(id)) return;
+    if (id === REVIEW_ID && !reviewOpen()) return;
+    S.chapterId = id;
+    save();
     feed.innerHTML = "";
-    deck = [];
-    retries = [];
     served = 0;
     cardCount = 0;
     lastId = null;
-    if (!S.castChosen && S.filter === "all") feed.append(welcomeCard());
-    appendCards(4);
+    completeShown = false;
+    buildQueue();
+    if (!S.castChosen) feed.append(welcomeCard());
+    const ch = currentChapter();
+    if (ch) feed.append(pauseCard(ch));
+    appendCards(3);
     feed.scrollTop = 0;
+    renderChapterBar();
   }
 
   function appendCards(n) {
     for (let i = 0; i < n; i++) {
       const next = nextQuestion();
-      if (!next) {
-        if (!feed.querySelector(".empty")) feed.append(emptyCard());
-        break;
-      }
+      if (!next) break;
       cardCount++;
       const card = makeCard(next.q, { isRetry: next.isRetry, label: `#${cardCount}` });
       visObs.observe(card);
       feed.append(card);
     }
-    // keep a sentinel at the end so the feed never runs out
+    // Keep a sentinel at the end so more cards load as you scroll.
     feed.querySelector(".sentinel")?.remove();
     const s = h("div", { class: "sentinel", "aria-hidden": "true", style: "height:1px" });
     feed.append(s);
@@ -419,14 +466,86 @@
     sentinelObs.observe(s);
   }
 
-  function emptyCard() {
-    const card = h("section", { class: "card empty" });
-    card.innerHTML = `<div class="card-inner hello">
-        <h2>No missed questions right now</h2>
-        <p>Anything you get wrong lands here so you can try it again. Switch back to all skills to keep going.</p>
-        <button class="btn wide next-row" type="button">Practice all skills</button>
+  // After each answer: keep two unanswered cards ready, and finish the chapter
+  // once the queue is empty and every card on screen has been answered.
+  function afterFeedAnswer() {
+    const pending = [...feed.querySelectorAll(".card[data-qid]")].filter((c) => !c._answered).length;
+    if (pending < 2 && queue.length) appendCards(2 - pending);
+    const ch = currentChapter();
+    if (!ch || completeShown || queue.length || pending) return;
+    completeShown = true;
+    const firstTime = !isComplete(ch.id);
+    let unlocked = null;
+    if (firstTime) {
+      S.completedChapters.push(ch.id);
+      rewards.earn(S, RULES.chapterSparks);
+      const next = chapterById(ch.id + 1);
+      if (next && !isUnlocked(next.id)) {
+        S.unlockedChapters.push(next.id);
+        unlocked = next;
+      }
+      save();
+      renderHud(["sparks"]);
+      celebrate("⭐", `Chapter ${ch.id} complete!`, `+${RULES.chapterSparks} ⚡ Sparks${unlocked ? ` · Chapter ${unlocked.id} unlocked` : ""}`);
+    }
+    feed.querySelector(".sentinel")?.remove();
+    feed.append(completeCard(ch, firstTime));
+    renderChapterBar();
+  }
+
+  // "Explanation Pause": the lesson card that opens each chapter.
+  function pauseCard(ch) {
+    const card = h("section", { class: "card pause" });
+    const cast = castOf();
+    card.innerHTML = `
+      <div class="card-inner pause-card">
+        <div class="meta"><span class="domain">${ch.bonus ? "Bonus chapter" : `Chapter ${ch.id} of ${CORE_CHAPTERS}`}</span><span>Explanation Pause</span></div>
+        <h2>${esc(ch.title)}</h2>
+        <p class="pause-summary">${fill(ch.pause.summary, cast)}</p>
+        <ul class="rule-list">${ch.pause.rules.map((r) => `<li>${fill(r, cast)}</li>`).join("")}</ul>
+        <div class="patterns" aria-label="Patterns">
+          ${ch.pause.patterns.map((p) => `<span class="pattern ${p.ok ? "ok" : "no"}"><b aria-hidden="true">${p.ok ? "✓" : "✗"}</b> ${fill(p.f, cast, false)}<span class="sr-only">${p.ok ? " (correct)" : " (incorrect)"}</span></span>`).join("")}
+        </div>
+        <p class="pause-example"><span class="label-sm">Example</span><span>${fill(ch.pause.example, cast)}</span></p>
+        <button class="btn wide next-row" type="button">Start practice ↓</button>
       </div>`;
-    card.querySelector("button").addEventListener("click", () => { S.filter = "all"; save(); renderChips(); resetFeed(); });
+    card.querySelector(".btn").addEventListener("click", () => scrollToNext(card));
+    return card;
+  }
+
+  function completeCard(ch, firstTime) {
+    const card = h("section", { class: "card complete" });
+    const next = chapterById(ch.id + 1);
+    const finishedCore = CHAPTERS.filter((c) => !c.bonus).every((c) => isComplete(c.id));
+    let heading;
+    let body;
+    let actions = "";
+    if (next && !next.bonus) {
+      heading = `Chapter ${ch.id} complete`;
+      body = `Next up: <b>${esc(next.title)}</b>.`;
+      actions = `<button class="btn wide" type="button" data-go="${next.id}">Start Chapter ${next.id} →</button>`;
+    } else if (finishedCore) {
+      heading = ch.bonus ? "Bonus chapter complete" : "Curriculum complete";
+      body = "You've worked through every chapter. Keep your skills sharp with mixed review.";
+      if (next) actions += `<button class="btn wide" type="button" data-go="${next.id}">Bonus: ${esc(next.short)} →</button>`;
+      actions += `<button class="btn ${next ? "ghost " : ""}wide" type="button" data-go="${REVIEW_ID}">Mixed review →</button>`;
+    } else {
+      heading = `${ch.bonus ? "Bonus chapter" : `Chapter ${ch.id}`} complete`;
+      body = "Pick your next chapter from the chapter list.";
+      actions = `<button class="btn wide" type="button" data-drawer>Open chapters</button>`;
+    }
+    card.innerHTML = `
+      <div class="card-inner complete-card">
+        <span class="complete-star" aria-hidden="true">⭐</span>
+        <h2>${heading}</h2>
+        <p>${firstTime ? `+${RULES.chapterSparks} ⚡ Sparks earned. ` : "Replay finished. "}${body}</p>
+        <div class="stack">${actions}<button class="btn ghost wide" type="button" data-go="${ch.id}">Replay this chapter</button></div>
+      </div>`;
+    card.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
+      const go = b.dataset.go === REVIEW_ID ? REVIEW_ID : Number(b.dataset.go);
+      startChapter(go);
+    }));
+    card.querySelector("[data-drawer]")?.addEventListener("click", openChapters);
     return card;
   }
 
@@ -443,10 +562,10 @@
     const grid = inner.querySelector(".cast-grid");
     const paint = () => {
       grid.querySelectorAll(".cast-btn").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === S.themeId)));
-      inner.querySelector("#welcome-preview").innerHTML = fill(QUESTIONS[0].text.replace("______", castOf().craft + ". By"), castOf());
+      inner.querySelector("#welcome-preview").innerHTML = previewSentence();
     };
     for (const t of themesForPicker()) {
-      grid.append(castButton(t, () => { S.themeId = t.id; save(); paint(); refreshUnanswered(); }));
+      grid.append(castButton(t, () => { S.themeId = t.id; save(); paint(); refreshCast(); }));
     }
     paint();
     inner.querySelector(".btn").addEventListener("click", () => {
@@ -474,17 +593,17 @@
   function paintCard(card) {
     const q = card._q;
     const cast = castOf();
-    const domainShort = DOMAINS.find((d) => d.id === q.domain)?.short || q.domain;
+    const ch = chapterById(q.chapterId);
     card.innerHTML = `
       <div class="card-inner">
         <div class="meta">
-          <span class="domain">${esc(domainShort)}</span>
+          <span class="domain">${ch.bonus ? "Bonus" : `Ch ${ch.id}`}</span>
           <span>${esc(q.skill)}</span>
           ${card._isRetry ? '<span class="retry-tag">↺ Try again</span>' : ""}
           <span class="num">${esc(card._label)}</span>
         </div>
         <p class="passage">${fill(q.text, cast).replace("______", '<span class="blank" role="img" aria-label="blank"></span>')}</p>
-        <p class="prompt">${q.domain === "Transitions" ? PROMPT_TRANSITION : PROMPT_GRAMMAR}</p>
+        <p class="prompt">${q.kind === "transition" ? PROMPT_TRANSITION : PROMPT_GRAMMAR}</p>
         <ol class="choices">
           ${card._order.map((ci, pos) => `
             <li><button class="choice" type="button" data-ci="${ci}">
@@ -496,9 +615,19 @@
     card.querySelectorAll(".choice").forEach((b) => b.addEventListener("click", () => answer(card, Number(b.dataset.ci))));
   }
 
-  // Re-render cards that haven't been answered so a new cast shows up immediately.
-  function refreshUnanswered() {
+  // Re-render cards that haven't been answered, and the lesson card, so a new
+  // cast shows up immediately.
+  function refreshCast() {
     feed.querySelectorAll(".card[data-qid]").forEach((c) => { if (!c._answered) paintCard(c); });
+    const pause = feed.querySelector(".card.pause");
+    const ch = currentChapter();
+    if (pause && ch) pause.replaceWith(pauseCard(ch));
+  }
+
+  // A sample sentence for cast previews.
+  function previewSentence() {
+    const q = BY_ID["c6-4"];
+    return fill(q.text.replace("______", q.choices[q.answer]));
   }
 
   function scrollToNext(card) {
@@ -543,7 +672,8 @@
     const d = today();
     d.n++;
     if (correct) d.c++;
-    const sk = (S.skills[q.skill] ||= { seen: 0, right: 0, domain: q.domain });
+    const sk = (S.skills[q.skill] ||= { seen: 0, right: 0 });
+    sk.chapterId = q.chapterId;
     sk.seen++;
     if (correct) sk.right++;
 
@@ -559,12 +689,14 @@
       sparks = rewards.sparksForCorrect(S.combo);
       rewards.earn(S, sparks.total);
       S.missed = S.missed.filter((id) => id !== q.id);
+      const got = correctIn(q.chapterId);
+      if (!got.includes(q.id)) got.push(q.id);
     } else {
       savedCombo = rewards.useComboSaver(S) ? S.combo : 0;
       S.combo = savedCombo;
       if (!S.missed.includes(q.id)) S.missed.push(q.id);
       if (!card._review) {
-        retries.push({ id: q.id, due: served + 3 });
+        requeue(q.id);
         focusLeft = rewards.loseFocus(S);
         lastWrong = q;
       }
@@ -593,7 +725,8 @@
     save();
     renderHud(goal || correct ? ["sparks", ...(goal ? ["streak"] : [])] : []);
     renderFocus(correct);
-    renderChips();
+    renderChapterBar();
+    if (!card._review) afterFeedAnswer();
 
     if (goal) celebrateGoal(goal);
     if (correct && [3, 5, 10, 15, 20, 25, 30, 40, 50].includes(S.combo)) {
@@ -644,17 +777,19 @@
   let focusSheet = null;
   let focusReturn = null;
 
+  // Two review questions from the same chapter, same skill first.
   function pickReview(base) {
-    const others = QUESTIONS.filter((q) => q.id !== base.id);
-    const sameSkill = shuffle(others.filter((q) => q.skill === base.skill));
-    const sameDomain = shuffle(others.filter((q) => q.domain === base.domain && q.skill !== base.skill));
-    return [...sameSkill, ...sameDomain, ...shuffle(others)].slice(0, REVIEW_LENGTH);
+    const sameChapter = QUESTIONS.filter((q) => q.chapterId === base.chapterId && q.id !== base.id);
+    const sameSkill = shuffle(sameChapter.filter((q) => q.skill === base.skill));
+    const rest = shuffle(sameChapter.filter((q) => q.skill !== base.skill));
+    return [...sameSkill, ...rest].slice(0, REVIEW_LENGTH);
   }
 
   function openFocusBreak() {
     if (focusSheet || onboarding.isOpen()) return;
-    const base = lastWrong || BY_ID[S.missed[S.missed.length - 1]] || QUESTIONS[0];
-    const tip = TIPS[base.skill];
+    const base = lastWrong || BY_ID[S.missed[S.missed.length - 1]] || currentChapter()?.questions[0] || QUESTIONS[0];
+    const ch = chapterById(base.chapterId);
+    const cast = castOf();
     focusReturn = document.activeElement;
 
     focusSheet = h("div", { class: "sheet-backdrop" });
@@ -676,11 +811,11 @@
     sheet.innerHTML = `
       ${header("")}
       <h2 id="fb-title">Focus is out. Take a breath.</h2>
-      <p class="muted">Here's a quick tip on what tripped you up. Then answer ${REVIEW_LENGTH} review questions to restore all ${RULES.maxFocus} shields.</p>
+      <p class="muted">Here's the rule summary for this chapter. Then answer ${REVIEW_LENGTH} review questions to restore all ${RULES.maxFocus} shields.</p>
       <article class="tip-card">
-        <span class="label-sm">${esc(base.skill)}</span>
-        <p class="tip-text">${esc(tip ? tip.tip : "Read the whole sentence before you pick. Check what comes right before and after the blank.")}</p>
-        ${tip && tip.ex ? `<p class="tip-ex">${esc(tip.ex)}</p>` : ""}
+        <span class="label-sm">${ch.bonus ? "Bonus" : `Chapter ${ch.id}`} · ${esc(ch.short)}</span>
+        <ul class="rule-list">${ch.pause.rules.map((r) => `<li>${fill(r, cast, false)}</li>`).join("")}</ul>
+        <p class="tip-ex">${fill(ch.pause.example, cast, false)}</p>
       </article>
       <button class="btn wide" type="button" id="fb-start">Start ${REVIEW_LENGTH}-question review</button>
       ${S.sparks >= RULES.focusRefillPrice
@@ -753,6 +888,93 @@
     }
     e.stopPropagation(); // keep the feed's shortcuts out of the drawer
   }
+
+  // ---------- Chapter drawer ----------
+  let chapterSheet = null;
+  let chapterReturn = null;
+
+  function openChapters() {
+    if (chapterSheet || focusSheet || onboarding.isOpen()) return;
+    chapterReturn = document.activeElement;
+    chapterSheet = h("div", { class: "sheet-backdrop" });
+    const sheet = h("div", { class: "sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "ch-title" });
+    chapterSheet.append(sheet);
+    document.body.append(chapterSheet);
+    chapterSheet.addEventListener("mousedown", (e) => { if (e.target === chapterSheet) closeChapters(); });
+    document.addEventListener("keydown", chapterKeys, true);
+
+    const row = (ch) => {
+      const unlocked = isUnlocked(ch.id);
+      const done = isComplete(ch.id);
+      const current = S.chapterId === ch.id;
+      const got = Math.min(correctIn(ch.id).length, ch.questions.length);
+      const status = done ? "✓" : current ? "▶" : unlocked ? "•" : "🔒";
+      const sub = unlocked
+        ? `${done ? "Complete" : `${got} of ${ch.questions.length} correct`}${current ? " · current" : ""}`
+        : `Finish Chapter ${ch.id - 1} first`;
+      return `
+        <button type="button" class="chapter-row${done ? " done" : ""}${current ? " current" : ""}" data-ch="${ch.id}" ${unlocked ? "" : "disabled"}>
+          <span class="ch-status" aria-hidden="true">${status}</span>
+          <span class="ch-info">
+            <b>${ch.bonus ? "Bonus" : `${ch.id}.`} ${esc(ch.title)}</b>
+            <small>${sub}</small>
+            ${unlocked && !done ? `<span class="bar" aria-hidden="true"><i style="width:${(got / ch.questions.length) * 100}%"></i></span>` : ""}
+          </span>
+        </button>`;
+    };
+    const core = CHAPTERS.filter((c) => !c.bonus);
+    const extra = CHAPTERS.filter((c) => c.bonus);
+    const coreDone = core.filter((c) => isComplete(c.id)).length;
+
+    sheet.innerHTML = `
+      <div class="grabber" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <span class="label-sm">Curriculum · ${coreDone} of ${core.length} complete</span>
+        <button class="linkbtn" type="button" data-close>Close</button>
+      </div>
+      <h2 id="ch-title">Chapters</h2>
+      <div class="chapter-list">${core.map(row).join("")}</div>
+      <span class="label-sm">Extras</span>
+      <div class="chapter-list">
+        ${extra.map(row).join("")}
+        <button type="button" class="chapter-row${inReview() ? " current" : ""}" data-ch="${REVIEW_ID}" ${reviewOpen() ? "" : "disabled"}>
+          <span class="ch-status" aria-hidden="true">${reviewOpen() ? "🔀" : "🔒"}</span>
+          <span class="ch-info"><b>Mixed review</b><small>${reviewOpen() ? "Endless questions from finished chapters, missed ones first" : "Finish any chapter first"}</small></span>
+        </button>
+      </div>`;
+    sheet.querySelector("[data-close]").addEventListener("click", closeChapters);
+    sheet.querySelectorAll("[data-ch]:not([disabled])").forEach((b) => b.addEventListener("click", () => {
+      const id = b.dataset.ch === REVIEW_ID ? REVIEW_ID : Number(b.dataset.ch);
+      closeChapters();
+      startChapter(id);
+    }));
+    (sheet.querySelector(".chapter-row.current:not([disabled])") || sheet.querySelector("[data-close]")).focus();
+  }
+
+  function closeChapters() {
+    if (!chapterSheet) return;
+    document.removeEventListener("keydown", chapterKeys, true);
+    chapterSheet.remove();
+    chapterSheet = null;
+    chapterReturn?.focus?.({ preventScroll: true });
+  }
+
+  function chapterKeys(e) {
+    if (!chapterSheet) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeChapters();
+    } else if (e.key === "Tab") {
+      const items = [...chapterSheet.querySelectorAll("button:not(:disabled)")];
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    e.stopPropagation();
+  }
+
+  $("#chapter-bar").addEventListener("click", openChapters);
 
   // ---------- Celebration & toast ----------
   // Celebrations queue so a streak, a badge and a combo don't pile up at once.
@@ -1004,7 +1226,7 @@
       S.themeId = b.dataset.use;
       S.castChosen = true;
       save();
-      refreshUnanswered();
+      refreshCast();
       renderShop();
       toast(`Cast switched to ${THEMES.find((t) => t.id === b.dataset.use).label}`);
     }));
@@ -1028,7 +1250,7 @@
       if (res.ok) {
         S.themeId = res.theme.id;
         S.castChosen = true;
-        refreshUnanswered();
+        refreshCast();
         celebrate(res.theme.icon || "🎭", `${res.theme.label} unlocked`, "Your questions now use this cast");
       }
     } else if (id.startsWith("avatar:")) {
@@ -1069,13 +1291,20 @@
     const v = $("#view-you");
     const c = S.custom;
     const proOpts = (sel) => ["he", "she", "they"].map((p) => `<option value="${p}" ${p === sel ? "selected" : ""}>${p}</option>`).join("");
-    const skillRows = Object.entries(S.skills)
-      .sort((a, b) => a[1].right / a[1].seen - b[1].right / b[1].seen)
-      .map(([name, s]) => {
-        const pct = Math.round((s.right / s.seen) * 100);
-        const tone = pct >= 80 ? "" : pct >= 50 ? "mid" : "low";
-        return `<div class="bar-row"><div class="top"><span>${esc(name)}</span><span>${s.right}/${s.seen} · ${pct}%</span></div><div class="bar"><i class="${tone}" style="width:${pct}%"></i></div></div>`;
-      }).join("");
+    // Accuracy per chapter, in curriculum order (skills are tagged with their chapter).
+    const byChapter = {};
+    for (const s of Object.values(S.skills)) {
+      if (!s.chapterId) continue; // stats from before the curriculum
+      const t = (byChapter[s.chapterId] ||= { seen: 0, right: 0 });
+      t.seen += s.seen;
+      t.right += s.right;
+    }
+    const skillRows = CHAPTERS.filter((ch) => byChapter[ch.id]).map((ch) => {
+      const s = byChapter[ch.id];
+      const pct = Math.round((s.right / s.seen) * 100);
+      const tone = pct >= 80 ? "" : pct >= 50 ? "mid" : "low";
+      return `<div class="bar-row"><div class="top"><span>${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(ch.short)}</span><span>${s.right}/${s.seen} · ${pct}%</span></div><div class="bar"><i class="${tone}" style="width:${pct}%"></i></div></div>`;
+    }).join("");
 
     v.innerHTML = `
       <div class="stack">
@@ -1107,7 +1336,7 @@
         </section>
         <section class="panel">
           <h2>Skill check</h2>
-          ${skillRows ? `<div class="bars">${skillRows}</div>` : '<p class="muted">Answer a few questions to see which grammar skills need work. Weakest skills show first.</p>'}
+          ${skillRows ? `<div class="bars">${skillRows}</div>` : '<p class="muted">Answer a few questions to see your accuracy for each chapter.</p>'}
         </section>
         <section class="panel">
           <h2>Start over</h2>
@@ -1131,10 +1360,7 @@
       }));
     }
 
-    const preview = () => {
-      const sample = BY_ID["t04"];
-      $("#you-preview", v).innerHTML = fill(sample.text.replace("______", sample.choices[0]));
-    };
+    const preview = () => { $("#you-preview", v).innerHTML = previewSentence(); };
     preview();
 
     const bindText = (id, setter) => $(id, v).addEventListener("input", (e) => { setter(e.target.value); save(); preview(); castChanged(); });
@@ -1167,8 +1393,7 @@
         S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
         save();
         renderHud();
-        renderChips();
-        resetFeed();
+        startChapter(1);
         show("feed");
         toast("Progress reset. Fresh start.");
       });
@@ -1178,7 +1403,7 @@
   let castTimer;
   function castChanged() {
     clearTimeout(castTimer);
-    castTimer = setTimeout(refreshUnanswered, 150);
+    castTimer = setTimeout(refreshCast, 150);
   }
 
   // ---------- Accounts & sync ----------
@@ -1323,7 +1548,8 @@
       toast("Signed in, but syncing failed. We'll retry after your next answer.");
     }
     renderHud();
-    refreshUnanswered();
+    refreshCast();
+    renderChapterBar();
     rerenderCurrent();
   }
 
@@ -1353,7 +1579,7 @@
 
   // ---------- Keyboard ----------
   document.addEventListener("keydown", (e) => {
-    if (onboarding.isOpen() || focusSheet || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
+    if (onboarding.isOpen() || focusSheet || chapterSheet || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
     const card = activeCard;
     if (!card) return;
     const k = e.key.toLowerCase();
@@ -1371,8 +1597,8 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) renderHud(); });
 
   // ---------- Boot ----------
+  S.focus = RULES.maxFocus; // 3 Focus Shields per session
   auth.init();
   renderHud();
-  renderChips();
-  resetFeed();
+  startChapter(S.chapterId);
 })();
