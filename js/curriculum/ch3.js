@@ -3,7 +3,7 @@
 // taught in the lesson; `forms` marks each choice: s = singular verb,
 // p = plural verb, x = non-verb. The content check in questions.js verifies
 // that the odd one out really is the answer.
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 3,
   short: "Subject-Verb Agreement",
   title: "Subject-Verb Agreement",

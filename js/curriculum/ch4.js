@@ -1,7 +1,7 @@
 // Chapter 4: Verb vs. Non-Verb Identification.
 // `shortcut: "2:1"` marks verb-spot questions where the 2:1 ratio check works
 // (see ch3.js for the `forms` codes).
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 4,
   short: "Verb vs. Non-Verb",
   title: "Verb vs. Non-Verb Identification",

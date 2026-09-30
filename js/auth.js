@@ -129,6 +129,7 @@
         spark_wager: state.wager,
         unlocked_avatars: state.unlockedAvatars,
         combo_savers: state.comboSavers,
+        vocab_progress: state.vocab,
         updated_at: now,
       },
       settings: {
@@ -257,6 +258,8 @@
       out.completedChapters = chapters(local.completedChapters, p.completed_chapters);
       out.unlockedThemes = union(local.unlockedThemes, p.unlocked_themes);
       out.badges = union(local.badges, p.unlocked_badges);
+      // Vocab Vault: per word, the most recently answered side wins.
+      if (SW.vocab) out.vocab = SW.vocab.mergeProgress(local.vocab, p.vocab_progress);
       const avatarIds = new Set((SW.avatars || []).map((a) => a.id));
       out.unlockedAvatars = union(local.unlockedAvatars, p.unlocked_avatars).filter((id) => avatarIds.has(id));
 

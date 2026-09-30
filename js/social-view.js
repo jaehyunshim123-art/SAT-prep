@@ -1,4 +1,4 @@
-// SatWizz "Ranks" tab: live leaderboards (Global Top 50 / Friends League),
+// SatWizz "Leaderboard" tab: live leaderboards (Global Top 50 / Friends League),
 // friend streaks with Lock In nudges, friend requests, search and invites.
 //
 // The app mounts it with a context of shared helpers:

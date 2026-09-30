@@ -1,5 +1,5 @@
 // Chapter 5: Verb Tenses.
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 5,
   short: "Verb Tenses",
   title: "Verb Tenses",

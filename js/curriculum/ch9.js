@@ -1,5 +1,5 @@
 // Chapter 9: Modifiers & Parallelism.
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 9,
   short: "Modifiers & Parallelism",
   title: "Modifiers & Parallelism",

@@ -407,6 +407,50 @@ button.avatar:hover { border-color: var(--volt); }
 }
 .prompt { margin: 0; font-size: 0.9rem; color: var(--muted); }
 
+/* ---------- Digital SAT (Bluebook-style) question card ---------- */
+.bb-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bb-num {
+  flex: none;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+.bb-meta {
+  min-width: 0;
+  flex: 1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bb-passage {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--ink);
+  border-radius: 4px 12px 12px 4px;
+  background: var(--surface-2);
+}
+.bb-passage .passage { font-size: 1.05rem; line-height: 1.7; }
+.bb-passage .blank { min-width: 5em; border-bottom-width: 2px; }
+u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weight: 600; }
+.bb-stem { margin: 0; font-size: 0.98rem; font-weight: 600; line-height: 1.45; }
+.bb .choice { border-radius: 10px; border-bottom-width: 2px; }
+.bb .choice:active:not(:disabled) { transform: none; margin-top: 0; border-bottom-width: 2px; }
+.bb .choice .letter { border-radius: 50%; }
+
 .choices { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .choice {
   width: 100%;
@@ -830,6 +874,70 @@ button.avatar:hover { border-color: var(--volt); }
 }
 .tab .ico { font-size: 1.3rem; line-height: 1.2; }
 .tab[aria-selected="true"] { color: var(--ink); background: var(--surface); }
+/* Long labels swap to a short form on phones so five tabs fit without truncation. */
+.tab .lbl-short { display: none; }
+@media (max-width: 440px) {
+  .tab .lbl-long { display: none; }
+  .tab .lbl-short { display: inline; }
+}
+
+/* ---------- Vocab Vault ---------- */
+.small { font-size: 0.8rem; }
+.vault-hero h2 { margin: 0; }
+.tier-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tier-tile {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  padding: 10px 6px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  text-align: center;
+}
+.tier-tile b { font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tier-tile span { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+.tier-tile.t1 b { color: var(--good); }
+.tier-tile.t2 b { color: var(--spark); }
+.tier-tile.t3 b { color: var(--volt); }
+.tier {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  background: var(--surface-2);
+}
+.tier.t1 { color: var(--good); background: var(--good-bg); }
+.tier.t2 { color: var(--spark); background: var(--spark-bg); }
+.tier.t3 { color: var(--volt-ink); background: var(--volt); }
+.word-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.word-list details { padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
+.word-list summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.word-list summary::-webkit-details-marker { display: none; }
+.word-list summary small { color: var(--muted); font-style: italic; }
+.word-list details p { margin: 6px 0 0; }
+.sprint-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sprint-dots { display: flex; gap: 6px; }
+.sprint-dots i { width: 22px; height: 8px; border-radius: 999px; background: var(--line); }
+.sprint-dots i.now { background: var(--volt); }
+.sprint-dots i.ok { background: var(--good); }
+.sprint-dots i.no { background: var(--bad); }
+.vocab-card { flex: none; }
+.vx-def { margin: 0; font-size: 1.02rem; font-weight: 600; }
+.vx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.vx-box { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.vx-box p { margin: 0; font-size: 0.9rem; }
+@media (max-width: 420px) { .vx-grid { grid-template-columns: 1fr; } }
+.sprint-summary { text-align: center; justify-items: center; }
+.sprint-summary .stack { width: 100%; }
+.sum-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: 100%; text-align: left; }
+.sum-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; }
+.sum-row.ok { background: var(--good-bg); }
+.sum-row.ok > span:first-child { color: var(--good); font-weight: 900; }
+.sum-row.no { background: var(--bad-bg); }
+.sum-row.no > span:first-child { color: var(--bad); font-weight: 900; }
+.sum-row .muted { text-align: right; }
 
 /* ---------- Demo Mode badge ---------- */
 .brand { position: relative; cursor: default; user-select: none; -webkit-user-select: none; }

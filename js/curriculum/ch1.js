@@ -2,7 +2,7 @@
 // Taught in plain language: a full sentence needs a subject, a verb and a
 // complete thought. Everything else is a fragment.
 // Each question's `notes` line up with `choices`: why each one works or fails.
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 1,
   short: "Complete Sentences",
   title: "Identifying Independent Clauses",

@@ -1,6 +1,18 @@
 # SatWizz
 
-A mobile-first, gamified SAT grammar course. You work through a 9-chapter curriculum in a snap-scrolling feed, earn Sparks, keep daily and friend streaks, and climb live leaderboards. The names in every question change to a cast you pick.
+A mobile-first, gamified SAT grammar and vocabulary course. You work through a 9-chapter curriculum in a snap-scrolling feed of Digital SAT-style questions, drill vocabulary in the Vocab Vault, earn Sparks, keep daily and friend streaks, and climb live leaderboards. The names in every question change to a cast you pick.
+
+The bottom nav has five tabs: **Practice · Vocab · Leaderboard · Shop · Profile**. Your daily streak and achievements live at the top of Profile, and tapping the 🔥 pill in the header opens it.
+
+## Question format
+
+Every card follows the Digital SAT (Bluebook) layout:
+- a numbered header;
+- a short passage (1–3 sentences) with either a blank `______` or an underlined segment;
+- the official College Board question stem;
+- four choices with circled letters **A–D**. Screen readers announce each as "(A) …".
+
+The stems live in `SatWizz.STEMS` in `js/questions.js`. `SatWizz.stemFor(q)` picks one: a question's own `stem` if it has one, then the transition stem for `kind: "transition"`, then the Standard English stem for a blank or an underline.
 
 ## Curriculum
 
@@ -29,6 +41,22 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 
 **Chapter drawer.** Tap the chapter bar above the feed to see every chapter's status (✓ done, ▶ current, 🔒 locked) and progress. You can jump to any unlocked chapter. Mixed review (missed questions first) opens once you finish a chapter.
 
+## Vocab Vault
+
+The **Vocab** tab (`js/vocab.js`) teaches 30 SAT words in two Words-in-Context formats:
+- 20 are "fill the blank" (the most logical and precise word);
+- 10 are "As used in the text, what does *X* most nearly mean?", with the word underlined.
+
+- **Daily Sprint:** 5 cards. It serves words due for review first (lowest tier first), then new words, then mastered ones for review.
+- **Spaced repetition:** 3 tiers, **Novice 🌱 → Practitioner ⚡ → Master 👑**. A correct answer moves a word up one tier, at most once per day, so reaching Master takes practice on separate days. A wrong answer drops the word back to Novice and slides up a breakdown with the definition, root word, context clue and a note on every choice.
+- **Rewards:**
+  - +5 ⚡ per correct card;
+  - +25 ⚡ the first time a word reaches Master;
+  - +20 ⚡ for finishing a sprint (once per day).
+
+  Vocab answers also count toward your daily goal and give +5 XP each. They don't use Focus Shields or combos.
+- Progress syncs to `profiles.vocab_progress`. If both devices practiced a word, the newer answer wins.
+
 ## Gamification
 
 - **Sparks ⚡.** You earn +10 per correct answer, +5 on every 3rd answer in a row, +50 per chapter (first time) and +50 for your daily goal.
@@ -41,7 +69,7 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 
 ## Social
 
-- **Ranks tab.** **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.
+- **Leaderboard tab.** **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.
 - **Friends.** Search by `@username` or share your invite link (`…/?invite=yourname`). Opening an invite while signed out asks you to sign in, then sends the request automatically. If both people send a request, it's accepted.
 - **Friend streaks 🔥.** A friend streak grows once per day when you and a friend both practice within 24 hours. Missing a day restarts it.
 - **Lock In 🔒.** Next to a friend who hasn't practiced today, send "*{name} told you to Lock In! Keep your 12-day streak alive.*" It arrives as a **push notification** on their devices and as an **in-app banner**, live if they have the app open. You can send it once per friend every 4 hours.
@@ -60,7 +88,7 @@ Without Supabase settings it runs in guest mode, and progress stays in `localSto
 ## Set up Supabase (accounts, sync, leaderboards, friends)
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql). It's safe to re-run. **Existing projects must re-run it** to add the social tables.
+2. In **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql). It's safe to re-run. **Existing projects must re-run it** to add the social tables and the `vocab_progress` column.
    - It creates `profiles` and `user_settings` (private sync), `user_public` (leaderboard cards), `friendships` (with the friend streak), `lock_ins` and `push_subscriptions`.
    - It adds row-level security and the functions `send_friend_request`, `respond_friend_request`, `record_practice` and `send_lock_in`.
    - It adds `lock_ins` to Supabase Realtime.
@@ -85,7 +113,7 @@ Push needs HTTPS, a service worker (`sw.js`), the web app manifest and a small S
    supabase functions deploy lock-in
    ```
    The function lives in [`supabase/functions/lock-in/index.ts`](supabase/functions/lock-in/index.ts). It stores the alert through `send_lock_in` (as the signed-in user, so all the checks apply), pushes it to the friend's devices, and removes expired subscriptions.
-4. Each user turns alerts on from **Ranks → Friends League** or **Profile → Settings**.
+4. Each user turns alerts on from **Leaderboard → Friends League** or **Profile → Settings**.
 
 **Notes:**
 - **iPhone:** web push only works after **Share → Add to Home Screen** (iOS 16.4+). The app explains this when it detects Safari.
@@ -100,20 +128,23 @@ icons/                      app, maskable, Apple touch and badge icons
 css/styles.css              all styles (light + dark)
 js/config.js                Supabase URL, anon key, VAPID public key
 js/themes.js                casts and avatars
+js/questions.js             curriculum framework: chapter plan, official stems, addChapter/build API
 js/curriculum/ch1-ch10.js   one file per chapter: lesson + 20 questions with per-choice notes
-js/questions.js             orders the chapters and builds the question list
+js/vocab.js                 Vocab Vault: words, spaced-repetition tiers, sprint UI
 js/rewards.js               Sparks, shop, Focus, Aura Shields, wager, badges (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push
 js/onboarding.js            sign-up / log-in modal
-js/social-view.js           Ranks tab: leaderboards, friend streaks, requests, invites
+js/social-view.js           Leaderboard tab: leaderboards, friend streaks, requests, invites
 js/app.js                   chapter feed, drawers, streaks, shop, profile, demo mode
-scripts/validate-content.js content checks for the curriculum
+scripts/validate-content.js content checks for the curriculum and vocab
 supabase/schema.sql         tables, row-level security, social functions
 supabase/functions/lock-in  Edge Function that sends Lock In pushes
 ```
 
 ## Adding questions
+
+`js/questions.js` holds the framework: the chapter plan (`SatWizz.CURRICULUM_PLAN`), the stems and the registration API. Each chapter file calls `SatWizz.curriculum.addChapter({ id, short, title, pause, questions })`, and `app.js` calls `SatWizz.curriculum.build()` once at startup. A chapter in the plan with no file yet shows up empty, so Phase 2 content can land one chapter file at a time. Load new chapter files after `js/questions.js` in `index.html`.
 
 Add to a chapter's `questions` array in `js/curriculum/chN.js`, then run `node scripts/validate-content.js`:
 
@@ -132,7 +163,7 @@ Add to a chapter's `questions` array in `js/curriculum/chN.js`, then run `node s
 }
 ```
 
-- `______` marks the blank. Each choice replaces exactly that blank.
+- `______` marks the blank, and each choice replaces exactly that blank. Or wrap a segment in `[[…]]` to underline it; that switches to the underlined-segment stem.
 - Placeholders:
   - `{{NAME_1}}`–`{{NAME_3}}`
   - `{{NAME_n_POSS}}` / `{{NAME_n_OBJ}}` (his/her/their, him/her/them)

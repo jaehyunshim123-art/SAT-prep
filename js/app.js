@@ -2,6 +2,7 @@
   "use strict";
 
   const SW = window.SatWizz;
+  SW.curriculum.build(); // every chapter file has registered by now
   const QUESTIONS = SW.questions;
   const THEMES = SW.themes;
   const PRONOUNS = SW.pronouns;
@@ -21,8 +22,6 @@
   const SIGNUP_PROMPT_COMBO = 3;
   const GOALS = [5, 10, 20];
   const REVIEW_LENGTH = 2;
-  const PROMPT_GRAMMAR = "Which choice completes the text so that it conforms to the conventions of Standard English?";
-  const PROMPT_TRANSITION = "Which choice completes the text with the most logical transition?";
 
   // ---------- State ----------
   const DEFAULTS = {
@@ -67,6 +66,8 @@
     comboSavers: 0,
     avatar: SW.defaultAvatarId,
     unlockedAvatars: [],
+    // Vocab Vault spaced-repetition progress (see js/vocab.js)
+    vocab: SW.vocab.emptyProgress(),
     // social
     username: "", // @handle, claimed on first sign-in
     displayName: "",
@@ -90,6 +91,7 @@
     if (!Array.isArray(s.badges)) s.badges = [];
     if (!Array.isArray(s.missed)) s.missed = [];
     if (!Array.isArray(s.unlockedAvatars)) s.unlockedAvatars = [];
+    s.vocab = SW.vocab.mergeProgress(s.vocab, null); // fills defaults, drops unknown words
     if (!SW.avatars.some((a) => a.id === s.avatar)) s.avatar = SW.defaultAvatarId;
     // Saves from before Sparks existed: count correct answers from skill stats.
     if (typeof saved.totalCorrect !== "number") {
@@ -327,49 +329,67 @@
       <button class="chapter-bar" id="chapter-bar" type="button" aria-haspopup="dialog"></button>
     </div>
     <main class="view feed" id="view-feed" aria-live="polite"></main>
-    <main class="view scrollview" id="view-streak" hidden></main>
+    <main class="view scrollview" id="view-vocab" hidden></main>
     <main class="view scrollview ranks-view" id="view-ranks" hidden></main>
     <main class="view scrollview" id="view-shop" hidden></main>
     <main class="view scrollview" id="view-you" hidden></main>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">✏️</span>Practice</button>
-      <button class="tab" role="tab" data-view="streak" aria-selected="false"><span class="ico" aria-hidden="true">🔥</span>Streak</button>
-      <button class="tab" role="tab" data-view="ranks" aria-selected="false"><span class="ico" aria-hidden="true">🏆</span>Ranks</button>
+      <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vocab</button>
+      <button class="tab" role="tab" data-view="ranks" aria-selected="false" aria-label="Leaderboard"><span class="ico" aria-hidden="true">🏆</span><span class="lbl-long" aria-hidden="true">Leaderboard</span><span class="lbl-short" aria-hidden="true">Leaders</span></button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
       <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Profile</button>
     </nav>
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  const VIEWS = ["feed", "streak", "ranks", "shop", "you"];
+  const VIEWS = ["feed", "vocab", "ranks", "shop", "you"];
   let currentView = "feed";
-  let streakTab = "streak"; // or "achievements"
+  let streakTab = "streak"; // Profile's streak section: "streak" or "achievements"
 
   app.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => { sfx.play("tap"); show(t.dataset.view); }));
   $("#hud-sparks").addEventListener("click", () => show("shop"));
   $("#hud-account").addEventListener("click", () => openSignup("save"));
-  $("#hud-avatar").addEventListener("click", () => {
+  const openProfile = () => {
     show("you");
     $("#view-you").scrollTop = 0;
-  });
+  };
+  $("#hud-avatar").addEventListener("click", openProfile);
+  $("#hud-streak").addEventListener("click", openProfile); // streak details live in Profile
 
   function show(view) {
     currentView = view;
     app.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.view === view)));
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
     $("#feed-tools").hidden = view !== "feed";
-    if (view === "streak") renderStreak();
+    if (view === "vocab") vocab.render();
     if (view === "ranks") ranks.render();
     if (view === "shop") renderShop();
     if (view === "you") renderYou();
   }
 
   function rerenderCurrent() {
-    if (currentView === "streak") renderStreak();
+    if (currentView === "vocab" && !vocab.inSprint()) vocab.render();
     if (currentView === "ranks") ranks.render();
     if (currentView === "shop") renderShop();
     if (currentView === "you") renderYou();
   }
+
+  // Vocab Vault lives in its own module (js/vocab.js).
+  const vocab = SW.vocab.mount({
+    container: $("#view-vocab"),
+    getState: () => S,
+    save: () => save(),
+    esc,
+    fill: (text, cast, mark) => fill(text, cast || castOf(), mark),
+    todayKey: () => todayKey(),
+    sfx,
+    toast: (m) => toast(m),
+    celebrate: (...a) => celebrate(...a),
+    earn: (n) => rewards.earn(S, n),
+    recordAnswer: (correct) => recordVocabAnswer(correct),
+    renderHud: (bump) => renderHud(bump),
+  });
 
   // Leaderboards & friends live in their own module (js/social-view.js).
   const ranks = SW.socialView.mount({
@@ -525,7 +545,7 @@
       const next = nextQuestion();
       if (!next) break;
       cardCount++;
-      const card = makeCard(next.q, { isRetry: next.isRetry, label: `#${cardCount}` });
+      const card = makeCard(next.q, { isRetry: next.isRetry, label: String(cardCount) });
       visObs.observe(card);
       feed.append(card);
     }
@@ -666,24 +686,35 @@
     return card;
   }
 
+  // Passage HTML: the blank becomes a Bluebook-style line (or the filled-in
+  // answer), and [[segment]] becomes the underlined target.
+  function renderPassage(text, cast, filledWith) {
+    return fill(text, cast)
+      .replace("______", filledWith != null
+        ? `<mark class="fill-in">${filledWith}</mark>`
+        : '<span class="blank" role="img" aria-label="blank"></span>')
+      .replace(/\[\[([^\]]+)\]\]/, '<u class="target">$1</u>');
+  }
+
+  // Digital SAT (Bluebook) layout: numbered header, passage box, official
+  // stem, then choices A–D.
   function paintCard(card) {
     const q = card._q;
     const cast = castOf();
     const ch = chapterById(q.chapterId);
     card.innerHTML = `
-      <div class="card-inner">
-        <div class="meta">
-          <span class="domain">${ch.bonus ? "Bonus" : `Ch ${ch.id}`}</span>
-          <span>${esc(q.skill)}</span>
+      <div class="card-inner bb">
+        <div class="bb-top">
+          <span class="bb-num" aria-label="Question ${esc(card._label)}">${esc(card._label)}</span>
+          <span class="bb-meta">${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(q.skill)}</span>
           ${card._isRetry ? '<span class="retry-tag">↺ Try again</span>' : ""}
-          <span class="num">${esc(card._label)}</span>
         </div>
-        <p class="passage">${fill(q.text, cast).replace("______", '<span class="blank" role="img" aria-label="blank"></span>')}</p>
-        <p class="prompt">${q.kind === "transition" ? PROMPT_TRANSITION : PROMPT_GRAMMAR}</p>
+        <div class="bb-passage"><p class="passage">${renderPassage(q.text, cast)}</p></div>
+        <p class="bb-stem">${esc(SW.stemFor(q))}</p>
         <ol class="choices">
           ${card._order.map((ci, pos) => `
-            <li><button class="choice" type="button" data-ci="${ci}">
-              <span class="letter">${"ABCD"[pos]}</span><span class="txt">${fill(q.choices[ci], cast, false)}</span>
+            <li><button class="choice" type="button" data-ci="${ci}" aria-label="(${"ABCD"[pos]}) ${esc(fill(q.choices[ci], cast, false).replace(/<[^>]+>/g, ""))}">
+              <span class="letter" aria-hidden="true">${"ABCD"[pos]}</span><span class="txt">${fill(q.choices[ci], cast, false)}</span>
             </button></li>`).join("")}
         </ol>
         <div class="fb-slot"></div>
@@ -740,11 +771,13 @@
       else if (bci === ci) b.classList.add("wrong");
       else b.classList.add("dim");
     });
-    const blank = card.querySelector(".blank");
-    blank.classList.add("filled");
-    blank.removeAttribute("role");
-    blank.removeAttribute("aria-label");
-    blank.innerHTML = fill(q.choices[q.answer], cast, false);
+    const blank = card.querySelector(".blank"); // absent for [[underlined]] questions
+    if (blank) {
+      blank.classList.add("filled");
+      blank.removeAttribute("role");
+      blank.removeAttribute("aria-label");
+      blank.innerHTML = fill(q.choices[q.answer], cast, false);
+    }
 
     // stats
     rollover();
@@ -846,6 +879,24 @@
     openExplain(card, ci, verdict, tag, after);
   }
 
+  // Vocab Vault answers count toward the daily goal, XP and friend streaks.
+  // They don't touch Focus Shields or the practice combo.
+  function recordVocabAnswer(correct) {
+    rollover();
+    const d = today();
+    d.n++;
+    if (correct) {
+      d.c++;
+      S.xp += 5;
+    }
+    const goal = checkGoal();
+    if (goal) {
+      renderHud(["streak", "sparks"]);
+      celebrateGoal(goal);
+    }
+    pingPractice();
+  }
+
   // Tell the server you practiced (friend streaks, "practiced today"), at most
   // every 30 minutes. Skipped for guests and in Demo Mode.
   let lastPracticePing = 0;
@@ -867,7 +918,7 @@
     const q = card._q;
     const cast = castOf();
     const correct = picked === q.answer;
-    const filled = fill(q.text, cast).replace("______", `<mark class="fill-in">${fill(q.choices[q.answer], cast, false)}</mark>`);
+    const filled = renderPassage(q.text, cast, fill(q.choices[q.answer], cast, false));
     const rows = card._order.map((ci, pos) => {
       const isAnswer = ci === q.answer;
       const isPick = ci === picked;
@@ -965,7 +1016,7 @@
   }
 
   function celebrateBadge(b) {
-    celebrate(b.icon, `Title unlocked: ${b.title}`, "Wear it from Streak → Achievements");
+    celebrate(b.icon, `Title unlocked: ${b.title}`, "Wear it from Profile → Achievements");
   }
 
   const PRAISE = ["Correct!", "Nailed it!", "Clean!", "Exactly right!", "Boom!", "Sharp!"];
@@ -1215,10 +1266,11 @@
     toastTimer = setTimeout(() => t.remove(), 3200);
   }
 
-  // ---------- Streak view (Streak | Achievements) ----------
+  // ---------- Streak & Achievements (top of the Profile tab) ----------
   function renderStreak() {
     rollover();
-    const v = $("#view-streak");
+    const v = $("#streak-slot");
+    if (!v) return;
     const switcher = `
       <div class="seg subtabs" role="tablist" aria-label="Streak sections">
         <button type="button" role="tab" data-sub="streak" aria-selected="${streakTab === "streak"}">Streak</button>
@@ -1506,6 +1558,7 @@
 
     v.innerHTML = `
       <div class="stack">
+        <div id="streak-slot"></div>
         <section class="panel" id="account-panel"></section>
         <section class="panel" id="settings-panel">
           <h2>Settings</h2>
@@ -1549,6 +1602,7 @@
         </section>
       </div>`;
 
+    renderStreak();
     renderAccountPanel();
     renderSettings();
     const grid = $("#you-casts", v);
@@ -1940,7 +1994,7 @@
 
   // ---------- Keyboard ----------
   document.addEventListener("keydown", (e) => {
-    if (onboarding.isOpen() || focusSheet || chapterSheet || explainSheet || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
+    if (onboarding.isOpen() || focusSheet || chapterSheet || explainSheet || vocab.isOpen() || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
     const card = activeCard;
     if (!card) return;
     const k = e.key.toLowerCase();

@@ -1,5 +1,5 @@
 // Bonus chapter 10: Pronouns & Possessives. Unlocks after Chapter 9.
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 10,
   bonus: true,
   short: "Pronouns & Possessives",

@@ -26,6 +26,8 @@ alter table public.profiles add column if not exists unlocked_badges text[] not 
 alter table public.profiles add column if not exists spark_wager jsonb;
 alter table public.profiles add column if not exists unlocked_avatars text[] not null default '{}';
 alter table public.profiles add column if not exists combo_savers integer not null default 0;
+-- Vocab Vault: { words: { [id]: { tier, seen, correct, wrong, lastAt, lastDay, advancedDay, mastered } }, sprintDay, sprints }
+alter table public.profiles add column if not exists vocab_progress jsonb not null default '{}'::jsonb;
 
 alter table public.profiles drop constraint if exists profiles_streak_freezes_check;
 alter table public.profiles add constraint profiles_streak_freezes_check check (streak_freezes between 0 and 5);

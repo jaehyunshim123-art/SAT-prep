@@ -1,5 +1,5 @@
 // Chapter 8: Appositives & Non-Essential Clauses.
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 8,
   short: "Appositives",
   title: "Appositives & Non-Essential Clauses",

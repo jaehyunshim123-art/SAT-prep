@@ -1,6 +1,6 @@
 // Chapter 6: Transitions.
 // `kind: "transition"` questions use the SAT's logical-transition prompt.
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 6,
   short: "Transitions",
   title: "Transitions",

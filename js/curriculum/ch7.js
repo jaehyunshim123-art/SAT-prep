@@ -1,5 +1,5 @@
 // Chapter 7: Punctuation Fundamentals (semicolons, colons, dashes, ", which").
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 7,
   short: "Semicolons, Colons, Dashes",
   title: "Punctuation Fundamentals: Semicolons, Colons, Dashes",

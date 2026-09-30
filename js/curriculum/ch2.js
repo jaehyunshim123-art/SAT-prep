@@ -2,7 +2,7 @@
 // IC = independent clause, DC = dependent clause, conj = FANBOYS,
 // LW = linking word (however, therefore...). Flexpos = an LW can slide around
 // inside its clause, so it can never join two clauses by itself.
-((window.SatWizz = window.SatWizz || {}).chapterData = window.SatWizz.chapterData || []).push({
+window.SatWizz.curriculum.addChapter({
   id: 2,
   short: "Connecting Clauses",
   title: "Connecting Independent Clauses",
