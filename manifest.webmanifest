@@ -1,7 +1,7 @@
 {
   "name": "SatWizz",
   "short_name": "SatWizz",
-  "description": "SAT grammar practice with chapters, streaks, friends and leaderboards.",
+  "description": "Digital SAT-style grammar and vocabulary practice with streaks, friends and leaderboards.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
