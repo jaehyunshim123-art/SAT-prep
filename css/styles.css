@@ -1662,12 +1662,33 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
   color: var(--ink);
 }
 .race-log { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; font-size: 0.85rem; }
-.race-log:empty { display: none; }
+.race-log:empty::before { content: "The rivals are reading their first questions…"; color: var(--muted); font-size: 0.85rem; }
+.race-feed { gap: 6px; }
 .race-log li { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; padding: 4px 6px; border-radius: 8px; background: var(--surface-2); line-height: 1.35; }
 .race-log li.ok { box-shadow: inset 3px 0 0 var(--good); }
 .race-log li.no { box-shadow: inset 3px 0 0 var(--bad); }
 .race-log li.muted { display: block; background: none; }
 .race-log .silk-dot { width: 1.1rem; height: 1.1rem; font-size: 0.65rem; margin-top: 1px; }
+
+/* ---------- Vocab Derby: real-time race ---------- */
+.tactic { position: absolute; right: 10px; top: 50%; translate: 0 -50%; font-size: 0.8rem; line-height: 1; pointer-events: none; }
+.tactic:empty { display: none; }
+.race-clock { font: 800 0.85rem/1 ui-monospace, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; color: var(--ink); }
+.race-log time { font: 700 0.75rem/1 ui-monospace, Menlo, Consolas, monospace; color: var(--muted); margin-right: 4px; font-variant-numeric: tabular-nums; }
+.race-log li:first-child { animation: rise 0.25s ease; }
+.race-log li.mine { background: var(--surface); box-shadow: inset 3px 0 0 var(--silk), 0 0 0 1px var(--line); }
+.lock-overlay {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bad-bg);
+  color: var(--bad);
+  font-weight: 700;
+  text-align: center;
+}
+.lock-overlay b { font-variant-numeric: tabular-nums; }
+.choices.locked { opacity: 0.45; }
+.review-table tr.skip .res { color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition: none !important; }

@@ -74,7 +74,10 @@ The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
   - The bet is taken at the gate, and a win pays it back **×1.5**.
   - Up to **3 betting races a day**; Fun runs are unlimited.
   - Leaving mid-race forfeits the bet, after a confirm tap.
-- **Field:** eight horses on a 5-step track. You are Galloping Lexicon. The seven rivals are **CPU players on their own clocks**: each reads a question (10–14s, like you), then answers in its own time range at its own accuracy.
+- **Field:** eight horses on a 5-step track. You are Galloping Lexicon. The seven rivals are **independent CPU players**.
+  - **The race clock never pauses**: not while you read feedback, not if you switch tabs.
+  - Each rival reads a question (12–16s, like you), answers in its own time range at its own accuracy, and moves **live whether or not you answer**.
+  - If you never answer, a rival wins in about 90 seconds. A rival that crosses the line while you're thinking wins.
 
   | Rival | Style | Answer time | Accuracy |
   |---|---|---|---|
@@ -86,26 +89,27 @@ The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
   | Rhetoric Rocket | Reckless | 1–2s | 54% |
   | Prose Pony | Careful | 6–9s | 95% |
 
-- **Turns:** each turn is one advanced question (Words in Context, definition, synonym or antonym) on a live ⏱ clock. The clock pauses if you leave the tab.
-  - The seconds you take, plus any Focus penalties, are the window in which the CPUs keep answering their own questions. Each right CPU answer moves that horse +1.
-  - A commentary log lists every CPU answer in order (e.g. "Verbal Velocity rushed an answer in 2s and missed ✗").
-  - A rival that crosses the line while you're still thinking wins.
+- **Rivals race to win.** Each attempt picks a tactic from the race state, shown as a lane badge and in the commentary:
+  - 🔥 **pushing the pace** (2+ steps behind the leader): reads ×0.8, answers ×0.7, −8% accuracy;
+  - ⚡ **kicking for home** (one step from the line): answers ×0.8;
+  - 🛡️ **guarding the lead** (out in front): +6% accuracy.
+- **Your turns:** answer advanced questions (Words in Context, definition, synonym or antonym) while a ⏱ think timer runs.
   - **Right:** you gallop +1. **Wrong:** you're held back, and the word is flagged 🔁.
-- **🧠 Focus** (max 3) carries between races.
-  - Each miss costs 1 Focus and adds a **4s stumble**.
-  - Every missing Focus bar adds **3s of hesitation** to every answer, so at 0 Focus each answer costs an extra 9s.
-  - Two right answers in a row restore 1 Focus.
-  - A **Focus Booster** (500 ⚡) refills Focus instantly, in the race or in the Stable.
-- **Balance:** CPU reading time is tuned by simulation (`CPU.read` in `js/derby.js`). With the literal clocks and no reading time, a human could never win.
+  - A **live commentary feed** (time-stamped, newest first) reports every rival answer as it happens, e.g. "0:17 Verbal Velocity rushed an answer in 2s and missed ✗". Lead changes and "one step from the line" warnings are announced.
+- **🧠 Focus** (max 3) carries between races, and lost Focus costs real time.
+  - Each miss costs 1 Focus and **locks your next question for 4s**.
+  - Every missing Focus bar adds a **3s lock** before each question, so at 0 Focus every question locks for 9s while the rivals keep running.
+  - Two right answers in a row restore 1 Focus. A **Focus Booster** (500 ⚡) refills Focus and lifts the current lock.
+- **Balance:** CPU reading time is tuned by simulating the real-time race, including locks and about 2s spent reading feedback (`CPU.read` in `js/derby.js`):
 
   | Your pace | Races won | At ×1.5 |
   |---|---|---|
-  | 8s/question at 90% | ~92% | |
-  | 10s at 85% | ~70% | break-even |
-  | 12s at 80% | ~38% | |
-  | 15s at 75% | ~12% | |
+  | 8s/question at 90% | ~91% | |
+  | 10s at 85% | ~68% | break-even |
+  | 12s at 80% | ~36% | |
+  | 15s at 75% | ~11% | |
 
-- **Results:** winner, payout, balance, Focus, final standings, and a **vocabulary review table** (word, meaning, synonyms, ✓/✗).
+- **Results:** winner, payout, balance, Focus, race time, your average think time, final standings, and a **vocabulary review table** (word, meaning, synonyms, ✓/✗, or — for a question you didn't answer before a rival won).
 - **🛍️ The Stable:** reached from the intro, the results, or the Shop tab. Prices are in real Sparks, using a higher baseline than the main Shop:
   - Jockey silks: **1,000 ⚡** (Scholar's Gold, Midnight Ink, Crimson Cadence, Emerald Essay);
   - Mounts: **1,500 ⚡** (🦄 🦓 🐉 🦌, which race in your lane);
@@ -189,7 +193,7 @@ js/themes.js                casts and avatars
 js/questions.js             curriculum framework: chapter plan, official stems, addChapter/build API
 js/curriculum/ch1-ch10.js   one file per chapter: lesson + 20 questions with per-choice notes
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
-js/derby.js                 SAT Vocabulary Derby: CPU rival engine, Focus, Stable, question generator, views
+js/derby.js                 SAT Vocabulary Derby: real-time CPU rival engine and tactics, Focus, Stable, question generator, views
 js/rewards.js               Sparks, shop, Focus, Aura Shields, wager, badges (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push
