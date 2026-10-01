@@ -47,7 +47,7 @@ pejorative|adj|expressing contempt or disapproval|derogatory, disparaging, insul
 penitent|adj|feeling sorrow for wrongdoing|remorseful, repentant, contrite|unrepentant, defiant|Latin paenitere (to repent)|The ______ thief returned the stolen bike and apologized.
 pensive|adj|engaged in deep or serious thought|thoughtful, reflective, contemplative|thoughtless, carefree|French penser (to think)|{{NAME_1}} sat ______ by the window, thinking about the big decision.
 perfidious|adj|deceitful and untrustworthy|treacherous, disloyal, faithless|loyal, faithful|Latin perfidia (treachery)|The ______ advisor sold the king's secrets to his enemies.
-peripatetic|adj|traveling from place to place|itinerant, nomadic, wandering|settled, stationary|Greek peripatein (to walk about)|The ______ reporter lived out of a suitcase, moving to a new country every month.
+peripatetic|adj|moving or working in many different places, especially for a job|itinerant, nomadic, wandering|settled, stationary|Greek peripatein (to walk about)|The ______ reporter lived out of a suitcase, moving to a new country every month.
 perspicacious|adj|having a ready insight into things|perceptive, astute, shrewd|obtuse, dull|Latin perspicax (sharp-sighted)|The ______ detective noticed the tiny scratch on the doorframe.
 petulant|adj|childishly sulky or bad-tempered|sulky, peevish, irritable|good-natured, easygoing|Latin petulans (impudent)|The ______ toddler threw his toys when he did not get candy.
 philanthropist|n|a person who gives money to help others|benefactor, donor, patron|miser, misanthrope|Greek philein (to love) + anthropos (person)|The ______ funded scholarships for hundreds of students.

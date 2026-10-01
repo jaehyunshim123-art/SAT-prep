@@ -91,7 +91,7 @@
         rule: `The main verb comes after the second comma. The blank opens a modifier, so it needs a non-verb (-ing) form.`,
       });
     }
-    // 2) Title ______ …, verb (the sample's "player Stephen Curry, intending…" pattern).
+    // 2) Title ______ …, verb (the "player {{NAME_1}}, intending…" pattern).
     for (const [t, p] of G.product(TITLES, PARTS)) {
       const main = G.pick(MAINS, t + p.ing);
       out.push({

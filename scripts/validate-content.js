@@ -180,6 +180,14 @@ for (const ch of SW.chapters) {
 }
 console.log("generated questions", generated);
 
+// Every word needs its own definition, or a quiz could show two identical answers.
+const defSeen = new Map();
+for (const w of SW.vocab.WORDS) {
+  const d = w.definition.trim().toLowerCase();
+  if (defSeen.has(d)) bad.push(`vocab ${w.word}: same definition as ${defSeen.get(d)}`);
+  else defSeen.set(d, w.word);
+}
+
 // ---------- Vocab Fishing ----------
 // Every cast: 4 fish with distinct definitions, exactly one right, no near-synonym distractors.
 let casts = 0;
@@ -209,5 +217,15 @@ for (const [skill, n] of Object.entries(fallback)) bad.push(`skill "${skill}" ($
 
 console.log("chapters", SW.chapters.map((c) => `${c.id}:${c.questions.length}`).join(" "), "| questions", SW.questions.length,
   "| vocab words", SW.vocab.WORDS.length, `(${SW.vocab.WORDS.filter((w) => w.format === "blank").length} blank, ${SW.vocab.WORDS.filter((w) => w.format === "meaning").length} meaning)`);
+// Casts are original: no real athletes, singers or celebrities, and no
+// characters or places from books, films, shows, anime or games.
+const REAL_NAMES = /\b(Harry|Hermione|Ron|Draco|Hogwarts|Ronaldo|Messi|Mbapp[eé]|Haaland|Neymar|LeBron|Steph|Kobe|Giannis|Caitlin|Naruto|Goku|Mikasa|Luffy|Tanjiro|Nezuko|Vegeta|Wanda|Tony|Bruce|Clark|Natasha|Peter|Diana|Taylor|Beyonc[eé]|Rihanna|Ariana|Billie|Dua|Bruno|Olivia)\b|web-sling|Great Hall|broomstick/i;
+for (const t of SW.themes) {
+  const text = [t.label, t.tagline, t.place, t.craft, t.event, ...t.people.map((p) => p.name)].join(" | ");
+  const hit = text.match(REAL_NAMES);
+  if (hit) bad.push(`cast ${t.id}: real person or franchise character "${hit[0]}"`);
+  if (t.people.length !== 8) bad.push(`cast ${t.id}: needs 8 people`);
+}
+
 console.log(bad.length ? "PROBLEMS:\n" + bad.join("\n") : "all content checks passed");
 process.exit(bad.length ? 1 : 0);

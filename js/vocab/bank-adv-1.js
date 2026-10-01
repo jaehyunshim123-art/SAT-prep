@@ -72,7 +72,7 @@ dearth|n|a scarcity or lack of something|lack, shortage, scarcity|abundance, ple
 debilitate|v|to make someone or something very weak|weaken, cripple, incapacitate|strengthen, invigorate|Latin debilis (weak)|The illness can ______ patients for weeks.
 decorum|n|behavior in keeping with good taste and propriety|propriety, etiquette, dignity|impropriety, rudeness|Latin decorus (seemly)|The judge asked everyone in the courtroom to maintain ______.
 deference|n|polite respect for someone's opinions or authority|respect, regard, esteem|disrespect, contempt|Latin deferre (to carry down)|Out of ______ to the elderly guest, everyone waited for her to start eating.
-deleterious|adj|causing harm or damage|harmful, damaging, detrimental|beneficial, helpful|Greek deleterios (destructive)|Smoking has ______ effects on almost every organ in the body.
+deleterious|adj|harmful, often in a gradual or unseen way|harmful, damaging, detrimental|beneficial, helpful|Greek deleterios (destructive)|Smoking has ______ effects on almost every organ in the body.
 demagogue|n|a leader who gains power by appealing to people's emotions and prejudices|agitator, rabble-rouser, firebrand|statesman, moderate|Greek demos (people) + agogos (leading)|The ______ won votes by blaming every problem on outsiders.
 denigrate|v|to criticize unfairly; to belittle|belittle, disparage, criticize|praise, extol|Latin denigrare (to blacken)|It is unfair to ______ someone's work without reading it first.
 deride|v|to mock or ridicule|ridicule, mock, scorn|praise, respect|Latin deridere (to laugh at)|Critics were quick to ______ the idea, but the inventor proved them wrong.

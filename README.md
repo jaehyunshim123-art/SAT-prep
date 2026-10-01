@@ -32,7 +32,9 @@ Seven chapters, in this order, plus two bonus chapters. Each core chapter starts
 - `{{NAME_1}}`–`{{NAME_3}}` for names;
 - `{{NAME_n_POSS}}` / `{{NAME_n_OBJ}}` for his/her/their and him/her/them.
 
-**Every cast has 8 people**, and each question uses 3 of them in its slots. The pick is seeded per player and per question, so a given question always shows the same people, but different questions bring in different characters. Without a purchased pack, questions use the free generic **Everyday** cast (John, Jane, Sam, Maya, Leo, Priya, Diego, Alex). Unlocking a **Character Cast** in the Shop swaps in that pack's names. For example, Football Legends makes the first question "In 2010, Ronaldo was scoring many goals in China… With the help of Messi…".
+**Every cast has 8 people**, and each question uses 3 of them in its slots. The pick is seeded per player and per question, so a given question always shows the same people, but different questions bring in different characters. Without a purchased pack, questions use the free generic **Everyday** cast (John, Jane, Sam, Maya, Leo, Priya, Diego, Alex). Unlocking a **Character Cast** in the Shop swaps in that pack's names. For example, Football Stars puts Kofi, Inés and Rafael into the questions.
+
+**Every cast is original.** The six Character Casts (Wizard Academy, Football Stars, Hoops Stars, Anime Heroes, Superhero Squad, Pop Stars) use made-up characters, never real people or characters from books, films, shows, anime or games. `scripts/validate-content.js` fails on known real or franchise names. Cast ids never change, so a pack bought under an old name stays unlocked.
 
 Facts tied to real historical people (radium, penicillin) were reworded to stay accurate with any name. Novel and album titles are invented.
 
@@ -45,9 +47,9 @@ Each chapter opens with an **Explanation Pause** lesson card: the chapter's expl
 |---|---|---|
 | 1 | Independent Clause Connectors & Sentence Boundaries | Comma + FANBOYS, semicolons, periods; comma splices and run-ons. Includes the user's goal-post example (`posts. With`) |
 | 2 | Subject-Verb Agreement | Singular vs. plural; tracking the subject past prepositional and parenthetical phrases; the **3:1 / 2:1 shortcuts**. Includes the "Dark Lord's name ___ pronounced" example (`is`) |
-| 3 | Verb vs. Non-Verb Identification (Appositives) | Does the blank need a conjugated main verb or a participle modifier? Includes the Stephen Curry example (`Curry, intending` vs. `Curry intends`) |
+| 3 | Verb vs. Non-Verb Identification (Appositives) | Does the blank need a conjugated main verb or a participle modifier? Includes the title-plus-name example (`player {{NAME_1}}, intending` vs. `player {{NAME_1}} intends`) |
 | 4 | Verb Tenses & Aspect | Explicit time frames: past (happened), future (will happen), past perfect (had happened), present perfect (until now), present (general truths) |
-| 5 | Logical Transitions | Contrast (However), addition, cause/effect, example, sequence. Includes the Batman example |
+| 5 | Logical Transitions | Contrast (However), addition, cause/effect, example, sequence. Includes a superhero-film example |
 | 6 | Punctuation Fundamentals (Semicolon, Dash, Colon) | Paired dashes around non-essential appositives; semicolons between ICs; a colon after an IC for a list, noun or explanation |
 | 7 | Appositives & Non-Essential Clauses | "a/an" cues → non-essential (paired commas or dashes); essential vs. non-essential names |
 | Bonus | Modifiers & Parallelism | 20 questions; unlocks when you pass Chapter 7's test |
@@ -94,7 +96,7 @@ Each of the 7 chapters has a generator that builds hundreds of questions in the 
 |---|---|---|
 | 1 | ~380 | 32 hand-written clause pairs (contrast, result, addition, reason) × every legal joint (period, semicolon, comma + FANBOYS) × trap sets; mix-and-match practice scenes; DC, IC openers |
 | 2 | ~540 | Subjects with prepositional-phrase traps; "along with" parentheticals; Each/One of; either/or and neither/nor; There is/are; compound subjects |
-| 3 | ~580 | "Name, -ing…, verb" modifiers; "Title ______" appositive openers (the Stephen Curry pattern); long subjects that need their main verb |
+| 3 | ~580 | "Name, -ing…, verb" modifiers; "Title ______" appositive openers (the "player {{NAME_1}}, intending…" pattern); long subjects that need their main verb |
 | 4 | ~440 | Time clues (last summer, since…, by the time…, next spring, by next June) × 25 verbs with all their forms |
 | 5 | ~410 | 62 sentence pairs tagged contrast / result / example / addition / similarity × every fitting transition, with distractors only from relationships that don't fit |
 | 6 | ~430 | Colon + list or explanation; no colon after a verb, "such as" or a preposition; dash pairs; semicolons between clauses and in lists with commas; closing commas |
@@ -396,7 +398,8 @@ node scripts/build-derby.js
 
 - **The documents:** [`js/legal.js`](js/legal.js) holds the Privacy Policy and Terms of Service (owner **SatWizz**, contact **jshim7892@gmail.com**, Indian law, last updated 1 October 2026). Edit the text there and change `UPDATED` when you do.
   - The Privacy Policy covers guests, account data, what other players see, the services used (Supabase in Tokyo, Google, Netlify, jsDelivr), retention, rights under India's DPDP Act, and the rule for under-18s.
-  - The Terms cover parent permission, play money with no cash value, acceptable use, and the College Board trademark note.
+  - The Privacy Policy also names a Grievance Officer (the contact email; complaints acknowledged within 24 hours and resolved within 15 days), the legal basis, the right to nominate, Do Not Track / Global Privacy Control, and how to clear local data.
+  - The Terms cover parent permission, rules for what players post (names, character names, Lock In messages, feedback), play money with no cash value, acceptable use, the College Board trademark note, a copyright/trademark takedown address, other services, governing law and the usual legal clauses.
 - **Where they open:** both open in an overlay inside the site. Links are in the Dashboard footer, at the bottom of ❓ Help, in Profile → Settings → **Privacy & terms**, and in the sign-in box. `index.html#privacy` and `index.html#terms` open them directly.
 - **Standalone pages:** `node scripts/build-single.js` also writes `dist/privacy.html` and `dist/terms.html`. Upload them next to `index.html`; these are the addresses to give Google's sign-in consent screen.
 - **Consent at sign-up:** Continue with Google and email Sign Up need a ticked box: "I agree to the Terms of Service and Privacy Policy, and I'm 18 or older or have my parent's or guardian's permission." Log In for an existing account doesn't need it.

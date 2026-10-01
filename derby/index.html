@@ -2327,6 +2327,30 @@ kbd {
 .bank-levels button { font-size: 0.85rem; padding: 6px 8px; }
 .word-bank h2 small, .panel h2 small { font-size: 0.8rem; font-weight: 700; }
 
+/* ---------- Privacy Policy / Terms of Service ---------- */
+.legal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70; /* above the sign-in modal (40) and help (60) */
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--scrim);
+}
+.legal-body { display: grid; gap: 10px; font-size: 0.92rem; line-height: 1.55; }
+.legal-body p, .legal-body ul { margin: 0; }
+.legal-body ul { padding-left: 1.2em; display: grid; gap: 4px; }
+.legal-body section { display: grid; gap: 6px; }
+.legal-body h3 { margin: 6px 0 0; font-family: var(--font-display); font-size: 1rem; }
+.legal-body a, .legal-links a, .consent a { color: var(--volt); font-weight: 700; }
+.legal-date { color: var(--muted); font-size: 0.82rem; }
+.legal-summary { padding: 10px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.legal-summary ul { margin-top: 6px; }
+.legal-foot { color: var(--muted); }
+.legal-links { margin: 14px 0 4px; text-align: center; font-size: 0.8rem; line-height: 1.6; }
+.consent { display: flex; gap: 10px; align-items: flex-start; text-align: left; font-size: 0.84rem; line-height: 1.45; color: var(--muted); cursor: pointer; }
+.consent input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--volt); }
+
 /* ---------- Standalone build ---------- */
 .scrollview.solo { padding-block: 4px 24px; }
 .stipend p { margin: 0; }
@@ -2345,9 +2369,11 @@ kbd {
 // {{SKILL}} -> craft, {{EVENT}} -> event. Flavor is always used mid-sentence.
 // `price` is in Sparks; 0 means free. Paid packs are Character Casts in the Shop (1,000 ⚡).
 //
-// Content rule: names are fine, but no franchise titles, brand names or coined
-// proprietary terms (no "Hogwarts", "Quidditch", "Avengers", league or award
-// trademarks), and nothing that implies endorsement.
+// Content rule: every cast is original. No real people (athletes, singers,
+// celebrities), no characters from books, films, shows, anime or games, no
+// franchise titles, brand names or coined proprietary terms, and nothing that
+// implies endorsement. Cast ids never change, so purchases in old saves keep
+// working when a pack is renamed.
 window.SatWizz = window.SatWizz || {};
 
 window.SatWizz.defaultThemeId = "everyday";
@@ -2380,57 +2406,57 @@ window.SatWizz.themes = [
     id: "wizard",
     icon: "🪄",
     price: 1000, // Character Cast (Shop)
-    label: "Wizard School",
-    tagline: "Harry, Hermione and Ron",
+    label: "Wizard Academy",
+    tagline: "Rowan, Isolde and Thaddeus",
     people: [
-      { name: "Harry", pro: "he" },
-      { name: "Hermione", pro: "she" },
-      { name: "Ron", pro: "he" },
-      { name: "Luna", pro: "she" },
-      { name: "Neville", pro: "he" },
-      { name: "Ginny", pro: "she" },
-      { name: "Draco", pro: "he" },
-      { name: "Cedric", pro: "he" },
+      { name: "Rowan", pro: "he" },
+      { name: "Isolde", pro: "she" },
+      { name: "Thaddeus", pro: "he" },
+      { name: "Wren", pro: "she" },
+      { name: "Barnaby", pro: "he" },
+      { name: "Elowen", pro: "she" },
+      { name: "Silas", pro: "he" },
+      { name: "Marigold", pro: "she" },
     ],
-    place: "the Great Hall",
+    place: "the castle library",
     craft: "potion-making",
-    event: "the broomstick final",
+    event: "the spell-casting final",
   },
   {
     id: "football",
     icon: "⚽",
     price: 1000, // Character Cast (Shop)
-    label: "Football Legends",
-    tagline: "Ronaldo, Messi and Aitana",
+    label: "Football Stars",
+    tagline: "Kofi, Inés and Rafael",
     people: [
-      { name: "Ronaldo", pro: "he" },
-      { name: "Messi", pro: "he" },
-      { name: "Aitana", pro: "she" },
-      { name: "Mbappé", pro: "he" },
-      { name: "Haaland", pro: "he" },
-      { name: "Alexia", pro: "she" },
-      { name: "Kerr", pro: "she" },
-      { name: "Neymar", pro: "he" },
+      { name: "Kofi", pro: "he" },
+      { name: "Inés", pro: "she" },
+      { name: "Rafael", pro: "he" },
+      { name: "Amara", pro: "she" },
+      { name: "Lukas", pro: "he" },
+      { name: "Sofía", pro: "she" },
+      { name: "Tomás", pro: "he" },
+      { name: "Nia", pro: "she" },
     ],
     place: "the training ground",
     craft: "free kicks",
-    event: "the European final",
+    event: "the cup final",
   },
   {
     id: "hoops",
     icon: "🏀",
     price: 1000, // Character Cast (Shop)
-    label: "Hoops Legends",
-    tagline: "LeBron, Steph and Caitlin",
+    label: "Hoops Stars",
+    tagline: "Darius, Keisha and Malik",
     people: [
-      { name: "LeBron", pro: "he" },
-      { name: "Steph", pro: "he" },
-      { name: "Caitlin", pro: "she" },
-      { name: "Giannis", pro: "he" },
-      { name: "Luka", pro: "he" },
-      { name: "A'ja", pro: "she" },
-      { name: "Sabrina", pro: "she" },
-      { name: "Kobe", pro: "he" },
+      { name: "Darius", pro: "he" },
+      { name: "Keisha", pro: "she" },
+      { name: "Malik", pro: "he" },
+      { name: "Imani", pro: "she" },
+      { name: "Andre", pro: "he" },
+      { name: "Tamsin", pro: "she" },
+      { name: "Tobias", pro: "he" },
+      { name: "Zara", pro: "she" },
     ],
     place: "the practice gym",
     craft: "fadeaway jumpers",
@@ -2440,17 +2466,17 @@ window.SatWizz.themes = [
     id: "anime",
     icon: "🍥",
     price: 1000, // Character Cast (Shop)
-    label: "Anime Pack",
-    tagline: "Naruto, Mikasa and Goku",
+    label: "Anime Heroes",
+    tagline: "Haruto, Aiko and Ren",
     people: [
-      { name: "Naruto", pro: "he" },
-      { name: "Mikasa", pro: "she" },
-      { name: "Goku", pro: "he" },
-      { name: "Luffy", pro: "he" },
-      { name: "Sakura", pro: "she" },
-      { name: "Tanjiro", pro: "he" },
-      { name: "Nezuko", pro: "she" },
-      { name: "Vegeta", pro: "he" },
+      { name: "Haruto", pro: "he" },
+      { name: "Aiko", pro: "she" },
+      { name: "Ren", pro: "he" },
+      { name: "Yuki", pro: "she" },
+      { name: "Kaito", pro: "he" },
+      { name: "Hana", pro: "she" },
+      { name: "Sora", pro: "they" },
+      { name: "Mei", pro: "she" },
     ],
     place: "the training dojo",
     craft: "energy blasts",
@@ -2460,37 +2486,37 @@ window.SatWizz.themes = [
     id: "heroes",
     icon: "🦸",
     price: 1000, // Character Cast (Shop)
-    label: "Superhero Pack",
-    tagline: "Peter, Wanda and Tony",
+    label: "Superhero Squad",
+    tagline: "Marcus, Elena and Jasper",
     people: [
-      { name: "Peter", pro: "he" },
-      { name: "Wanda", pro: "she" },
-      { name: "Tony", pro: "he" },
-      { name: "Bruce", pro: "he" },
-      { name: "Diana", pro: "she" },
-      { name: "Clark", pro: "he" },
-      { name: "Natasha", pro: "she" },
-      { name: "Miles", pro: "he" },
+      { name: "Marcus", pro: "he" },
+      { name: "Elena", pro: "she" },
+      { name: "Jasper", pro: "he" },
+      { name: "Celeste", pro: "she" },
+      { name: "Theo", pro: "he" },
+      { name: "Iris", pro: "she" },
+      { name: "Dante", pro: "he" },
+      { name: "Selene", pro: "she" },
     ],
     place: "the hero tower",
-    craft: "web-slinging",
+    craft: "flying",
     event: "the final battle",
   },
   {
     id: "pop",
     icon: "🎤",
     price: 1000, // Character Cast (Shop)
-    label: "Pop Icons",
-    tagline: "Taylor, Beyoncé and Olivia",
+    label: "Pop Stars",
+    tagline: "Lyra, Jade and Marco",
     people: [
-      { name: "Taylor", pro: "she" },
-      { name: "Beyoncé", pro: "she" },
-      { name: "Olivia", pro: "she" },
-      { name: "Ariana", pro: "she" },
-      { name: "Rihanna", pro: "she" },
-      { name: "Dua", pro: "she" },
-      { name: "Bruno", pro: "he" },
-      { name: "Billie", pro: "she" },
+      { name: "Lyra", pro: "she" },
+      { name: "Jade", pro: "she" },
+      { name: "Marco", pro: "he" },
+      { name: "Skye", pro: "she" },
+      { name: "Nadia", pro: "she" },
+      { name: "Remy", pro: "he" },
+      { name: "Ivy", pro: "she" },
+      { name: "Kai", pro: "he" },
     ],
     place: "the recording studio",
     craft: "songwriting",
@@ -4478,7 +4504,7 @@ dearth|n|a scarcity or lack of something|lack, shortage, scarcity|abundance, ple
 debilitate|v|to make someone or something very weak|weaken, cripple, incapacitate|strengthen, invigorate|Latin debilis (weak)|The illness can ______ patients for weeks.
 decorum|n|behavior in keeping with good taste and propriety|propriety, etiquette, dignity|impropriety, rudeness|Latin decorus (seemly)|The judge asked everyone in the courtroom to maintain ______.
 deference|n|polite respect for someone's opinions or authority|respect, regard, esteem|disrespect, contempt|Latin deferre (to carry down)|Out of ______ to the elderly guest, everyone waited for her to start eating.
-deleterious|adj|causing harm or damage|harmful, damaging, detrimental|beneficial, helpful|Greek deleterios (destructive)|Smoking has ______ effects on almost every organ in the body.
+deleterious|adj|harmful, often in a gradual or unseen way|harmful, damaging, detrimental|beneficial, helpful|Greek deleterios (destructive)|Smoking has ______ effects on almost every organ in the body.
 demagogue|n|a leader who gains power by appealing to people's emotions and prejudices|agitator, rabble-rouser, firebrand|statesman, moderate|Greek demos (people) + agogos (leading)|The ______ won votes by blaming every problem on outsiders.
 denigrate|v|to criticize unfairly; to belittle|belittle, disparage, criticize|praise, extol|Latin denigrare (to blacken)|It is unfair to ______ someone's work without reading it first.
 deride|v|to mock or ridicule|ridicule, mock, scorn|praise, respect|Latin deridere (to laugh at)|Critics were quick to ______ the idea, but the inventor proved them wrong.
@@ -4661,7 +4687,7 @@ pejorative|adj|expressing contempt or disapproval|derogatory, disparaging, insul
 penitent|adj|feeling sorrow for wrongdoing|remorseful, repentant, contrite|unrepentant, defiant|Latin paenitere (to repent)|The ______ thief returned the stolen bike and apologized.
 pensive|adj|engaged in deep or serious thought|thoughtful, reflective, contemplative|thoughtless, carefree|French penser (to think)|{{NAME_1}} sat ______ by the window, thinking about the big decision.
 perfidious|adj|deceitful and untrustworthy|treacherous, disloyal, faithless|loyal, faithful|Latin perfidia (treachery)|The ______ advisor sold the king's secrets to his enemies.
-peripatetic|adj|traveling from place to place|itinerant, nomadic, wandering|settled, stationary|Greek peripatein (to walk about)|The ______ reporter lived out of a suitcase, moving to a new country every month.
+peripatetic|adj|moving or working in many different places, especially for a job|itinerant, nomadic, wandering|settled, stationary|Greek peripatein (to walk about)|The ______ reporter lived out of a suitcase, moving to a new country every month.
 perspicacious|adj|having a ready insight into things|perceptive, astute, shrewd|obtuse, dull|Latin perspicax (sharp-sighted)|The ______ detective noticed the tiny scratch on the doorframe.
 petulant|adj|childishly sulky or bad-tempered|sulky, peevish, irritable|good-natured, easygoing|Latin petulans (impudent)|The ______ toddler threw his toys when he did not get candy.
 philanthropist|n|a person who gives money to help others|benefactor, donor, patron|miser, misanthrope|Greek philein (to love) + anthropos (person)|The ______ funded scholarships for hundreds of students.
