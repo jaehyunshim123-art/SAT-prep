@@ -363,6 +363,11 @@
     let armed = null; // Stable item waiting for a confirm tap
     const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
     const mode = MODES.derby;
+    // Standalone build (derby/index.html): no Vault around it, so Vault links
+    // and notes are hidden, and a once-a-day stipend keeps a broke player in
+    // the game (Sparks only come from betting there).
+    const solo = Boolean(ctx.standalone);
+    const STIPEND = 250;
 
     const S = () => ctx.getState();
     const stats = () => {
@@ -424,9 +429,14 @@
       container.innerHTML = `
         <div class="stack vault derby">
           <div class="sprint-top">
-            <button class="linkbtn" type="button" id="derby-exit">✕ Back to the Vault</button>
+            ${solo ? '<span class="label-sm">Welcome to the track</span>' : '<button class="linkbtn" type="button" id="derby-exit">✕ Back to the Vault</button>'}
             <span class="pill-sm">⚡ ${fmt(S().sparks || 0)}</span>
           </div>
+          ${solo && stipendOpen() ? `
+          <section class="panel stipend">
+            <p><b>Running low?</b> The Stable lends a hand once a day.</p>
+            <button class="btn wide" type="button" id="derby-stipend">Claim a ${STIPEND} ⚡ stable stipend</button>
+          </section>` : ""}
           <section class="panel derby-intro">
             <pre class="derby-banner" aria-label="SAT Vocabulary Derby">=================================
  🐎 SAT VOCABULARY DERBY 🐎
@@ -440,7 +450,7 @@
               <li><b>After the race:</b> your balance, a review table of every word, and the 🛍️ Stable.</li>
             </ol>
             <div class="intro-focus">Your Focus: ${focusBar(st.focus)}${focusNote(st.focus)}</div>
-            <button class="btn wide start-btn" type="button" id="derby-start-race">START ▶</button>
+            <button class="btn wide start-btn" type="button" id="derby-start-race">${solo ? "Start Derby ▶" : "START ▶"}</button>
             <button class="btn ghost wide" type="button" id="derby-stable">🛍️ Visit the Stable</button>
           </section>
           <section class="panel">
@@ -456,10 +466,26 @@
             <div><b>${fmt(st.bestWin)}</b><span>Best payout ⚡</span></div>
           </section>
         </div>`;
-      container.querySelector("#derby-exit").addEventListener("click", exit);
+      container.querySelector("#derby-exit")?.addEventListener("click", exit);
+      container.querySelector("#derby-stipend")?.addEventListener("click", claimStipend);
       container.querySelector("#derby-start-race").addEventListener("click", () => { ctx.sfx.play("tap"); go("setup"); });
       container.querySelector("#derby-stable").addEventListener("click", openStable);
       container.querySelector("#derby-start-race").focus({ preventScroll: true });
+    }
+
+    // Standalone only: below the smallest bet, once per day.
+    function stipendOpen() {
+      return (S().sparks || 0) < RULES.wagers[0] && S().stipendDay !== ctx.todayKey();
+    }
+    function claimStipend() {
+      if (!stipendOpen()) return;
+      S().stipendDay = ctx.todayKey();
+      ctx.earn(STIPEND);
+      ctx.save();
+      ctx.renderHud(["sparks"]);
+      ctx.sfx.play("combo");
+      ctx.toast(`+${STIPEND} ⚡ from the Stable. Spend it wisely!`);
+      renderIntro();
     }
 
     // ---------- Bet ----------
@@ -759,7 +785,7 @@
           <div class="feedback ${right ? "ok" : "no"}">
             <h3>${right ? "Correct!" : `Not quite. You're held back, and your next question locks for ${PENALTY.stumble}s+.`}</h3>
             <p>${ctx.fill(q.explain, undefined, false)}</p>
-            ${right ? "" : `<p class="muted small">🔁 “${esc(w.word)}” is flagged for review in the Vault.</p>`}
+            ${right || solo ? "" : `<p class="muted small">🔁 “${esc(w.word)}” is flagged for review in the Vault.</p>`}
           </div>` : over ? `<div class="feedback no"><h3>Too late!</h3><p>${esc(HORSE[race.winner].name)} finished before you answered. “${esc(w.word)}”: ${esc(w.definition)}.</p></div>` : ""}`;
       container.querySelector("#derby-next-slot").innerHTML = over
         ? '<button class="btn wide" type="button" id="derby-next">See the results 🏁</button>'
@@ -890,12 +916,12 @@
                 <tbody>${rows}</tbody>
               </table>
             </div>
-            ${race.log.some((r) => !r.correct && !r.unanswered) ? '<p class="muted small">Missed words are flagged 🔁. They lead your next flashcard deck and sprint.</p>' : ""}
+            ${!solo && race.log.some((r) => !r.correct && !r.unanswered) ? '<p class="muted small">Missed words are flagged 🔁. They lead your next flashcard deck and sprint.</p>' : ""}
           </section>
           <div class="stack">
             <button class="btn wide" type="button" id="derby-again">🏇 Race again</button>
             <button class="btn ghost wide" type="button" id="derby-stable">🛍️ Visit the Stable</button>
-            <button class="btn ghost wide" type="button" id="derby-home">Back to the Vault</button>
+            <button class="btn ghost wide" type="button" id="derby-home">${solo ? "📜 Rules & stats" : "Back to the Vault"}</button>
           </div>
         </div>`;
       race = null;

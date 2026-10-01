@@ -119,6 +119,28 @@ The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
 - **Practice and sync:** answers count toward the daily goal (+5 XP each). Stats, Focus, owned gear and Bursts sync in `vocab_progress.derby`.
 - **Question checks:** `scripts/validate-content.js` builds 11,000 generated questions and checks each has 4 distinct choices and one defensible answer. Words close in meaning, or near-opposites, are never used as each other's distractors.
 
+## Standalone Derby (`derby/index.html`)
+
+The SAT Vocabulary Derby also ships as **one self-contained HTML file**, with all HTML, CSS and JavaScript inline. Use it in either of two ways:
+- **Run locally:** double-click `derby/index.html`. No server is needed.
+- **Host it:** upload that one file to any static host (GitHub Pages, Netlify, S3…).
+
+It plays exactly like the in-app Derby:
+- the intro screen and banner → **Start Derby** → bet → the live race against seven independent CPU rivals → results and review table → the Stable;
+- the same 55 words, engine, tactics, Focus locks and prices.
+
+What differs in the standalone file:
+- **Its own economy:** you start with **2,500 ⚡**. Wins pay ×1.5, and there are 3 betting races a day.
+  - If your balance drops below the minimum bet, the intro offers a **250 ⚡ stable stipend** once a day.
+- **Saving:** balance, Focus, gear, Bursts and stats are saved in the browser's `localStorage` under `satwizz-derby.v1`. In private mode, or with storage blocked, the game still plays; it just doesn't save.
+- **No sign-in, no network:** Google Fonts are optional, and the file falls back to system fonts offline.
+
+The file is **generated** from the app's sources, so the two never drift apart. After changing `css/styles.css`, `js/themes.js`, `js/questions.js`, `js/vocab.js`, `js/derby.js` or `js/sfx.js`, rebuild it:
+
+```sh
+node scripts/build-derby.js
+```
+
 ## Gamification
 
 - **Sparks ⚡.** You earn +10 per correct answer, +5 on every 3rd answer in a row, +50 per chapter (first time) and +50 for your daily goal.
@@ -201,6 +223,8 @@ js/onboarding.js            sign-up / log-in modal
 js/social-view.js           Leaderboard tab: leaderboards, friend streaks, requests, invites
 js/app.js                   chapter feed, drawers, streaks, shop, profile, demo mode
 scripts/validate-content.js content checks for the curriculum and vocab
+scripts/build-derby.js      builds the standalone derby/index.html
+derby/index.html            standalone SAT Vocabulary Derby (generated, single file)
 supabase/schema.sql         tables, row-level security, social functions
 supabase/functions/lock-in  Edge Function that sends Lock In pushes
 ```
