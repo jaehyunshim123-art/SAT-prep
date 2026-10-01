@@ -87,16 +87,16 @@
   // The Stable: cosmetics and power-ups, priced in real Sparks.
   const STABLE = Object.freeze({
     silks: [
-      { id: "gold", name: "Scholar's Gold", price: 1000 },
-      { id: "ink", name: "Midnight Ink", price: 1000 },
-      { id: "crimson", name: "Crimson Cadence", price: 1000 },
-      { id: "emerald", name: "Emerald Essay", price: 1000 },
+      { id: "gold", name: "Scholar's Gold", price: 500 },
+      { id: "ink", name: "Midnight Ink", price: 500 },
+      { id: "crimson", name: "Crimson Cadence", price: 500 },
+      { id: "emerald", name: "Emerald Essay", price: 500 },
     ],
     mounts: [
-      { id: "pegasus", name: "Pegasus of Prose", emoji: "🦄", price: 1500 },
-      { id: "zebra", name: "Zebra of Zeugma", emoji: "🦓", price: 1500 },
-      { id: "dragon", name: "Dragon of Diction", emoji: "🐉", price: 1500 },
-      { id: "stag", name: "Stag of Syntax", emoji: "🦌", price: 1500 },
+      { id: "pegasus", name: "Pegasus of Prose", emoji: "🦄", price: 500 },
+      { id: "zebra", name: "Zebra of Zeugma", emoji: "🦓", price: 500 },
+      { id: "dragon", name: "Dragon of Diction", emoji: "🐉", price: 500 },
+      { id: "stag", name: "Stag of Syntax", emoji: "🦌", price: 500 },
     ],
     elixir: { name: "Focus Elixir", price: 500 },
     burst: { name: "Starting Burst", price: 500 },
@@ -121,7 +121,8 @@
     const p = PROFILES[r.id];
     const tactic = race ? tacticFor(r, race) : "steady";
     const t = TACTICS[tactic];
-    const read = between(CPU.read[0], CPU.read[1], rand) * t.read;
+    const rd = (race && race.read) || CPU.read; // grammar races read longer passages
+    const read = between(rd[0], rd[1], rand) * t.read;
     const answer = between(p.min, p.max, rand) * t.answer;
     const acc = Math.min(0.98, Math.max(0.05, p.acc + t.acc));
     return { read, answer, total: read + answer, correct: rand() < acc, tactic };
@@ -148,10 +149,13 @@
   // The race runs on one continuous clock (seconds). Each CPU has `next`: the
   // race time when its current attempt lands. focus/streak come from (and go
   // back to) the saved stats.
-  function newRace(modeId, wager, wordIds, { focus = RULES.focusMax, streak = 0, burst = false } = {}, rand = Math.random) {
+  // `wordIds` is the question queue: vocab word ids, or any items a question
+  // source understands. `read` overrides CPU.read for this race.
+  function newRace(modeId, wager, wordIds, { focus = RULES.focusMax, streak = 0, burst = false, read = null } = {}, rand = Math.random) {
     const mode = MODES[modeId];
     const race = {
       mode: mode.id,
+      read,
       wager,
       horses: HORSES.slice(0, mode.field).map((h) => ({ id: h.id, pos: h.you && burst ? 1 : 0 })),
       words: wordIds.slice(),
@@ -382,6 +386,47 @@
     return { ok: true, spent: price };
   }
 
+  // ---------- Question sources ----------
+  // The race asks whatever a source serves. A source is:
+  //   { title, banner, tagline, intro (rule text), read ([min, max] CPU reading
+  //     seconds), draw() → queue items, question(item) → a question,
+  //     onAnswer(q, correct), missNote(q), lateNote(q),
+  //     review: { title, head: [a, b], row(q) → [aHtml, bHtml], note },
+  //     unitHtml?() / wireUnit?(el, rerender): an optional unit picker }
+  // A question: { meta, passage (template with ______ or ""), stem,
+  //   choices (templates), answer, explain (template) }.
+  // The default is the Vault's advanced vocabulary (the standalone Derby).
+  const KIND_LABEL = { context: "Words in Context", definition: "Definition", synonym: "Synonym", antonym: "Antonym" };
+  function vocabSource(ctx) {
+    const W = () => SW.vocab.WORDS;
+    const word = (q) => W().find((x) => x.id === q.wordId);
+    return {
+      title: "SAT Vocabulary Derby",
+      banner: "=== 🐎 SATWIZZ VOCAB DERBY 🐎 ===",
+      tagline: "Where precise words win photo finishes.",
+      intro: "Answer advanced SAT words as fast and as accurately as you can.",
+      read: null,
+      // Advanced words lead; core words fill in if a long race runs out.
+      draw: () => [...shuffle(W().filter((w) => w.level === "advanced"), Math.random), ...shuffle(W().filter((w) => w.level !== "advanced"), Math.random)].map((w) => w.id),
+      question: (id) => {
+        const q = makeQuestion(W().find((x) => x.id === id));
+        return { ...q, meta: KIND_LABEL[q.kind] };
+      },
+      onAnswer: (q, correct) => { if (!correct && !ctx.standalone) SW.vocab.flag(ctx.getState().vocab, q.wordId); },
+      missNote: (q) => (ctx.standalone ? "" : `🔁 “${ctx.esc(word(q).word)}” is flagged for review in the Vault.`),
+      lateNote: (q) => `“${ctx.esc(word(q).word)}”: ${ctx.esc(word(q).definition)}.`,
+      review: {
+        title: "Vocabulary review",
+        head: ["Word", "Meaning"],
+        row: (q) => {
+          const w = word(q);
+          return [`<b>${ctx.esc(w.word)}</b><br><small class="muted">${ctx.esc(w.pos)}</small>`, `${ctx.esc(w.definition)}<br><small class="muted">≈ ${w.synonyms.map(ctx.esc).join(", ")}</small>`];
+        },
+        note: ctx.standalone ? "" : "Missed words are flagged 🔁. They lead your next flashcard deck and sprint.",
+      },
+    };
+  }
+
   // ---------- View ----------
   // ctx: vocab's ctx plus { container, onExit, focusState?, tab?, standalone?, shake? }.
   function mount(ctx) {
@@ -399,6 +444,7 @@
     const solo = Boolean(ctx.standalone);
     // Own tab in the app (no "Back to the Vault"; leaving goes to the intro).
     const tab = Boolean(ctx.tab);
+    const src = ctx.source || vocabSource(ctx);
     const STIPEND = 250;
 
     const S = () => ctx.getState();
@@ -473,14 +519,15 @@
             <button class="btn wide" type="button" id="derby-stipend">Claim a ${STIPEND} ⚡ stable stipend</button>
           </section>` : ""}
           <section class="panel derby-intro">
-            <pre class="derby-banner" aria-label="SatWizz Vocab Derby">=== 🐎 SATWIZZ VOCAB DERBY 🐎 ===</pre>
-            <p class="muted center">Where precise words win photo finishes.</p>
+            <pre class="derby-banner" aria-label="${esc(src.title)}">${esc(src.banner)}</pre>
+            <p class="muted center">${esc(src.tagline)}</p>
+            ${src.unitHtml ? `<div class="derby-unit">${src.unitHtml()}</div>` : ""}
             <ol class="rule-list">
               <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. ${RULES.ratedPerDay} betting races a day.</li>
-              <li><b>The race never pauses ⏱.</b> Answer advanced SAT words as fast and as accurately as you can. Right → you gallop +1. Wrong → you're held back.</li>
-              <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${CPU.read[0]}–${CPU.read[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
+              <li><b>The race never pauses ⏱.</b> ${esc(src.intro)} Right → you gallop +1. Wrong → you're held back.</li>
+              <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${(src.read || CPU.read)[0]}–${(src.read || CPU.read)[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
               <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running, and blurs the screen. Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
-              <li><b>After the race:</b> your balance, a review table of every word, and the 🛍️ Stable.</li>
+              <li><b>After the race:</b> your balance, a review of every question, and the 🛍️ Stable.</li>
             </ol>
             <div class="intro-focus">Your Focus: ${focusBar(fst().focus)}${focusNote(fst().focus)}</div>
             <button class="btn wide start-btn" type="button" id="derby-start-race">Start Derby ▶</button>
@@ -500,6 +547,7 @@
           </section>
         </div>`;
       container.querySelector("#derby-exit")?.addEventListener("click", exit);
+      if (src.wireUnit) src.wireUnit(container, () => renderIntro());
       container.querySelector("#derby-stipend")?.addEventListener("click", claimStipend);
       container.querySelector("#derby-start-race").addEventListener("click", () => { ctx.sfx.play("tap"); go("setup"); });
       container.querySelector("#derby-stable").addEventListener("click", openStable);
@@ -535,8 +583,9 @@
             <span class="pill-sm">⚡ ${fmt(sparks)}</span>
           </div>
           <section class="panel">
-            <span class="label-sm">SAT Vocabulary Derby</span>
+            <span class="label-sm">${esc(src.title)}</span>
             <h2>🏇 Place your bet</h2>
+            ${src.unitHtml ? `<div class="derby-unit">${src.unitHtml()}</div>` : ""}
             <p class="muted">A win pays your bet back ×${mode.payout}. Bet what your accuracy can back up.</p>
             <div class="wager-chips" role="radiogroup" aria-label="Wager">
               ${[0, ...RULES.wagers].map((a) => `
@@ -556,6 +605,7 @@
           </section>
         </div>`;
       container.querySelector("#derby-back").addEventListener("click", () => go("intro"));
+      if (src.wireUnit) src.wireUnit(container, () => renderSetup());
       container.querySelectorAll(".wchip:not(:disabled)").forEach((b) => b.addEventListener("click", () => {
         setup.wager = Number(b.dataset.wager);
         ctx.sfx.play("tap");
@@ -674,7 +724,7 @@
 
     // A rival crossed the line, maybe while you were still thinking.
     function cpuWon() {
-      if (race.picked === null && race.q) race.log.push({ wordId: race.q.wordId, kind: race.q.kind, correct: false, unanswered: true });
+      if (race.picked === null && race.q) race.log.push({ q: race.q, correct: false, unanswered: true });
       announce(`🏁 ${HORSE[race.winner].name} crossed the line${race.picked === null ? " while you were thinking" : ""}!`);
       settle();
       if (screen !== "race") return;
@@ -695,10 +745,7 @@
       setup.burst = false;
       touch();
       ctx.save();
-      // Advanced words lead; core words fill in if a long race runs out.
-      const W = SW.vocab.WORDS;
-      const ids = [...shuffle(W.filter((w) => w.level === "advanced"), Math.random), ...shuffle(W.filter((w) => w.level !== "advanced"), Math.random)].map((w) => w.id);
-      race = newRace(mode.id, wager, ids, { focus: FOCUS().clamp(fst().focus), streak: fst().focusStreak || 0, burst });
+      race = newRace(mode.id, wager, src.draw(), { focus: FOCUS().clamp(fst().focus), streak: fst().focusStreak || 0, burst, read: src.read });
       Object.assign(race, { log: [], times: [], feed: [], leader: burst ? "lexicon" : null, lastWrong: false, lockLeft: 0, lockShown: false });
       race.call = burst ? "And they're off! 🔔 Your Starting Burst puts you a step ahead." : "And they're off! 🔔 The rivals are already reading.";
       nextQuestion();
@@ -709,8 +756,7 @@
 
     function nextQuestion() {
       if (race.turn >= race.words.length) race.words = race.words.concat(shuffle(race.words, Math.random));
-      const w = SW.vocab.WORDS.find((x) => x.id === race.words[race.turn]);
-      race.q = makeQuestion(w);
+      race.q = src.question(race.words[race.turn]);
       race.picked = null;
       race.qClock = 0;
       race.lockLeft = lockFor(race.focus, race.lastWrong);
@@ -786,15 +832,15 @@
       const over = Boolean(race.winner);
       const locked = !answered && !over && race.lockLeft > 0;
       race.lockShown = locked;
-      const w = SW.vocab.WORDS.find((x) => x.id === q.wordId);
       const passage = q.passage
         ? ctx.fill(q.passage)
-          .replace("______", answered ? `<mark class="fill-in">${esc(q.choices[q.answer])}</mark>` : '<span class="blank" role="img" aria-label="blank"></span>')
+          .replace("______", answered ? `<mark class="fill-in">${ctx.fill(q.choices[q.answer], undefined, false)}</mark>` : '<span class="blank" role="img" aria-label="blank"></span>')
           .replace(SW.UNDERLINE_RE, '<u class="target">$1</u>')
         : "";
-      const kindLabel = { context: "Words in Context", definition: "Definition", synonym: "Synonym", antonym: "Antonym" }[q.kind];
+      const kindLabel = esc(q.meta || "");
       const right = race.picked === q.answer;
       el.classList.toggle("answered", answered || over); // low-Focus blur only hits open questions
+      el.dataset.qid = q.id || q.wordId || "";
       el.innerHTML = `
         <div class="bb-top">
           <span class="bb-num">${race.turn + (answered ? 0 : 1)}</span>
@@ -808,17 +854,20 @@
           ${q.choices.map((c, i) => {
             let cls = "";
             if (answered) cls = i === q.answer ? "right" : i === race.picked ? "wrong" : "dim";
-            return `<li><button class="choice ${cls}" type="button" data-ci="${i}" ${answered || over || locked ? "disabled" : ""} aria-label="(${"ABCD"[i]}) ${esc(c)}">
-              <span class="letter" aria-hidden="true">${"ABCD"[i]}</span><span class="txt">${esc(c)}</span>
+            const txt = ctx.fill(c, undefined, false);
+            return `<li><button class="choice ${cls}" type="button" data-ci="${i}" ${answered || over || locked ? "disabled" : ""} aria-label="(${"ABCD"[i]}) ${txt.replace(/<[^>]+>/g, "")}">
+              <span class="letter" aria-hidden="true">${"ABCD"[i]}</span><span class="txt">${txt}</span>
             </button></li>`;
           }).join("")}
         </ol>
         ${answered ? `
           <div class="feedback ${right ? "ok" : "no"}">
             <h3>${right ? "Correct!" : `Not quite. You're held back, and your next question locks for ${PENALTY.stumble}s+.`}</h3>
+            ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${ctx.fill(q.rule, undefined, false)}</p>` : ""}
+            ${!right && q.notes ? `<p><b>Your pick:</b> ${ctx.fill(q.notes[race.picked], undefined, false)}</p>` : ""}
             <p>${ctx.fill(q.explain, undefined, false)}</p>
-            ${right || solo ? "" : `<p class="muted small">🔁 “${esc(w.word)}” is flagged for review in the Vault.</p>`}
-          </div>` : over ? `<div class="feedback no"><h3>Too late!</h3><p>${esc(HORSE[race.winner].name)} finished before you answered. “${esc(w.word)}”: ${esc(w.definition)}.</p></div>` : ""}`;
+            ${right || !src.missNote(q) ? "" : `<p class="muted small">${src.missNote(q)}</p>`}
+          </div>` : over ? `<div class="feedback no"><h3>Too late!</h3><p>${esc(HORSE[race.winner].name)} finished before you answered. ${src.lateNote(q)}</p></div>` : ""}`;
       container.querySelector("#derby-next-slot").innerHTML = over
         ? '<button class="btn wide" type="button" id="derby-next">See the results 🏁</button>'
         : answered
@@ -841,9 +890,9 @@
       const res = playerAnswer(race, correct, seconds);
       race.picked = ci;
       race.lastWrong = !correct;
-      race.log.push({ wordId: q.wordId, kind: q.kind, correct });
+      race.log.push({ q, correct });
       race.times.push(seconds);
-      if (!correct) SW.vocab.flag(S().vocab, q.wordId);
+      src.onAnswer(q, correct);
       ctx.recordAnswer(correct);
       race.confirmQuit = false;
       fst().focus = race.focus; // Focus carries over between races (and into Practice)
@@ -919,11 +968,11 @@
       const right = race.log.filter((r) => r.correct).length;
       const answered = race.log.filter((r) => !r.unanswered).length;
       const rows = race.log.map((r) => {
-        const w = SW.vocab.WORDS.find((x) => x.id === r.wordId);
+        const [a, b] = src.review.row(r.q);
         const res = r.unanswered ? ["skip", "not answered", "—"] : r.correct ? ["ok", "correct", "✓"] : ["no", "missed", "✗"];
         return `<tr class="${res[0]}">
-          <td><b>${esc(w.word)}</b><br><small class="muted">${esc(w.pos)}</small></td>
-          <td>${esc(w.definition)}<br><small class="muted">≈ ${w.synonyms.map(esc).join(", ")}</small></td>
+          <td>${a}</td>
+          <td>${b}</td>
           <td class="res" aria-label="${res[1]}">${res[2]}</td>
         </tr>`;
       }).join("");
@@ -942,14 +991,14 @@
             </ol>
           </section>
           <section class="panel">
-            <h2>Vocabulary review <small class="muted">${right} of ${answered} right</small></h2>
+            <h2>${esc(src.review.title)} <small class="muted">${right} of ${answered} right</small></h2>
             <div class="table-wrap">
               <table class="review-table">
-                <thead><tr><th scope="col">Word</th><th scope="col">Meaning</th><th scope="col"><span class="sr-only">Result</span></th></tr></thead>
+                <thead><tr><th scope="col">${esc(src.review.head[0])}</th><th scope="col">${esc(src.review.head[1])}</th><th scope="col"><span class="sr-only">Result</span></th></tr></thead>
                 <tbody>${rows}</tbody>
               </table>
             </div>
-            ${!solo && race.log.some((r) => !r.correct && !r.unanswered) ? '<p class="muted small">Missed words are flagged 🔁. They lead your next flashcard deck and sprint.</p>' : ""}
+            ${src.review.note && race.log.some((r) => !r.correct && !r.unanswered) ? `<p class="muted small">${esc(src.review.note)}</p>` : ""}
           </section>
           <div class="stack">
             <button class="btn wide" type="button" id="derby-again">🏇 Race again</button>

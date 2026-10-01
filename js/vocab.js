@@ -17,7 +17,7 @@
 //   • Tiers only move in sprints. A sprint miss also flags the word for review,
 //     so flagged words lead both the deck and the next sprint.
 //
-//   • Vocab Derby (js/derby.js): a wager-based horse race on these words.
+//   • Vocab Fishing (js/fishing.js): hook the fish carrying the right definition.
 //
 // Exposes SatWizz.vocab = { WORDS, TIERS, RULES, emptyProgress, drawSprint,
 // drawDeck, grade, reviewCard, flag, finishSprint, summary, mergeProgress, mount }.
@@ -943,7 +943,7 @@
   //              advancedDay, mastered, review, cards, cardDay } }, sprintDay, sprints }
   //   seen/correct/wrong/lastDay count sprint answers; cards/cardDay count flashcard
   //   reviews; lastAt is the last activity of either kind (used for merging).
-  const emptyProgress = () => ({ words: {}, sprintDay: null, sprints: 0, derby: SW.derby.emptyStats() });
+  const emptyProgress = () => ({ words: {}, sprintDay: null, sprints: 0, derby: SW.derby.emptyStats(), fishing: SW.fishing.emptyStats() });
 
   function wordState(p, id) {
     return { tier: 1, seen: 0, correct: 0, wrong: 0, lastAt: 0, lastDay: null, advancedDay: null, mastered: false, review: false, cards: 0, cardDay: null, ...p.words[id] };
@@ -1095,6 +1095,7 @@
       sprintDay: [a.sprintDay, b.sprintDay].filter(Boolean).sort().pop() || null,
       sprints: Math.max(a.sprints || 0, b.sprints || 0),
       derby: SW.derby.mergeStats(a.derby, b.derby),
+      fishing: SW.fishing.mergeStats(a.fishing, b.fishing),
     };
   }
 
@@ -1107,6 +1108,7 @@
     let deck = null; // { ids, i, flipped, got, later, earned, requeued: Set, busy }
     let drawer = null;
     const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fishing = SW.fishing.mount({ ...ctx, onExit: () => render() });
 
     const P = () => {
       const S = ctx.getState();
@@ -1127,6 +1129,7 @@
     function render() {
       if (sprint) return renderCard();
       if (deck) return renderDeck();
+      if (fishing.active()) return fishing.render();
       const p = P();
       const sum = summary(p);
       const today = ctx.todayKey();
@@ -1156,9 +1159,9 @@
                 <small>${bonusLeft ? `+${RULES.sprintSparks} ⚡ bonus` : "today's bonus is done"}</small>
               </button>
             </div>
-            <button class="mode-btn derby-btn" type="button" id="derby-start">
-              <span class="mode-ico" aria-hidden="true">🏇</span>
-              <span><b>Vocab Derby</b><small>Advanced words, 7 rivals, real bets. Wins pay ×1.5. Opens the Derby tab.</small></span>
+            <button class="mode-btn derby-btn fish-btn" type="button" id="fish-start-mode">
+              <span class="mode-ico" aria-hidden="true">🎣</span>
+              <span><b>Vocab Fishing</b><small>Hook the fish carrying the right definition. +${SW.fishing.RULES.catchSparks} ⚡ a catch.</small></span>
             </button>
             <p class="muted small">+${RULES.sparksPerCorrect} ⚡ per correct sprint word · +${RULES.masterySparks} ⚡ when a word reaches 👑 Master</p>
           </section>
@@ -1176,7 +1179,7 @@
         </div>`;
       container.querySelector("#sprint-start").addEventListener("click", startSprint);
       container.querySelector("#deck-start").addEventListener("click", startDeck);
-      container.querySelector("#derby-start").addEventListener("click", () => ctx.openDerby?.());
+      container.querySelector("#fish-start-mode").addEventListener("click", () => { sprint = null; deck = null; closeDrawer(); fishing.open(); });
     }
 
     // ---------- Flashcards ----------
@@ -1581,7 +1584,8 @@
     return {
       render,
       isOpen: () => Boolean(drawer),
-      busy: () => Boolean(sprint || deck),
+      busy: () => Boolean(sprint || deck || fishing.playing()),
+      openFishing: () => { sprint = null; deck = null; fishing.open(); },
     };
   }
 

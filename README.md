@@ -1,10 +1,16 @@
 # SatWizz
 
-A mobile-first, gamified Digital SAT grammar and vocabulary course. You work through a 7-chapter grammar curriculum in a snap-scrolling feed of Digital SAT-style questions, flip 3D flashcards in the Vocab Vault, bet Sparks in the Vocab Derby, and spend them in the High-Barrier Shop. Daily and friend streaks and live leaderboards keep you coming back.
+A mobile-first, gamified Digital SAT grammar and vocabulary website. You work through a 7-chapter grammar curriculum in a snap-scrolling feed of Digital SAT-style questions. The Vocab Vault has 3D flashcards, sprints and Vocab Fishing. You race your unit's grammar questions in the Derby and spend Sparks in the Shop. Daily and friend streaks and live leaderboards keep you coming back.
 
 - **Header (every screen):** ⚡ **Spark balance** (new players start with **2,500**), 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%).
-- **Bottom nav, four tabs:** ✏️ **Practice** (chapter lessons and questions) · 📚 **Vault** (flashcards and sprints) · 🐎 **Derby** (the arcade racing game) · 🛍️ **Shop** (High-Barrier Shop). Views fade in as you switch.
-- **Profile** opens from the avatar in the header. It holds your stats, streak and achievements, account, settings and cast, plus **🏆 Leaderboard & Friends**.
+- **Bottom nav, five tabs:**
+  - ✏️ **Practice:** chapter lessons and questions.
+  - 📚 **Vault:** flashcards, sprints and 🎣 Vocab Fishing.
+  - 🐎 **Derby:** a grammar horse race on your unit.
+  - 🛍️ **Shop.**
+  - 🎭 **Profile:** three sub-tabs, **Edit Profile** · **Settings** · **Leaderboard**.
+
+  Views fade in as you switch.
 
 The whole app is also built as **one self-contained `dist/index.html`** (see below).
 
@@ -78,6 +84,35 @@ The **Vault** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
 - Flagged words lead the next deck and the next sprint. A sprint miss also flags a word, and a correct sprint answer or Mastered clears the flag.
 - Flashcards don't change tiers: only sprints do.
 
+**🎣 Vocab Fishing** (`js/fishing.js`). Hook the fish that carries the right definition.
+- **A round is 8 casts.** Each cast shows a word (part of speech and context sentence), and 4 fish swim across the water, each carrying a definition. Tap the right fish, or press 1–4, before the 20s line runs out.
+- **Rewards:**
+  - a catch: **+5 ⚡**, and the word's review flag clears;
+  - a wrong fish or no bite: the school scatters, the word is flagged 🔁, and the right fish is shown;
+  - a perfect round: **+20 ⚡**.
+
+  Catches count toward your daily goal.
+- **Rods:**
+
+  | Rod | Price | Perk |
+  |---|---|---|
+  | 🎋 Bamboo Rod | free | none |
+  | 🎣 Steady Graphite | 500 ⚡ | fish swim 25% slower |
+  | 🧵 Second-Chance Reel | 500 ⚡ | your first wrong hook each round doesn't scare the school off |
+  | ✨ Golden Lure | 500 ⚡ | +2 ⚡ a catch |
+
+- **Spots** set the scenery and which words bite:
+
+  | Spot | Price | Words |
+  |---|---|---|
+  | 🪷 Village Pond | free | core words |
+  | 🌫️ Misty Lake | 500 ⚡ | advanced words |
+  | 🪸 Coral Reef | 500 ⚡ | all 55 words |
+  | 🌙 Moonlit Bay | 500 ⚡ | flagged words first |
+
+- **Syncing:** gear and stats sync in `vocab_progress.fishing`.
+- **Checks:** `scripts/validate-content.js` checks 2,200 generated casts. Each must have 4 distinct definitions and one right fish, and never a near-synonym as a distractor.
+
 **⚡ Daily 5-Word Sprint.** Words-in-Context questions in two formats:
 - 35 words are "fill the blank" (the most logical and precise word);
 - 20 are "As used in the text, what does *X* most nearly mean?", with the word underlined.
@@ -92,17 +127,21 @@ The **Vault** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
   Vocab answers also count toward your daily goal and give +5 XP each. They don't use Focus or combos.
 - Progress syncs to `profiles.vocab_progress`. If both devices practiced a word, the newer answer wins.
 
-## Vocab Derby
+## Grammar Derby
 
-The **Derby** tab (`js/derby.js`) is a wager-based horse race on the Vault's advanced words.
-- **Flow:** an intro screen (the `=== 🐎 SATWIZZ VOCAB DERBY 🐎 ===` banner, rules, the field, your Focus) → **Start Derby** → place a bet → race → results.
+The **Derby** tab (`js/derby.js`) is a wager-based horse race on **grammar questions from the unit you're on**.
+- **Your unit:** the race uses your current Practice chapter. A "Racing on" picker switches to any unlocked chapter.
+- **Question order:** questions you missed come first, then ones you haven't got right yet, then the rest.
+- **Counts as practice:** a right answer counts toward the chapter, including its 60% unlock. A miss goes on your missed list.
+- **Flow:** an intro screen (the `=== 🐎 SATWIZZ GRAMMAR DERBY 🐎 ===` banner, rules, your unit, the field, your Focus) → **Start Derby** → place a bet → race → results with a grammar review (the sentence filled in, plus the rule).
+- **The engine is generic:** a question source plugs in (`ctx.source`), and the standalone `derby/index.html` still races on vocabulary.
 - **Betting:** bet real ⚡ Sparks (50, 100, 250 or 500) or take a Fun run.
   - The bet is taken at the gate, and a win pays it back **×1.5**.
   - Up to **3 betting races a day**; Fun runs are unlimited.
   - Leaving mid-race forfeits the bet, after a confirm tap.
 - **Field:** eight horses on a 5-step track. You are Galloping Lexicon. The seven rivals are **independent CPU players**.
   - **The race clock never pauses**: not while you read feedback, not if you switch tabs.
-  - Each rival reads a question (12–16s, like you), answers in its own time range at its own accuracy, and moves **live whether or not you answer**.
+  - Each rival reads a question (20–26s for grammar passages), answers in its own time range at its own accuracy, and moves **live whether or not you answer**.
   - If you never answer, a rival wins in about 90 seconds. A rival that crosses the line while you're thinking wins.
 
   | Rival | Style | Answer time | Accuracy |
@@ -126,17 +165,18 @@ The **Derby** tab (`js/derby.js`) is a wager-based horse race on the Vault's adv
   - A miss costs 25% and **locks your next question for 4s**; a rushed answer (under 1.5s) costs 10%.
   - Missing Focus locks every question for up to **9s** (at 0%) while the rivals keep running.
   - Two right answers in a row restore 25%. A **Focus Elixir** (500 ⚡) refills Focus and lifts the current lock.
-- **Balance:** CPU reading time is tuned by simulating the real-time race, including locks and about 2s spent reading feedback (`CPU.read` in `js/derby.js`):
+- **Balance:** CPU reading time (20–26s for grammar, set by the source) is tuned by simulating the real-time race, including locks and about 2s spent reading feedback:
 
   | Your pace | Races won | At ×1.5 |
   |---|---|---|
-  | 8s/question at 90% | ~94% | |
-  | 10s at 85% | ~71% | break-even |
-  | 12s at 80% | ~37% | |
-  | 15s at 75% | ~11% | |
+  | 13s/question at 85% | ~88% | |
+  | 15s at 85% | ~83% | |
+  | ~17s at 82% | | break-even |
+  | 18s at 80% | ~50% | |
+  | 25s at 75% | ~10% | |
 
-- **Results:** winner, payout, balance, Focus, race time, your average think time, final standings, and a **vocabulary review table** (word, meaning, synonyms, ✓/✗, or — for a question you didn't answer before a rival won).
-- **🛍️ Gear:** jockey silks, mounts, Focus Elixirs and Starting Bursts are sold in the High-Barrier Shop (and on the Derby's own Stable screen). Your silks color your lane and the field list, and your mount runs in your lane.
+- **Results:** winner, payout, balance, Focus, race time, your average think time, final standings, and a **grammar review table** (each sentence with the right answer filled in, the rule, and ✓/✗, or — for a question you didn't answer before a rival won).
+- **🛍️ Gear:** jockey silks, mounts, Focus Elixirs and Starting Bursts are sold in the Shop (and on the Derby's own Stable screen). Your silks color your lane and the field list, and your mount runs in your lane.
 - **Practice and sync:** answers count toward the daily goal (+5 XP each). Stats, Focus, owned gear and Bursts sync in `vocab_progress.derby`.
 - **Question checks:** `scripts/validate-content.js` builds 11,000 generated questions and checks each has 4 distinct choices and one defensible answer. Words close in meaning, or near-opposites, are never used as each other's distractors.
 
@@ -161,7 +201,7 @@ A separate **grammar racing game** in one self-contained, dark-themed HTML file.
 - **Unlocking:** chapters unlock in order. Get 15 of 25 right in a chapter to open the next.
 - **Naming rule:** people and character names are used freely, but franchise and brand titles are swapped for generic ones ("the league of heroes", "a digital power visor", a fictional conservatory and album).
 
-**Race:** the same live engine as the Vocab Derby.
+**Race:** the same live engine as the Grammar Derby.
 - Eight horses on a 5-step track. Seven CPU rivals read and answer on their own clocks: Verbal Velocity 1–3s at 60%, Grammar Galloper 5–8s at 85%, and five more profiles.
 - The rivals switch tactics to win and can cross the line while you think. Commentary is live.
 - Rival reading time is 20–26s for these longer passages, tuned by simulation:
@@ -197,7 +237,7 @@ node scripts/build-clause-derby.js     # → clause-derby/index.html
 
 ## Single-file build (`dist/index.html`)
 
-The **whole SatWizz app** is also available as **one self-contained HTML file**: the header, all four tabs, the 345-question curriculum, the Vault, the Derby, the High-Barrier Shop, Profile and Leaderboard & Friends, with every style, script and icon inline.
+The **whole SatWizz app** is also available as **one self-contained HTML file**: the header, all five tabs, the 345-question curriculum, the Vault (with Vocab Fishing), the Grammar Derby, the Shop and Profile (with Settings and the Leaderboard), with every style, script and icon inline.
 - **Run locally:** double-click `dist/index.html`.
 - **Host it:** upload it to any static host.
 
@@ -239,14 +279,18 @@ node scripts/build-derby.js
 - **Sparks ⚡.** You earn +10 per correct answer, +5 on every 3rd answer in a row, +50 per chapter (first time) and +50 for your daily goal.
 - **Focus Meter 🧠.** 0–100%; see [Focus Meter](#focus-meter-0100) above.
 - **Lock In Streak 🔥.** It grows each day you hit your goal (5, 10 or 20). **Aura Shields 💠** cover a missed day.
-- **High-Barrier Shop.**
+- **Shop.** Every cosmetic costs **500 ⚡**, in separate sections (jump links at the top):
 
-  | Tier | Price | Items |
-  |---|---|---|
-  | Jockey & Character Skins | **1,000 ⚡** | 4 Derby jockey silks and 6 character casts (theme packs) |
-  | Custom Mounts & Avatars | **1,500 ⚡** | 4 Derby mounts and 6 rare avatars |
-  | Focus Elixir | **500 ⚡** | Focus back to 100% |
-  | Power-ups | as before | Starting Burst (500), Aura Shields (50, or 3 for 120), Combo Saver, Double-Spark Wager |
+  | Section | Items |
+  |---|---|
+  | 🏇 Jockey Skins | 4 Derby silks |
+  | 🦄 Derby Mounts | 4 mounts |
+  | 🎭 Character Casts | 6 casts for the extra-practice questions |
+  | 🙂 Avatars | 6 rare profile pictures |
+  | 🎣 Fishing Rods | 3 rods with perks |
+  | 🌊 Fishing Spots | 3 spots with their own word pools |
+  | 🧪 Focus Elixir | 500 ⚡, Focus back to 100% |
+  | Power-ups | Starting Burst (500), Aura Shields (50, or 3 for 120), Combo Saver, Double-Spark Wager |
 
   Purchases need two taps. Anything you already own stays owned. Derby wins pay your bet back ×1.5.
 - **Starting balance.** New players start with 2,500 ⚡. Existing saves keep their balance. A fresh device that signs in to an account that has played takes the account's balance, so a new browser can't top up an account.
@@ -256,7 +300,7 @@ node scripts/build-derby.js
 
 ## Social
 
-- **Leaderboard & Friends** (Profile → 🏆). **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.
+- **Leaderboard** (Profile → 🏆 Leaderboard). **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.
 - **Friends.** Search by `@username` or share your invite link (`…/?invite=yourname`). Opening an invite while signed out asks you to sign in, then sends the request automatically. If both people send a request, it's accepted.
 - **Friend streaks 🔥.** A friend streak grows once per day when you and a friend both practice within 24 hours. Missing a day restarts it.
 - **Lock In 🔒.** Next to a friend who hasn't practiced today, send "*{name} told you to Lock In! Keep your 12-day streak alive.*" It arrives as a **push notification** on their devices and as an **in-app banner**, live if they have the app open. You can send it once per friend every 4 hours.
@@ -320,7 +364,8 @@ js/curriculum/clause.js     registers the pop-culture sets (clause-derby/src/ch1
 js/curriculum/ch1-ch9.js    extra practice per chapter: lesson patterns + questions with per-choice notes
 js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row restore, Elixir, locks, blur/shake
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
-js/derby.js                 Vocab Derby (Derby tab): real-time CPU rival engine and tactics, Stable purchases, question generator, views
+js/fishing.js               Vocab Fishing (Vault): casts, rods, spots, view
+js/derby.js                 Grammar Derby (Derby tab, pluggable question source): real-time CPU rival engine and tactics, Stable purchases, question generator, views
 js/rewards.js               Sparks, shop, Focus Elixir, Aura Shields, wager, badges (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push

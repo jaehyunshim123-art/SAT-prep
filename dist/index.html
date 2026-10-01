@@ -1828,6 +1828,119 @@ body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px)
 .fc-toggle[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--volt); }
 .rule-line { font-size: 0.9rem; padding: 8px 10px; border-left: 3px solid var(--volt); background: var(--surface-2); border-radius: 8px; margin-block: 8px; }
 
+/* ---------- Vocab Fishing (js/fishing.js) ---------- */
+.fish-btn .mode-ico { font-size: 1.5rem; }
+.fish-word { gap: 8px; }
+.fish-target { margin: 0; font-family: var(--font-display); font-size: 1.6rem; line-height: 1.1; }
+.fish-target b { font-weight: 800; letter-spacing: -0.02em; }
+.fish-context { margin: 0; font-size: 0.95rem; color: var(--muted); }
+.line-bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.line-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--ice), var(--volt)); transition: width 0.25s linear; }
+.water {
+  --water-a: #3fb6c9;
+  --water-b: #1d6f9e;
+  display: grid;
+  gap: 4px;
+  padding: 10px 8px 14px;
+  border-radius: var(--r);
+  background: linear-gradient(180deg, var(--water-a), var(--water-b));
+  box-shadow: inset 0 8px 20px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.spot-lake .water { --water-a: #9fb4c4; --water-b: #4d6a85; }
+.spot-reef .water { --water-a: #36d1c4; --water-b: #0f8fa8; }
+.spot-bay .water { --water-a: #2b3b78; --water-b: #0b1230; }
+.lane-water { padding-block: 2px; }
+/* Fish bob back and forth inside their lane, so the definition stays readable. */
+.fish {
+  position: relative;
+  width: 80%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 8px;
+  border: 2px solid transparent;
+  border-radius: 999px 22px 22px 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #16213a;
+  text-align: left;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.45);
+  animation: swim var(--swim, 8s) ease-in-out var(--delay, 0s) infinite alternate;
+  transition: opacity 0.3s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.fish.rtl { animation-direction: alternate-reverse; border-radius: 22px 999px 999px 22px; }
+.fish:hover:not(:disabled), .fish:focus-visible { border-color: #ffd23f; }
+.fish-body { flex: none; font-size: 1.5rem; line-height: 1; }
+.fish.rtl .fish-body { transform: scaleX(-1); }
+.fish-def b { display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; margin-right: 2px; border-radius: 50%; background: #16213a; color: #fff; font-size: 0.72rem; }
+@keyframes swim {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(12.5%, -2px); }
+  100% { transform: translate(25%, 0); }
+}
+.water.stopped .fish, .water.still .fish { animation-play-state: paused; }
+.water.still .fish { animation: none; }
+.fish.gone { opacity: 0.25; }
+.fish:disabled { cursor: default; }
+.fish.caught { border-color: var(--good); background: #dbf4e6; animation: reel 0.7s ease forwards; }
+.fish.reveal { border-color: var(--good); background: #dbf4e6; }
+.fish.wrong { border-color: var(--bad); background: #fde3e6; }
+@keyframes reel { 60% { transform: translateY(-10px) scale(1.04); } 100% { transform: translateY(-4px); } }
+.gear-list { display: grid; gap: 8px; }
+.gear {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  text-align: left;
+}
+.gear.on { border-color: var(--volt); background: var(--surface-2); }
+.gear:disabled { opacity: 0.6; cursor: default; }
+.gear-ico { font-size: 1.5rem; text-align: center; }
+.gear-info { display: grid; gap: 2px; min-width: 0; }
+.gear-info b { font-family: var(--font-display); font-weight: 700; }
+.gear-info small { color: var(--muted); font-size: 0.8rem; }
+@media (prefers-reduced-motion: reduce) {
+  .fish { animation: none; }
+}
+
+/* Derby unit picker */
+.unit-pick { display: grid; gap: 4px; }
+.derby-unit { margin-block: 4px; }
+
+/* Shop: jump links between sections */
+.shop-jump { display: flex; flex-wrap: wrap; gap: 6px; }
+.shop-jump a {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.shop-jump a:hover { outline: 2px solid var(--spark); }
+.shop-tier h2 .price-tag { flex: none; }
+#view-shop [id^="shop-"] { scroll-margin-top: 8px; }
+/* Profile sub-tabs */
+.you-tabs button { font-size: 0.85rem; padding: 8px 6px; }
+.you-tabs button { white-space: nowrap; }
+.you-tabs .lbl-short { display: none; }
+@media (max-width: 440px) {
+  .you-tabs .lbl-long { display: none; }
+  .you-tabs .lbl-short { display: inline; }
+}
+/* In the Profile pane the "Your rank" bar sits after the list (a sticky bar would cover the sign-in button). */
+#you-ranks .rank-bar { position: static; }
+.shop-tier h2 { font-size: 1.3rem; }
+
 </style>
 </head>
 <body>
@@ -1859,7 +1972,7 @@ window.SatWizz.config = {
 // SatWizz casts that get swapped into every question.
 // Placeholders map to cast fields: {{NAME_1..3}} -> people, {{LOCATION}} -> place,
 // {{SKILL}} -> craft, {{EVENT}} -> event. Flavor is always used mid-sentence.
-// `price` is in Sparks; 0 means free. Paid packs are Character Skins in the High-Barrier Shop (1,000 ⚡).
+// `price` is in Sparks; 0 means free. Paid packs are Character Casts in the Shop (500 ⚡).
 //
 // Content rule: names are fine, but no franchise titles, brand names or coined
 // proprietary terms (no "Hogwarts", "Quidditch", "Avengers", league or award
@@ -1890,7 +2003,7 @@ window.SatWizz.themes = [
   {
     id: "wizard",
     icon: "🪄",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Wizard School",
     tagline: "Harry, Hermione and Ron",
     people: [
@@ -1905,7 +2018,7 @@ window.SatWizz.themes = [
   {
     id: "football",
     icon: "⚽",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Football Legends",
     tagline: "Ronaldo, Messi and Aitana",
     people: [
@@ -1920,7 +2033,7 @@ window.SatWizz.themes = [
   {
     id: "hoops",
     icon: "🏀",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Hoops Legends",
     tagline: "LeBron, Steph and Caitlin",
     people: [
@@ -1935,7 +2048,7 @@ window.SatWizz.themes = [
   {
     id: "anime",
     icon: "🍥",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Anime Pack",
     tagline: "Naruto, Mikasa and Goku",
     people: [
@@ -1950,7 +2063,7 @@ window.SatWizz.themes = [
   {
     id: "heroes",
     icon: "🦸",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Superhero Pack",
     tagline: "Peter, Wanda and Tony",
     people: [
@@ -1965,7 +2078,7 @@ window.SatWizz.themes = [
   {
     id: "pop",
     icon: "🎤",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Pop Icons",
     tagline: "Taylor, Beyoncé and Olivia",
     people: [
@@ -2002,12 +2115,12 @@ window.SatWizz.avatars = [
   { id: "turtle", emoji: "🐢", label: "Turtle", price: 0 },
   { id: "bee", emoji: "🐝", label: "Bee", price: 0 },
   { id: "unicorn", emoji: "🦄", label: "Unicorn", price: 0 },
-  { id: "rocket", emoji: "🚀", label: "Rocket", price: 1500 },
-  { id: "brain", emoji: "🧠", label: "Big Brain", price: 1500 },
-  { id: "dragon", emoji: "🐲", label: "Dragon", price: 1500 },
-  { id: "wizard", emoji: "🧙", label: "Wizard", price: 1500 },
-  { id: "crown", emoji: "👑", label: "Crown", price: 1500 },
-  { id: "galaxy", emoji: "🌌", label: "Galaxy", price: 1500 },
+  { id: "rocket", emoji: "🚀", label: "Rocket", price: 500 },
+  { id: "brain", emoji: "🧠", label: "Big Brain", price: 500 },
+  { id: "dragon", emoji: "🐲", label: "Dragon", price: 500 },
+  { id: "wizard", emoji: "🧙", label: "Wizard", price: 500 },
+  { id: "crown", emoji: "👑", label: "Crown", price: 500 },
+  { id: "galaxy", emoji: "🌌", label: "Galaxy", price: 500 },
 ];
 
 </script>
@@ -5951,16 +6064,16 @@ window.SatWizz.curriculum.addChapter({
   // The Stable: cosmetics and power-ups, priced in real Sparks.
   const STABLE = Object.freeze({
     silks: [
-      { id: "gold", name: "Scholar's Gold", price: 1000 },
-      { id: "ink", name: "Midnight Ink", price: 1000 },
-      { id: "crimson", name: "Crimson Cadence", price: 1000 },
-      { id: "emerald", name: "Emerald Essay", price: 1000 },
+      { id: "gold", name: "Scholar's Gold", price: 500 },
+      { id: "ink", name: "Midnight Ink", price: 500 },
+      { id: "crimson", name: "Crimson Cadence", price: 500 },
+      { id: "emerald", name: "Emerald Essay", price: 500 },
     ],
     mounts: [
-      { id: "pegasus", name: "Pegasus of Prose", emoji: "🦄", price: 1500 },
-      { id: "zebra", name: "Zebra of Zeugma", emoji: "🦓", price: 1500 },
-      { id: "dragon", name: "Dragon of Diction", emoji: "🐉", price: 1500 },
-      { id: "stag", name: "Stag of Syntax", emoji: "🦌", price: 1500 },
+      { id: "pegasus", name: "Pegasus of Prose", emoji: "🦄", price: 500 },
+      { id: "zebra", name: "Zebra of Zeugma", emoji: "🦓", price: 500 },
+      { id: "dragon", name: "Dragon of Diction", emoji: "🐉", price: 500 },
+      { id: "stag", name: "Stag of Syntax", emoji: "🦌", price: 500 },
     ],
     elixir: { name: "Focus Elixir", price: 500 },
     burst: { name: "Starting Burst", price: 500 },
@@ -5985,7 +6098,8 @@ window.SatWizz.curriculum.addChapter({
     const p = PROFILES[r.id];
     const tactic = race ? tacticFor(r, race) : "steady";
     const t = TACTICS[tactic];
-    const read = between(CPU.read[0], CPU.read[1], rand) * t.read;
+    const rd = (race && race.read) || CPU.read; // grammar races read longer passages
+    const read = between(rd[0], rd[1], rand) * t.read;
     const answer = between(p.min, p.max, rand) * t.answer;
     const acc = Math.min(0.98, Math.max(0.05, p.acc + t.acc));
     return { read, answer, total: read + answer, correct: rand() < acc, tactic };
@@ -6012,10 +6126,13 @@ window.SatWizz.curriculum.addChapter({
   // The race runs on one continuous clock (seconds). Each CPU has `next`: the
   // race time when its current attempt lands. focus/streak come from (and go
   // back to) the saved stats.
-  function newRace(modeId, wager, wordIds, { focus = RULES.focusMax, streak = 0, burst = false } = {}, rand = Math.random) {
+  // `wordIds` is the question queue: vocab word ids, or any items a question
+  // source understands. `read` overrides CPU.read for this race.
+  function newRace(modeId, wager, wordIds, { focus = RULES.focusMax, streak = 0, burst = false, read = null } = {}, rand = Math.random) {
     const mode = MODES[modeId];
     const race = {
       mode: mode.id,
+      read,
       wager,
       horses: HORSES.slice(0, mode.field).map((h) => ({ id: h.id, pos: h.you && burst ? 1 : 0 })),
       words: wordIds.slice(),
@@ -6246,6 +6363,47 @@ window.SatWizz.curriculum.addChapter({
     return { ok: true, spent: price };
   }
 
+  // ---------- Question sources ----------
+  // The race asks whatever a source serves. A source is:
+  //   { title, banner, tagline, intro (rule text), read ([min, max] CPU reading
+  //     seconds), draw() → queue items, question(item) → a question,
+  //     onAnswer(q, correct), missNote(q), lateNote(q),
+  //     review: { title, head: [a, b], row(q) → [aHtml, bHtml], note },
+  //     unitHtml?() / wireUnit?(el, rerender): an optional unit picker }
+  // A question: { meta, passage (template with ______ or ""), stem,
+  //   choices (templates), answer, explain (template) }.
+  // The default is the Vault's advanced vocabulary (the standalone Derby).
+  const KIND_LABEL = { context: "Words in Context", definition: "Definition", synonym: "Synonym", antonym: "Antonym" };
+  function vocabSource(ctx) {
+    const W = () => SW.vocab.WORDS;
+    const word = (q) => W().find((x) => x.id === q.wordId);
+    return {
+      title: "SAT Vocabulary Derby",
+      banner: "=== 🐎 SATWIZZ VOCAB DERBY 🐎 ===",
+      tagline: "Where precise words win photo finishes.",
+      intro: "Answer advanced SAT words as fast and as accurately as you can.",
+      read: null,
+      // Advanced words lead; core words fill in if a long race runs out.
+      draw: () => [...shuffle(W().filter((w) => w.level === "advanced"), Math.random), ...shuffle(W().filter((w) => w.level !== "advanced"), Math.random)].map((w) => w.id),
+      question: (id) => {
+        const q = makeQuestion(W().find((x) => x.id === id));
+        return { ...q, meta: KIND_LABEL[q.kind] };
+      },
+      onAnswer: (q, correct) => { if (!correct && !ctx.standalone) SW.vocab.flag(ctx.getState().vocab, q.wordId); },
+      missNote: (q) => (ctx.standalone ? "" : `🔁 “${ctx.esc(word(q).word)}” is flagged for review in the Vault.`),
+      lateNote: (q) => `“${ctx.esc(word(q).word)}”: ${ctx.esc(word(q).definition)}.`,
+      review: {
+        title: "Vocabulary review",
+        head: ["Word", "Meaning"],
+        row: (q) => {
+          const w = word(q);
+          return [`<b>${ctx.esc(w.word)}</b><br><small class="muted">${ctx.esc(w.pos)}</small>`, `${ctx.esc(w.definition)}<br><small class="muted">≈ ${w.synonyms.map(ctx.esc).join(", ")}</small>`];
+        },
+        note: ctx.standalone ? "" : "Missed words are flagged 🔁. They lead your next flashcard deck and sprint.",
+      },
+    };
+  }
+
   // ---------- View ----------
   // ctx: vocab's ctx plus { container, onExit, focusState?, tab?, standalone?, shake? }.
   function mount(ctx) {
@@ -6263,6 +6421,7 @@ window.SatWizz.curriculum.addChapter({
     const solo = Boolean(ctx.standalone);
     // Own tab in the app (no "Back to the Vault"; leaving goes to the intro).
     const tab = Boolean(ctx.tab);
+    const src = ctx.source || vocabSource(ctx);
     const STIPEND = 250;
 
     const S = () => ctx.getState();
@@ -6337,14 +6496,15 @@ window.SatWizz.curriculum.addChapter({
             <button class="btn wide" type="button" id="derby-stipend">Claim a ${STIPEND} ⚡ stable stipend</button>
           </section>` : ""}
           <section class="panel derby-intro">
-            <pre class="derby-banner" aria-label="SatWizz Vocab Derby">=== 🐎 SATWIZZ VOCAB DERBY 🐎 ===</pre>
-            <p class="muted center">Where precise words win photo finishes.</p>
+            <pre class="derby-banner" aria-label="${esc(src.title)}">${esc(src.banner)}</pre>
+            <p class="muted center">${esc(src.tagline)}</p>
+            ${src.unitHtml ? `<div class="derby-unit">${src.unitHtml()}</div>` : ""}
             <ol class="rule-list">
               <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. ${RULES.ratedPerDay} betting races a day.</li>
-              <li><b>The race never pauses ⏱.</b> Answer advanced SAT words as fast and as accurately as you can. Right → you gallop +1. Wrong → you're held back.</li>
-              <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${CPU.read[0]}–${CPU.read[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
+              <li><b>The race never pauses ⏱.</b> ${esc(src.intro)} Right → you gallop +1. Wrong → you're held back.</li>
+              <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${(src.read || CPU.read)[0]}–${(src.read || CPU.read)[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
               <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running, and blurs the screen. Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
-              <li><b>After the race:</b> your balance, a review table of every word, and the 🛍️ Stable.</li>
+              <li><b>After the race:</b> your balance, a review of every question, and the 🛍️ Stable.</li>
             </ol>
             <div class="intro-focus">Your Focus: ${focusBar(fst().focus)}${focusNote(fst().focus)}</div>
             <button class="btn wide start-btn" type="button" id="derby-start-race">Start Derby ▶</button>
@@ -6364,6 +6524,7 @@ window.SatWizz.curriculum.addChapter({
           </section>
         </div>`;
       container.querySelector("#derby-exit")?.addEventListener("click", exit);
+      if (src.wireUnit) src.wireUnit(container, () => renderIntro());
       container.querySelector("#derby-stipend")?.addEventListener("click", claimStipend);
       container.querySelector("#derby-start-race").addEventListener("click", () => { ctx.sfx.play("tap"); go("setup"); });
       container.querySelector("#derby-stable").addEventListener("click", openStable);
@@ -6399,8 +6560,9 @@ window.SatWizz.curriculum.addChapter({
             <span class="pill-sm">⚡ ${fmt(sparks)}</span>
           </div>
           <section class="panel">
-            <span class="label-sm">SAT Vocabulary Derby</span>
+            <span class="label-sm">${esc(src.title)}</span>
             <h2>🏇 Place your bet</h2>
+            ${src.unitHtml ? `<div class="derby-unit">${src.unitHtml()}</div>` : ""}
             <p class="muted">A win pays your bet back ×${mode.payout}. Bet what your accuracy can back up.</p>
             <div class="wager-chips" role="radiogroup" aria-label="Wager">
               ${[0, ...RULES.wagers].map((a) => `
@@ -6420,6 +6582,7 @@ window.SatWizz.curriculum.addChapter({
           </section>
         </div>`;
       container.querySelector("#derby-back").addEventListener("click", () => go("intro"));
+      if (src.wireUnit) src.wireUnit(container, () => renderSetup());
       container.querySelectorAll(".wchip:not(:disabled)").forEach((b) => b.addEventListener("click", () => {
         setup.wager = Number(b.dataset.wager);
         ctx.sfx.play("tap");
@@ -6538,7 +6701,7 @@ window.SatWizz.curriculum.addChapter({
 
     // A rival crossed the line, maybe while you were still thinking.
     function cpuWon() {
-      if (race.picked === null && race.q) race.log.push({ wordId: race.q.wordId, kind: race.q.kind, correct: false, unanswered: true });
+      if (race.picked === null && race.q) race.log.push({ q: race.q, correct: false, unanswered: true });
       announce(`🏁 ${HORSE[race.winner].name} crossed the line${race.picked === null ? " while you were thinking" : ""}!`);
       settle();
       if (screen !== "race") return;
@@ -6559,10 +6722,7 @@ window.SatWizz.curriculum.addChapter({
       setup.burst = false;
       touch();
       ctx.save();
-      // Advanced words lead; core words fill in if a long race runs out.
-      const W = SW.vocab.WORDS;
-      const ids = [...shuffle(W.filter((w) => w.level === "advanced"), Math.random), ...shuffle(W.filter((w) => w.level !== "advanced"), Math.random)].map((w) => w.id);
-      race = newRace(mode.id, wager, ids, { focus: FOCUS().clamp(fst().focus), streak: fst().focusStreak || 0, burst });
+      race = newRace(mode.id, wager, src.draw(), { focus: FOCUS().clamp(fst().focus), streak: fst().focusStreak || 0, burst, read: src.read });
       Object.assign(race, { log: [], times: [], feed: [], leader: burst ? "lexicon" : null, lastWrong: false, lockLeft: 0, lockShown: false });
       race.call = burst ? "And they're off! 🔔 Your Starting Burst puts you a step ahead." : "And they're off! 🔔 The rivals are already reading.";
       nextQuestion();
@@ -6573,8 +6733,7 @@ window.SatWizz.curriculum.addChapter({
 
     function nextQuestion() {
       if (race.turn >= race.words.length) race.words = race.words.concat(shuffle(race.words, Math.random));
-      const w = SW.vocab.WORDS.find((x) => x.id === race.words[race.turn]);
-      race.q = makeQuestion(w);
+      race.q = src.question(race.words[race.turn]);
       race.picked = null;
       race.qClock = 0;
       race.lockLeft = lockFor(race.focus, race.lastWrong);
@@ -6650,15 +6809,15 @@ window.SatWizz.curriculum.addChapter({
       const over = Boolean(race.winner);
       const locked = !answered && !over && race.lockLeft > 0;
       race.lockShown = locked;
-      const w = SW.vocab.WORDS.find((x) => x.id === q.wordId);
       const passage = q.passage
         ? ctx.fill(q.passage)
-          .replace("______", answered ? `<mark class="fill-in">${esc(q.choices[q.answer])}</mark>` : '<span class="blank" role="img" aria-label="blank"></span>')
+          .replace("______", answered ? `<mark class="fill-in">${ctx.fill(q.choices[q.answer], undefined, false)}</mark>` : '<span class="blank" role="img" aria-label="blank"></span>')
           .replace(SW.UNDERLINE_RE, '<u class="target">$1</u>')
         : "";
-      const kindLabel = { context: "Words in Context", definition: "Definition", synonym: "Synonym", antonym: "Antonym" }[q.kind];
+      const kindLabel = esc(q.meta || "");
       const right = race.picked === q.answer;
       el.classList.toggle("answered", answered || over); // low-Focus blur only hits open questions
+      el.dataset.qid = q.id || q.wordId || "";
       el.innerHTML = `
         <div class="bb-top">
           <span class="bb-num">${race.turn + (answered ? 0 : 1)}</span>
@@ -6672,17 +6831,20 @@ window.SatWizz.curriculum.addChapter({
           ${q.choices.map((c, i) => {
             let cls = "";
             if (answered) cls = i === q.answer ? "right" : i === race.picked ? "wrong" : "dim";
-            return `<li><button class="choice ${cls}" type="button" data-ci="${i}" ${answered || over || locked ? "disabled" : ""} aria-label="(${"ABCD"[i]}) ${esc(c)}">
-              <span class="letter" aria-hidden="true">${"ABCD"[i]}</span><span class="txt">${esc(c)}</span>
+            const txt = ctx.fill(c, undefined, false);
+            return `<li><button class="choice ${cls}" type="button" data-ci="${i}" ${answered || over || locked ? "disabled" : ""} aria-label="(${"ABCD"[i]}) ${txt.replace(/<[^>]+>/g, "")}">
+              <span class="letter" aria-hidden="true">${"ABCD"[i]}</span><span class="txt">${txt}</span>
             </button></li>`;
           }).join("")}
         </ol>
         ${answered ? `
           <div class="feedback ${right ? "ok" : "no"}">
             <h3>${right ? "Correct!" : `Not quite. You're held back, and your next question locks for ${PENALTY.stumble}s+.`}</h3>
+            ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${ctx.fill(q.rule, undefined, false)}</p>` : ""}
+            ${!right && q.notes ? `<p><b>Your pick:</b> ${ctx.fill(q.notes[race.picked], undefined, false)}</p>` : ""}
             <p>${ctx.fill(q.explain, undefined, false)}</p>
-            ${right || solo ? "" : `<p class="muted small">🔁 “${esc(w.word)}” is flagged for review in the Vault.</p>`}
-          </div>` : over ? `<div class="feedback no"><h3>Too late!</h3><p>${esc(HORSE[race.winner].name)} finished before you answered. “${esc(w.word)}”: ${esc(w.definition)}.</p></div>` : ""}`;
+            ${right || !src.missNote(q) ? "" : `<p class="muted small">${src.missNote(q)}</p>`}
+          </div>` : over ? `<div class="feedback no"><h3>Too late!</h3><p>${esc(HORSE[race.winner].name)} finished before you answered. ${src.lateNote(q)}</p></div>` : ""}`;
       container.querySelector("#derby-next-slot").innerHTML = over
         ? '<button class="btn wide" type="button" id="derby-next">See the results 🏁</button>'
         : answered
@@ -6705,9 +6867,9 @@ window.SatWizz.curriculum.addChapter({
       const res = playerAnswer(race, correct, seconds);
       race.picked = ci;
       race.lastWrong = !correct;
-      race.log.push({ wordId: q.wordId, kind: q.kind, correct });
+      race.log.push({ q, correct });
       race.times.push(seconds);
-      if (!correct) SW.vocab.flag(S().vocab, q.wordId);
+      src.onAnswer(q, correct);
       ctx.recordAnswer(correct);
       race.confirmQuit = false;
       fst().focus = race.focus; // Focus carries over between races (and into Practice)
@@ -6783,11 +6945,11 @@ window.SatWizz.curriculum.addChapter({
       const right = race.log.filter((r) => r.correct).length;
       const answered = race.log.filter((r) => !r.unanswered).length;
       const rows = race.log.map((r) => {
-        const w = SW.vocab.WORDS.find((x) => x.id === r.wordId);
+        const [a, b] = src.review.row(r.q);
         const res = r.unanswered ? ["skip", "not answered", "—"] : r.correct ? ["ok", "correct", "✓"] : ["no", "missed", "✗"];
         return `<tr class="${res[0]}">
-          <td><b>${esc(w.word)}</b><br><small class="muted">${esc(w.pos)}</small></td>
-          <td>${esc(w.definition)}<br><small class="muted">≈ ${w.synonyms.map(esc).join(", ")}</small></td>
+          <td>${a}</td>
+          <td>${b}</td>
           <td class="res" aria-label="${res[1]}">${res[2]}</td>
         </tr>`;
       }).join("");
@@ -6806,14 +6968,14 @@ window.SatWizz.curriculum.addChapter({
             </ol>
           </section>
           <section class="panel">
-            <h2>Vocabulary review <small class="muted">${right} of ${answered} right</small></h2>
+            <h2>${esc(src.review.title)} <small class="muted">${right} of ${answered} right</small></h2>
             <div class="table-wrap">
               <table class="review-table">
-                <thead><tr><th scope="col">Word</th><th scope="col">Meaning</th><th scope="col"><span class="sr-only">Result</span></th></tr></thead>
+                <thead><tr><th scope="col">${esc(src.review.head[0])}</th><th scope="col">${esc(src.review.head[1])}</th><th scope="col"><span class="sr-only">Result</span></th></tr></thead>
                 <tbody>${rows}</tbody>
               </table>
             </div>
-            ${!solo && race.log.some((r) => !r.correct && !r.unanswered) ? '<p class="muted small">Missed words are flagged 🔁. They lead your next flashcard deck and sprint.</p>' : ""}
+            ${src.review.note && race.log.some((r) => !r.correct && !r.unanswered) ? `<p class="muted small">${esc(src.review.note)}</p>` : ""}
           </section>
           <div class="stack">
             <button class="btn wide" type="button" id="derby-again">🏇 Race again</button>
@@ -6947,6 +7109,439 @@ window.SatWizz.curriculum.addChapter({
 
 </script>
 <script>
+/* ===== js/fishing.js ===== */
+// SatWizz Vocab Fishing: a Vault game where you hook the fish carrying the
+// right definition.
+//
+//   • A round is 8 casts. Each cast shows a word (part of speech and its
+//     context sentence) and sends a school of 4 fish swimming across the
+//     water, each carrying a definition. Tap (or press 1–4) the fish with the
+//     right one before the 20s line timer runs out.
+//   • Hook the right fish: +5 ⚡ and the word's review flag clears. Hook a wrong
+//     one, or let the timer run out, and the school scatters: the word is
+//     flagged 🔁 for review. A perfect round pays +20 ⚡.
+//   • Rods give small perks and spots set the scenery and the word pool. Both
+//     are sold in the Shop (500 ⚡ each); the Bamboo Rod and Village Pond are free.
+//
+// Exposes SatWizz.fishing = { RULES, RODS, SPOTS, emptyStats, mergeStats,
+// buyItem, poolFor, makeCast, mount }.
+(function () {
+  "use strict";
+
+  const SW = (window.SatWizz = window.SatWizz || {});
+
+  const RULES = Object.freeze({
+    casts: 8,
+    fish: 4,
+    lineSeconds: 20,
+    catchSparks: 5,
+    perfectSparks: 20,
+    swimSeconds: [7, 10], // one crossing of the water, per fish
+  });
+
+  // Rods: small perks. Spots: scenery + which words bite.
+  const RODS = [
+    { id: "bamboo", name: "Bamboo Rod", emoji: "🎋", price: 0, perk: "No perk. A classic." },
+    { id: "graphite", name: "Steady Graphite", emoji: "🎣", price: 500, perk: "Fish swim 25% slower.", slow: 1.25 },
+    { id: "reel", name: "Second-Chance Reel", emoji: "🧵", price: 500, perk: "Your first wrong hook each round doesn't scare the school off.", secondChance: true },
+    { id: "golden", name: "Golden Lure", emoji: "✨", price: 500, perk: "+2 ⚡ on every catch.", bonus: 2 },
+  ];
+  const SPOTS = [
+    { id: "pond", name: "Village Pond", emoji: "🪷", price: 0, desc: "Core high-frequency words.", pool: "core" },
+    { id: "lake", name: "Misty Lake", emoji: "🌫️", price: 500, desc: "Advanced words only.", pool: "advanced" },
+    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "All 55 Vault words.", pool: "all" },
+    { id: "bay", name: "Moonlit Bay", emoji: "🌙", price: 500, desc: "Words you flagged for review bite first.", pool: "review" },
+  ];
+  const rodById = (id) => RODS.find((r) => r.id === id) || RODS[0];
+  const spotById = (id) => SPOTS.find((s) => s.id === id) || SPOTS[0];
+  const FISH = ["🐟", "🐠", "🐡", "🦈"];
+
+  const rnd = Math.random;
+  const shuffle = (arr, rand = rnd) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  // ---------- Stats (kept in the Vault progress as vocab.fishing) ----------
+  const emptyStats = () => ({ rounds: 0, catches: 0, perfect: 0, best: 0, rods: [], spots: [], rod: "bamboo", spot: "pond", at: 0 });
+  function mergeStats(a, b) {
+    const x = { ...emptyStats(), ...(a || {}) };
+    const y = { ...emptyStats(), ...(b || {}) };
+    const newer = (y.at || 0) > (x.at || 0) ? y : x;
+    const rods = [...new Set([...x.rods, ...y.rods])].filter((id) => RODS.some((r) => r.id === id && r.price));
+    const spots = [...new Set([...x.spots, ...y.spots])].filter((id) => SPOTS.some((s) => s.id === id && s.price));
+    const owns = (list, id, cat) => !cat.find((c) => c.id === id)?.price || list.includes(id);
+    return {
+      rounds: Math.max(x.rounds, y.rounds),
+      catches: Math.max(x.catches, y.catches),
+      perfect: Math.max(x.perfect, y.perfect),
+      best: Math.max(x.best, y.best),
+      rods,
+      spots,
+      rod: owns(rods, newer.rod, RODS) ? newer.rod : "bamboo",
+      spot: owns(spots, newer.spot, SPOTS) ? newer.spot : "pond",
+      at: Math.max(x.at || 0, y.at || 0),
+    };
+  }
+
+  // key: "rod:<id>" | "spot:<id>". Spends state.sparks, owns + equips the item.
+  function buyItem(st, state, key) {
+    const [kind, id] = key.split(":");
+    const item = (kind === "rod" ? RODS : kind === "spot" ? SPOTS : []).find((x) => x.id === id);
+    if (!item || !item.price) return { ok: false, reason: "unknown" };
+    const list = kind === "rod" ? st.rods : st.spots;
+    if (list.includes(id)) return { ok: false, reason: "owned" };
+    if ((state.sparks || 0) < item.price) return { ok: false, reason: "short", need: item.price - (state.sparks || 0) };
+    state.sparks -= item.price;
+    list.push(id);
+    if (kind === "rod") st.rod = id; else st.spot = id;
+    st.at = Date.now();
+    return { ok: true, spent: item.price, item };
+  }
+
+  // ---------- Rounds (pure) ----------
+  // Words for a round at a spot. `progress` is the Vault progress (review flags).
+  function poolFor(spotId, progress, words = SW.vocab.WORDS, rand = rnd) {
+    const spot = spotById(spotId);
+    if (spot.pool === "core") return shuffle(words.filter((w) => w.level !== "advanced"), rand);
+    if (spot.pool === "advanced") return shuffle(words.filter((w) => w.level === "advanced"), rand);
+    if (spot.pool === "review") {
+      const flagged = (w) => Boolean(progress && progress.words && progress.words[w.id] && progress.words[w.id].review);
+      return [...shuffle(words.filter(flagged), rand), ...shuffle(words.filter((w) => !flagged(w)), rand)];
+    }
+    return shuffle(words, rand);
+  }
+
+  // One cast: the word plus 4 fish (definitions), one of them right. Words
+  // close in meaning (SatWizz.derby.related) never swim together.
+  function makeCast(w, words = SW.vocab.WORDS, rand = rnd) {
+    const others = shuffle(words.filter((x) => !SW.derby.related(w, x)), rand).slice(0, RULES.fish - 1);
+    const fish = shuffle([w, ...others], rand).map((x, i) => ({ wordId: x.id, def: x.definition, right: x.id === w.id, kind: FISH[i % FISH.length] }));
+    return { wordId: w.id, fish, answer: fish.findIndex((f) => f.right) };
+  }
+
+  // ---------- View ----------
+  // ctx: { container, getState, save, esc, fill, sfx, toast, celebrate, earn,
+  //        recordAnswer, renderHud, onExit, openShop }
+  function mount(ctx) {
+    const { container, esc } = ctx;
+    let screen = null; // null | "dock" | "cast" | "result"
+    let round = null; // { words, i, cast, results: [], earned, saved (reel used), timer, left, done }
+    const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const S = () => ctx.getState();
+    // Kept in the Vault progress (S.vocab.fishing), so it syncs with an account.
+    const st = () => {
+      const p = S().vocab;
+      p.fishing = Object.assign(p.fishing || {}, mergeStats(p.fishing, null));
+      return p.fishing;
+    };
+    const touch = () => { st().at = Date.now(); };
+    const W = () => SW.vocab.WORDS;
+    const word = (id) => W().find((w) => w.id === id);
+    const fmt = (n) => Number(n || 0).toLocaleString("en-US");
+    const banner = "=== 🎣 SATWIZZ VOCAB FISHING 🎣 ===";
+
+    function go(next) {
+      screen = next;
+      render();
+      container.scrollTop = 0;
+    }
+    function render() {
+      if (screen === "dock") return renderDock();
+      if (screen === "cast") return renderCast();
+      if (screen === "result") return renderResult();
+    }
+
+    // ---------- Dock: rules, gear, start ----------
+    function renderDock() {
+      const s = st();
+      const rod = rodById(s.rod);
+      const spot = spotById(s.spot);
+      const ownsRod = (r) => !r.price || s.rods.includes(r.id);
+      const ownsSpot = (x) => !x.price || s.spots.includes(x.id);
+      container.innerHTML = `
+        <div class="stack vault fishing spot-${spot.id}">
+          <div class="sprint-top">
+            <button class="linkbtn" type="button" id="fish-exit">✕ Back to the Vault</button>
+            <span class="pill-sm">⚡ ${fmt(S().sparks)}</span>
+          </div>
+          <section class="panel fish-intro">
+            <pre class="derby-banner fish-banner" aria-label="SatWizz Vocab Fishing">${banner}</pre>
+            <p class="muted center">Hook the fish that carries the right definition.</p>
+            <ol class="rule-list">
+              <li><b>${RULES.casts} casts a round.</b> Each cast shows a word and sends ${RULES.fish} fish across the water, each carrying a definition.</li>
+              <li><b>Tap the right fish</b> (or press 1–${RULES.fish}) before the ${RULES.lineSeconds}s line runs out: +${RULES.catchSparks} ⚡${rod.bonus ? ` (+${rod.bonus} with your ${esc(rod.name)})` : ""}.</li>
+              <li><b>Wrong fish or no bite?</b> The school scatters, and the word is flagged 🔁 for review.</li>
+              <li><b>Perfect round</b> (${RULES.casts}/${RULES.casts}): +${RULES.perfectSparks} ⚡ bonus.</li>
+            </ol>
+            <button class="btn wide start-btn" type="button" id="fish-start">Cast off at ${esc(spot.name)} ${spot.emoji}</button>
+          </section>
+          <section class="panel">
+            <h2>Your rod</h2>
+            <div class="gear-list" role="radiogroup" aria-label="Rod">
+              ${RODS.map((r) => `
+                <button class="gear${s.rod === r.id ? " on" : ""}" type="button" role="radio" aria-checked="${s.rod === r.id}" data-rod="${r.id}" ${ownsRod(r) ? "" : "disabled"}>
+                  <span class="gear-ico" aria-hidden="true">${r.emoji}</span>
+                  <span class="gear-info"><b>${esc(r.name)}</b><small>${ownsRod(r) ? esc(r.perk) : `🔒 ${fmt(r.price)} ⚡ in the Shop · ${esc(r.perk)}`}</small></span>
+                </button>`).join("")}
+            </div>
+            <h2>Your spot</h2>
+            <div class="gear-list" role="radiogroup" aria-label="Fishing spot">
+              ${SPOTS.map((x) => `
+                <button class="gear${s.spot === x.id ? " on" : ""}" type="button" role="radio" aria-checked="${s.spot === x.id}" data-spot="${x.id}" ${ownsSpot(x) ? "" : "disabled"}>
+                  <span class="gear-ico" aria-hidden="true">${x.emoji}</span>
+                  <span class="gear-info"><b>${esc(x.name)}</b><small>${ownsSpot(x) ? esc(x.desc) : `🔒 ${fmt(x.price)} ⚡ in the Shop · ${esc(x.desc)}`}</small></span>
+                </button>`).join("")}
+            </div>
+            ${ctx.openShop ? '<button class="btn ghost wide" type="button" id="fish-shop">🛍️ More rods and spots in the Shop</button>' : ""}
+          </section>
+          <section class="panel derby-stats">
+            <div><b>${fmt(s.rounds)}</b><span>Rounds</span></div>
+            <div><b>${fmt(s.catches)}</b><span>Catches</span></div>
+            <div><b>${s.best}/${RULES.casts}</b><span>Best round</span></div>
+            <div><b>${fmt(s.perfect)}</b><span>Perfect</span></div>
+          </section>
+        </div>`;
+      container.querySelector("#fish-exit").addEventListener("click", exit);
+      container.querySelector("#fish-start").addEventListener("click", start);
+      container.querySelector("#fish-shop")?.addEventListener("click", () => ctx.openShop());
+      container.querySelectorAll("[data-rod]:not(:disabled)").forEach((b) => b.addEventListener("click", () => { st().rod = b.dataset.rod; touch(); ctx.save(); ctx.sfx.play("tap"); renderDock(); }));
+      container.querySelectorAll("[data-spot]:not(:disabled)").forEach((b) => b.addEventListener("click", () => { st().spot = b.dataset.spot; touch(); ctx.save(); ctx.sfx.play("tap"); renderDock(); }));
+      container.querySelector("#fish-start").focus({ preventScroll: true });
+    }
+
+    // ---------- A round ----------
+    function start() {
+      ctx.sfx.play("tap");
+      const words = poolFor(st().spot, S().vocab).slice(0, RULES.casts);
+      round = { words, i: 0, results: [], earned: 0, saved: false };
+      nextCast();
+      go("cast");
+    }
+
+    function nextCast() {
+      round.cast = makeCast(round.words[round.i]);
+      round.left = RULES.lineSeconds;
+      round.done = false;
+      round.scared = new Set(); // fish that swam off after a Second-Chance miss
+      round.picked = null;
+      clearInterval(round.timer);
+      round.timer = setInterval(tickLine, 250);
+    }
+
+    function tickLine() {
+      if (!round || round.done) return;
+      if (container.hidden) return; // paused while another tab is showing
+      round.left = Math.max(0, round.left - 0.25);
+      const bar = container.querySelector("#line-left");
+      if (bar) bar.style.width = `${(round.left / RULES.lineSeconds) * 100}%`;
+      const t = container.querySelector("#line-secs");
+      if (t) t.textContent = `${Math.ceil(round.left)}s`;
+      if (round.left <= 0) finishCast(null);
+    }
+
+    function renderCast() {
+      const c = round.cast;
+      const w = word(c.wordId);
+      const rod = rodById(st().rod);
+      const spot = spotById(st().spot);
+      const swim = (i) => {
+        const [a, b] = RULES.swimSeconds;
+        const base = a + ((i * 7919 + round.i * 104729) % 1000) / 1000 * (b - a);
+        return (base * (rod.slow || 1)).toFixed(2);
+      };
+      container.innerHTML = `
+        <div class="stack vault fishing spot-${spot.id}">
+          <div class="sprint-top">
+            <button class="linkbtn" type="button" id="fish-quit">✕ Reel in</button>
+            <span class="muted small" aria-live="polite">Cast ${round.i + 1} of ${round.words.length} · ${round.results.filter((r) => r.caught).length} caught</span>
+          </div>
+          <section class="card-inner bb fish-word">
+            <div class="bb-top"><span class="bb-num">${round.i + 1}</span><span class="bb-meta">Hook the definition of</span><span class="q-timer" aria-hidden="true">🎣 <span id="line-secs">${Math.ceil(round.left)}s</span></span></div>
+            <p class="fish-target"><b>${esc(w.word)}</b> <small class="muted">${esc(w.pos)}</small></p>
+            <p class="fish-context">${ctx.fill(w.text).replace("______", `<b class="fc-hl">${esc(w.word)}</b>`).replace(SW.UNDERLINE_RE, '<b class="fc-hl">$1</b>')}</p>
+            <div class="line-bar" aria-hidden="true"><i id="line-left" style="width:${(round.left / RULES.lineSeconds) * 100}%"></i></div>
+          </section>
+          <section class="water${reducedMotion() ? " still" : ""}" id="water" aria-label="Fish">
+            ${c.fish.map((f, i) => `
+              <div class="lane-water">
+                <button class="fish${i % 2 ? " rtl" : ""}" type="button" data-fish="${i}" style="--swim:${swim(i)}s;--delay:-${(i * 1.7).toFixed(1)}s" aria-label="Fish ${i + 1}: ${esc(f.def)}">
+                  <span class="fish-body" aria-hidden="true">${f.kind}</span><span class="fish-def"><b>${i + 1}</b> ${esc(f.def)}</span>
+                </button>
+              </div>`).join("")}
+          </section>
+          <div id="fish-feedback" aria-live="polite"></div>
+        </div>`;
+      container.querySelector("#fish-quit").addEventListener("click", quit);
+      container.querySelectorAll("[data-fish]").forEach((b) => b.addEventListener("click", () => hook(Number(b.dataset.fish))));
+      paintCast();
+    }
+
+    // Marks fish after a hook / scatter and shows the feedback + Next button.
+    function paintCast() {
+      const c = round.cast;
+      container.querySelectorAll("[data-fish]").forEach((b) => {
+        const i = Number(b.dataset.fish);
+        b.classList.toggle("gone", round.scared.has(i));
+        if (round.done) {
+          b.disabled = true;
+          b.classList.toggle("caught", i === c.answer && round.picked === i);
+          b.classList.toggle("reveal", i === c.answer && round.picked !== i);
+          b.classList.toggle("wrong", i === round.picked && i !== c.answer);
+        } else b.disabled = round.scared.has(i);
+      });
+      container.querySelector("#water")?.classList.toggle("stopped", round.done);
+      if (!round.done) return;
+      const w = word(c.wordId);
+      const r = round.results[round.results.length - 1];
+      container.querySelector("#fish-feedback").innerHTML = `
+        <div class="feedback ${r.caught ? "ok" : "no"}">
+          <h3>${r.caught ? "🎣 Caught it!" : round.picked === null ? "⏱ The school swam off" : "💨 It got away"}<small>${r.caught ? `+${r.sparks} ⚡` : "🔁 flagged for review"}</small></h3>
+          <p><b>${esc(w.word)}</b> (${esc(w.pos)}): ${esc(w.definition)}.</p>
+          <p class="muted small">🌱 ${esc(w.root)} · ≈ ${w.synonyms.map(esc).join(", ")}</p>
+        </div>
+        <button class="btn wide" type="button" id="fish-next">${round.i + 1 >= round.words.length ? "See your catch 🧺" : "Next cast →"}</button>`;
+      container.querySelector("#fish-next").addEventListener("click", advance);
+      container.querySelector("#fish-next").focus({ preventScroll: true });
+      container.querySelector("#fish-feedback").scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
+    }
+
+    function hook(i) {
+      if (!round || round.done || round.scared.has(i)) return;
+      const c = round.cast;
+      if (i !== c.answer && rodById(st().rod).secondChance && !round.saved) {
+        // Second-Chance Reel: that fish swims off, the rest stay.
+        round.saved = true;
+        round.scared.add(i);
+        ctx.sfx.play("wrong");
+        ctx.toast("🧵 Second-Chance Reel: that one swam off. Try again!");
+        paintCast();
+        return;
+      }
+      finishCast(i);
+    }
+
+    function finishCast(i) {
+      const c = round.cast;
+      round.done = true;
+      round.picked = i;
+      clearInterval(round.timer);
+      const caught = i === c.answer;
+      const p = S().vocab;
+      let sparks = 0;
+      if (caught) {
+        sparks = RULES.catchSparks + (rodById(st().rod).bonus || 0);
+        ctx.earn(sparks);
+        round.earned += sparks;
+        if (p.words[c.wordId]) p.words[c.wordId].review = false;
+        ctx.sfx.play("correct");
+        ctx.sfx.buzz(50);
+      } else {
+        SW.vocab.flag(p, c.wordId);
+        ctx.sfx.play("wrong");
+      }
+      round.results.push({ wordId: c.wordId, caught, sparks });
+      ctx.recordAnswer(caught);
+      touch();
+      ctx.save();
+      ctx.renderHud(caught ? ["sparks"] : []);
+      paintCast();
+    }
+
+    function advance() {
+      round.i += 1;
+      if (round.i >= round.words.length) return finishRound();
+      nextCast();
+      renderCast();
+      container.querySelector("[data-fish]")?.focus({ preventScroll: true });
+    }
+
+    function finishRound() {
+      const s = st();
+      const caught = round.results.filter((r) => r.caught).length;
+      const perfect = caught === round.words.length;
+      if (perfect) {
+        ctx.earn(RULES.perfectSparks);
+        round.earned += RULES.perfectSparks;
+        s.perfect += 1;
+      }
+      s.rounds += 1;
+      s.catches += caught;
+      s.best = Math.max(s.best, caught);
+      round.caught = caught;
+      round.perfect = perfect;
+      touch();
+      ctx.save();
+      ctx.renderHud(["sparks"]);
+      if (perfect) ctx.celebrate("🎣", "Perfect round!", `+${RULES.perfectSparks} ⚡ bonus`);
+      go("result");
+    }
+
+    function renderResult() {
+      const spot = spotById(st().spot);
+      container.innerHTML = `
+        <div class="stack vault fishing spot-${spot.id}">
+          <section class="panel sprint-summary">
+            <span class="complete-star" aria-hidden="true">${round.perfect ? "🏆" : "🧺"}</span>
+            <h2>${round.caught} of ${round.words.length} caught</h2>
+            <p class="derby-payout ok">+${fmt(round.earned)} ⚡${round.perfect ? ` · includes the +${RULES.perfectSparks} perfect bonus` : ""}</p>
+            <ul class="sum-list">
+              ${round.results.map((r) => {
+                const w = word(r.wordId);
+                return `<li class="sum-row ${r.caught ? "ok" : "no"}"><span aria-label="${r.caught ? "caught" : "missed"}">${r.caught ? "🐟" : "✗"}</span><b>${esc(w.word)}</b><span class="muted small">${esc(w.definition)}</span></li>`;
+              }).join("")}
+            </ul>
+            ${round.caught < round.words.length ? '<p class="muted small">Missed words are flagged 🔁. They lead your next flashcard deck and sprint.</p>' : ""}
+          </section>
+          <div class="stack">
+            <button class="btn wide" type="button" id="fish-again">🎣 Fish again</button>
+            <button class="btn ghost wide" type="button" id="fish-dock">Change rod or spot</button>
+            <button class="btn ghost wide" type="button" id="fish-exit">Back to the Vault</button>
+          </div>
+        </div>`;
+      round = null;
+      container.querySelector("#fish-again").addEventListener("click", start);
+      container.querySelector("#fish-dock").addEventListener("click", () => go("dock"));
+      container.querySelector("#fish-exit").addEventListener("click", exit);
+    }
+
+    function quit() {
+      if (round) clearInterval(round.timer);
+      round = null;
+      go("dock");
+    }
+    function exit() {
+      if (round) clearInterval(round.timer);
+      round = null;
+      screen = null;
+      ctx.onExit();
+    }
+
+    // 1–4 hooks a fish while a cast is open.
+    document.addEventListener("keydown", (e) => {
+      if (screen !== "cast" || !round || round.done || container.hidden) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.target.closest("input, select, textarea") || document.querySelector('[aria-modal="true"]')) return;
+      const i = "1234".indexOf(e.key);
+      if (i >= 0) { e.preventDefault(); hook(i); }
+    });
+
+    return {
+      open: () => { ctx.sfx.play("tap"); go("dock"); },
+      render,
+      active: () => screen !== null,
+      playing: () => screen === "cast",
+    };
+  }
+
+  SW.fishing = { RULES, RODS, SPOTS, rodById, spotById, emptyStats, mergeStats, buyItem, poolFor, makeCast, mount };
+})();
+
+</script>
+<script>
 /* ===== js/vocab.js ===== */
 // SatWizz Vocab Vault: high-frequency Digital SAT words in two modes:
 //   • Flashcards: a flippable, swipeable deck. Front: word, part of speech and
@@ -6967,7 +7562,7 @@ window.SatWizz.curriculum.addChapter({
 //   • Tiers only move in sprints. A sprint miss also flags the word for review,
 //     so flagged words lead both the deck and the next sprint.
 //
-//   • Vocab Derby (js/derby.js): a wager-based horse race on these words.
+//   • Vocab Fishing (js/fishing.js): hook the fish carrying the right definition.
 //
 // Exposes SatWizz.vocab = { WORDS, TIERS, RULES, emptyProgress, drawSprint,
 // drawDeck, grade, reviewCard, flag, finishSprint, summary, mergeProgress, mount }.
@@ -7893,7 +8488,7 @@ window.SatWizz.curriculum.addChapter({
   //              advancedDay, mastered, review, cards, cardDay } }, sprintDay, sprints }
   //   seen/correct/wrong/lastDay count sprint answers; cards/cardDay count flashcard
   //   reviews; lastAt is the last activity of either kind (used for merging).
-  const emptyProgress = () => ({ words: {}, sprintDay: null, sprints: 0, derby: SW.derby.emptyStats() });
+  const emptyProgress = () => ({ words: {}, sprintDay: null, sprints: 0, derby: SW.derby.emptyStats(), fishing: SW.fishing.emptyStats() });
 
   function wordState(p, id) {
     return { tier: 1, seen: 0, correct: 0, wrong: 0, lastAt: 0, lastDay: null, advancedDay: null, mastered: false, review: false, cards: 0, cardDay: null, ...p.words[id] };
@@ -8045,6 +8640,7 @@ window.SatWizz.curriculum.addChapter({
       sprintDay: [a.sprintDay, b.sprintDay].filter(Boolean).sort().pop() || null,
       sprints: Math.max(a.sprints || 0, b.sprints || 0),
       derby: SW.derby.mergeStats(a.derby, b.derby),
+      fishing: SW.fishing.mergeStats(a.fishing, b.fishing),
     };
   }
 
@@ -8057,6 +8653,7 @@ window.SatWizz.curriculum.addChapter({
     let deck = null; // { ids, i, flipped, got, later, earned, requeued: Set, busy }
     let drawer = null;
     const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fishing = SW.fishing.mount({ ...ctx, onExit: () => render() });
 
     const P = () => {
       const S = ctx.getState();
@@ -8077,6 +8674,7 @@ window.SatWizz.curriculum.addChapter({
     function render() {
       if (sprint) return renderCard();
       if (deck) return renderDeck();
+      if (fishing.active()) return fishing.render();
       const p = P();
       const sum = summary(p);
       const today = ctx.todayKey();
@@ -8106,9 +8704,9 @@ window.SatWizz.curriculum.addChapter({
                 <small>${bonusLeft ? `+${RULES.sprintSparks} ⚡ bonus` : "today's bonus is done"}</small>
               </button>
             </div>
-            <button class="mode-btn derby-btn" type="button" id="derby-start">
-              <span class="mode-ico" aria-hidden="true">🏇</span>
-              <span><b>Vocab Derby</b><small>Advanced words, 7 rivals, real bets. Wins pay ×1.5. Opens the Derby tab.</small></span>
+            <button class="mode-btn derby-btn fish-btn" type="button" id="fish-start-mode">
+              <span class="mode-ico" aria-hidden="true">🎣</span>
+              <span><b>Vocab Fishing</b><small>Hook the fish carrying the right definition. +${SW.fishing.RULES.catchSparks} ⚡ a catch.</small></span>
             </button>
             <p class="muted small">+${RULES.sparksPerCorrect} ⚡ per correct sprint word · +${RULES.masterySparks} ⚡ when a word reaches 👑 Master</p>
           </section>
@@ -8126,7 +8724,7 @@ window.SatWizz.curriculum.addChapter({
         </div>`;
       container.querySelector("#sprint-start").addEventListener("click", startSprint);
       container.querySelector("#deck-start").addEventListener("click", startDeck);
-      container.querySelector("#derby-start").addEventListener("click", () => ctx.openDerby?.());
+      container.querySelector("#fish-start-mode").addEventListener("click", () => { sprint = null; deck = null; closeDrawer(); fishing.open(); });
     }
 
     // ---------- Flashcards ----------
@@ -8531,7 +9129,8 @@ window.SatWizz.curriculum.addChapter({
     return {
       render,
       isOpen: () => Boolean(drawer),
-      busy: () => Boolean(sprint || deck),
+      busy: () => Boolean(sprint || deck || fishing.playing()),
+      openFishing: () => { sprint = null; deck = null; fishing.open(); },
     };
   }
 
@@ -8541,7 +9140,7 @@ window.SatWizz.curriculum.addChapter({
 </script>
 <script>
 /* ===== js/rewards.js ===== */
-// SatWizz rewards: Sparks economy, High-Barrier Shop, Focus Elixir, Aura Shields,
+// SatWizz rewards: Sparks economy, Shop, Focus Elixir, Aura Shields,
 // the Double-Spark Wager and achievement titles.
 // Pure state logic with no DOM. Each function takes the app state, changes it,
 // and returns what happened so the UI can react.
@@ -8556,7 +9155,7 @@ window.SatWizz.curriculum.addChapter({
     comboEvery: 3,
     dailyGoalSparks: 50,
     chapterSparks: 50, // first completion of each chapter
-    startSparks: 2500, // new players' bankroll (Derby wagers, High-Barrier Shop)
+    startSparks: 2500, // new players' bankroll (Derby wagers, Shop)
     maxAura: 5,
     auraPrice: 50,
     auraBundleSize: 3,
@@ -10163,6 +10762,7 @@ window.SatWizz.curriculum.addChapter({
     displayName: "",
     lbScope: "global", // leaderboard tab: "global" | "friends"
     lbMetric: "xp", // rank by "xp" | "sparks"
+    derbyChapter: null, // unit the Derby races on (defaults to the current chapter)
     // settings
     muted: false,
     haptics: true,
@@ -10325,11 +10925,11 @@ window.SatWizz.curriculum.addChapter({
       type: "button",
       "data-id": t.id,
       "aria-pressed": String(t.id === S.themeId),
-    }, `<b>${esc(t.label)}</b><span>${locked ? `🔒 ${fmt(t.price)} ⚡ in the High-Barrier Shop` : esc(sub)}</span>`);
+    }, `<b>${esc(t.label)}</b><span>${locked ? `🔒 ${fmt(t.price)} ⚡ in the Shop` : esc(sub)}</span>`);
     b.addEventListener("click", () => {
       if (locked) {
         show("shop");
-        toast(`Unlock ${t.label} in the High-Barrier Shop for ${fmt(t.price)} ⚡`);
+        toast(`Unlock ${t.label} in the Shop for ${fmt(t.price)} ⚡`);
         return;
       }
       onPick(t);
@@ -10423,7 +11023,7 @@ window.SatWizz.curriculum.addChapter({
     <header class="hud">
       <div class="brand" id="brand" aria-label="SatWizz"><b class="b-pre">Sat</b><span>Wizz</span><em class="demo-badge" id="demo-badge" hidden>DEMO</em></div>
       <button class="pill flame" id="hud-streak" type="button" title="Lock In Streak: days in a row you met your daily goal"></button>
-      <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the High-Barrier Shop"></button>
+      <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the Shop"></button>
       <button class="pill focus-pill" id="hud-focus" type="button" title="Focus Meter"></button>
       <button class="avatar sm" id="hud-avatar" type="button" aria-label="Profile, leaderboard and friends"></button>
       <button class="acct" id="hud-account" type="button"><span class="acct-long">Save</span><span class="acct-short" aria-hidden="true">☁️</span></button>
@@ -10442,22 +11042,22 @@ window.SatWizz.curriculum.addChapter({
     <main class="view scrollview" id="view-derby" hidden></main>
     <main class="view scrollview" id="view-shop" hidden></main>
     <main class="view scrollview" id="view-you" hidden></main>
-    <main class="view scrollview ranks-view" id="view-ranks" hidden>
-      <div class="subnav"><button class="linkbtn" type="button" id="ranks-back">← Profile</button><span class="label-sm">Leaderboard &amp; Friends</span></div>
-      <div id="ranks-mount"></div>
-    </main>
     <nav class="tabs" role="tablist" aria-label="SatWizz">
       <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">✏️</span>Practice</button>
       <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vault</button>
       <button class="tab" role="tab" data-view="derby" aria-selected="false"><span class="ico" aria-hidden="true">🐎</span>Derby</button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
+      <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Profile</button>
     </nav>
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  // Four tabs (Practice, Vault, Derby, Shop). Profile opens from the header
-  // avatar, and Leaderboard & Friends from Profile.
-  const VIEWS = ["feed", "vocab", "derby", "shop", "you", "ranks"];
+  // Five tabs: Practice, Vault, Derby, Shop, Profile. Profile has three
+  // sub-tabs: Edit Profile, Settings and Leaderboard (with friends).
+  const VIEWS = ["feed", "vocab", "derby", "shop", "you"];
+  let youTab = "profile"; // "profile" | "settings" | "leaderboard"
+  // The leaderboard module keeps its own DOM; it moves into the Profile pane.
+  const ranksMount = h("div", { id: "ranks-mount", class: "ranks-view" });
   let currentView = "feed";
   let streakTab = "streak"; // Profile's streak section: "streak" or "achievements"
 
@@ -10465,6 +11065,7 @@ window.SatWizz.curriculum.addChapter({
   $("#hud-sparks").addEventListener("click", () => show("shop"));
   $("#hud-account").addEventListener("click", () => openSignup("save"));
   const openProfile = () => {
+    youTab = "profile";
     show("you");
     $("#view-you").scrollTop = 0;
   };
@@ -10475,8 +11076,6 @@ window.SatWizz.curriculum.addChapter({
       ? "🧠 Focus 100%. A miss costs 25%, rushing (under 3s) 10%."
       : `🧠 Focus ${S.focus}%. Get 2 right in a row for +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2), or buy a Focus Elixir in the Shop.`);
   });
-  $("#ranks-back").addEventListener("click", () => show("you"));
-  const openRanks = () => show("ranks");
 
   function show(view) {
     const changed = view !== currentView;
@@ -10496,7 +11095,6 @@ window.SatWizz.curriculum.addChapter({
       else if (derby.racing()) derby.sync();
       else derby.render();
     }
-    if (view === "ranks") ranks.render();
     if (view === "shop") renderShop();
     if (view === "you") renderYou();
   }
@@ -10504,7 +11102,7 @@ window.SatWizz.curriculum.addChapter({
   function rerenderCurrent() {
     if (currentView === "vocab" && !vocab.busy()) vocab.render();
     if (currentView === "derby" && !derby.racing()) derby.render();
-    if (currentView === "ranks") ranks.render();
+    if (currentView === "you" && youTab === "leaderboard") ranks.render();
     if (currentView === "shop") renderShop();
     if (currentView === "you") renderYou();
   }
@@ -10526,11 +11124,13 @@ window.SatWizz.curriculum.addChapter({
     openDerby: () => show("derby"),
   });
 
-  // The Vocab Derby has its own tab (js/derby.js). It shares the app's Focus
-  // Meter, so a rough race carries into Practice and the other way round.
+  // The Derby has its own tab (js/derby.js) and races on grammar questions
+  // from the unit you're on (or any unlocked one you pick). It shares the
+  // app's Focus Meter, so a rough race carries into Practice and back.
   const derby = SW.derby.mount({
     container: $("#view-derby"),
     tab: true,
+    source: grammarSource(),
     getState: () => S,
     save: () => save(),
     esc,
@@ -10547,9 +11147,96 @@ window.SatWizz.curriculum.addChapter({
     onExit: () => derby.open(),
   });
 
+  // ---------- Derby question source: grammar from your unit ----------
+  function derbyChapter() {
+    const pick = [S.derbyChapter, S.chapterId].find((id) => Number.isInteger(id) && isUnlocked(id));
+    return chapterById(pick || 1);
+  }
+  function grammarSource() {
+    return {
+      title: "SatWizz Grammar Derby",
+      banner: "=== 🐎 SATWIZZ GRAMMAR DERBY 🐎 ===",
+      tagline: "Where clean sentences win photo finishes.",
+      intro: "Answer Digital SAT grammar questions from your unit as fast and as accurately as you can.",
+      // Grammar passages take longer to read than vocab cards, so the CPUs read
+      // longer too (tuned by simulation; see README).
+      read: [20, 26],
+      // Questions you missed come first, then ones you haven't got right yet, then the rest.
+      draw() {
+        const ch = derbyChapter();
+        const got = new Set(correctIn(ch.id));
+        const ids = ch.questions.map((q) => q.id);
+        const missed = shuffle(ids.filter((id) => S.missed.includes(id)));
+        const fresh = shuffle(ids.filter((id) => !got.has(id) && !missed.includes(id)));
+        const rest = shuffle(ids.filter((id) => got.has(id) && !missed.includes(id)));
+        return [...missed, ...fresh, ...rest];
+      },
+      question(id) {
+        const q = BY_ID[id];
+        const order = shuffle([0, 1, 2, 3]);
+        const ch = chapterById(q.chapterId);
+        return {
+          id,
+          meta: `${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${ch.short}`,
+          passage: q.text,
+          stem: SW.stemFor(q),
+          choices: order.map((i) => q.choices[i]),
+          answer: order.indexOf(q.answer),
+          notes: order.map((i) => q.notes[i]),
+          rule: q.rule || "",
+          explain: q.notes[q.answer],
+        };
+      },
+      // Derby answers count toward the unit like Practice answers do.
+      onAnswer(dq, correct) {
+        const q = BY_ID[dq.id];
+        const sk = (S.skills[q.skill] ||= { seen: 0, right: 0 });
+        sk.chapterId = q.chapterId;
+        sk.seen++;
+        if (correct) {
+          sk.right++;
+          S.totalCorrect++;
+          S.missed = S.missed.filter((id) => id !== q.id);
+          const got = correctIn(q.chapterId);
+          if (!got.includes(q.id)) got.push(q.id);
+          unlockNextAt60(chapterById(q.chapterId));
+        } else if (!S.missed.includes(q.id)) S.missed.push(q.id);
+        renderChapterBar();
+      },
+      missNote: () => "↺ Saved to your missed questions: it comes back first next race and in mixed review.",
+      lateNote: (dq) => `Answer: ${renderPassage(BY_ID[dq.id].text, castOf(), fill(BY_ID[dq.id].choices[BY_ID[dq.id].answer], castOf(), false))}`,
+      review: {
+        title: "Grammar review",
+        head: ["Question", "Why"],
+        row(dq) {
+          const q = BY_ID[dq.id];
+          const cast = castOf();
+          return [
+            `<small class="muted">${esc(q.skill)}</small><br>${renderPassage(q.text, cast, fill(q.choices[q.answer], cast, false))}`,
+            esc(q.rule || "") || fill(q.notes[q.answer], cast, false),
+          ];
+        },
+        note: "Missed questions come back first in your next race and in mixed review.",
+      },
+      unitHtml() {
+        const cur = derbyChapter();
+        const opts = CHAPTERS.filter((c) => isUnlocked(c.id))
+          .map((c) => `<option value="${c.id}" ${c.id === cur.id ? "selected" : ""}>${c.bonus ? "Bonus" : `Ch ${c.id}`} · ${esc(c.short)}</option>`).join("");
+        return `<label class="unit-pick"><span class="label-sm">Racing on</span><select class="select" id="derby-unit">${opts}</select></label>`;
+      },
+      wireUnit(el, rerender) {
+        el.querySelector("#derby-unit")?.addEventListener("change", (e) => {
+          S.derbyChapter = Number(e.target.value);
+          save();
+          rerender();
+        });
+      },
+    };
+  }
+
   // Leaderboards & friends live in their own module (js/social-view.js).
   const ranks = SW.socialView.mount({
-    container: $("#ranks-mount"),
+    container: ranksMount,
     getState: () => S,
     save: () => save(false),
     esc,
@@ -10624,7 +11311,7 @@ window.SatWizz.curriculum.addChapter({
     st.innerHTML = `🔥 ${S.streak}${atRisk() ? ' <span class="risk" title="Streak at risk">⌛</span>' : ""}`;
     st.classList.toggle("cold", S.streak === 0 || atRisk());
     $("#hud-sparks").textContent = `⚡ ${compact(S.sparks)}`;
-    $("#hud-sparks").setAttribute("aria-label", `${S.sparks} Sparks. Open the High-Barrier Shop`);
+    $("#hud-sparks").setAttribute("aria-label", `${S.sparks} Sparks. Open the Shop`);
     st.setAttribute("aria-label", `Lock In Streak: ${S.streak} day${S.streak === 1 ? "" : "s"}${atRisk() ? ", at risk" : ""}`);
     const fp = $("#hud-focus");
     fp.innerHTML = FOCUS.meterHtml(S.focus);
@@ -11522,7 +12209,7 @@ window.SatWizz.curriculum.addChapter({
       <section class="panel">
         <div class="freeze-row">
           <span class="ice" aria-hidden="true">${"💠".repeat(S.freezes) || "–"}</span>
-          <p><b>${S.freezes} of ${RULES.maxAura} Aura Shields.</b> Each one covers a missed day automatically. You get one free every ${RULES.auraEarnEvery} streak days, or buy one in the High-Barrier Shop.</p>
+          <p><b>${S.freezes} of ${RULES.maxAura} Aura Shields.</b> Each one covers a missed day automatically. You get one free every ${RULES.auraEarnEvery} streak days, or buy one in the Shop.</p>
         </div>
         ${wp ? `<p class="muted">🎲 Double-Spark Wager: day ${wp.days} of ${wp.of}</p>` : ""}
       </section>
@@ -11561,10 +12248,15 @@ window.SatWizz.curriculum.addChapter({
       </section>`;
   }
 
-  // ---------- High-Barrier Shop ----------
-  // Prices: Jockey/Character Skins 1,000 · Custom Mounts/Avatars 1,500 ·
-  // Focus Elixir 500. Derby gear lives in the Derby stats (vocab progress).
+  // ---------- Shop ----------
+  // Every cosmetic is 500 ⚡: jockey skins, Derby mounts, character casts,
+  // avatars, fishing rods and fishing spots; the Focus Elixir is 500 too.
+  // Derby and fishing gear live in the Vault progress, so they sync.
   const D = SW.derby;
+  const fishStats = () => {
+    S.vocab.fishing = Object.assign(S.vocab.fishing || {}, SW.fishing.mergeStats(S.vocab.fishing, null));
+    return S.vocab.fishing;
+  };
   const derbyStats = () => {
     S.vocab.derby = Object.assign(S.vocab.derby || {}, D.mergeStats(S.vocab.derby, null));
     return S.vocab.derby;
@@ -11594,44 +12286,55 @@ window.SatWizz.curriculum.addChapter({
         </article>`;
     const useBtn = (inUse, attrs) => (inUse ? '<button class="buy" type="button" disabled>In use</button>' : `<button class="buy owned" type="button" ${attrs}>Use</button>`);
 
-    // 1,000 ⚡: Derby jockey silks and character casts (theme packs).
+    const fishSt = fishStats();
+    const F = SW.fishing;
+    const section = (icon, title, sub, rows) => `
+        <section class="panel shop-tier">
+          <h2><span>${icon} ${title}</span> <span class="price-tag">500 ⚡ each</span></h2>
+          <p class="muted">${sub}</p>
+          <div class="shop-list">${rows}</div>
+        </section>`;
     const silkRows = D.STABLE.silks.map((x) => row(
-      `<span class="shop-icon silk-swatch silk-${x.id}" aria-hidden="true">🏇</span>`, esc(x.name), "Jockey silks for your Derby horse",
+      `<span class="shop-icon silk-swatch silk-${x.id}" aria-hidden="true">🏇</span>`, esc(x.name), "Jockey silks: colors your Derby lane",
       derbySt.silks.includes(x.id) ? useBtn(derbySt.silk === x.id, `data-silk="${x.id}"`) : buyBtn(`silk:${x.id}`, x.price))).join("");
-    const packRows = packs.map((t) => row(
-      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), `Character cast: ${esc(t.people.map((p) => p.name).join(", "))}`,
-      rewards.isThemeUnlocked(S, t.id) ? useBtn(S.themeId === t.id, `data-use="${t.id}"`) : buyBtn(`theme:${t.id}`, t.price))).join("");
-    // 1,500 ⚡: Derby mounts and profile avatars.
     const mountRows = D.STABLE.mounts.map((m) => row(
-      `<span class="shop-icon" aria-hidden="true">${m.emoji}</span>`, esc(m.name), "Custom mount: runs in your Derby lane",
+      `<span class="shop-icon" aria-hidden="true">${m.emoji}</span>`, esc(m.name), "Derby mount: runs in your lane",
       derbySt.mounts.includes(m.id) ? useBtn(derbySt.mount === m.id, `data-mount="${m.id}"`) : buyBtn(`mount:${m.id}`, m.price))).join("");
+    const packRows = packs.map((t) => row(
+      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), esc(t.people.map((p) => p.name).join(", ")),
+      rewards.isThemeUnlocked(S, t.id) ? useBtn(S.themeId === t.id, `data-use="${t.id}"`) : buyBtn(`theme:${t.id}`, t.price))).join("");
     const avatarRows = SW.avatars.filter((a) => a.price > 0).map((a) => row(
-      `<span class="avatar md" aria-hidden="true">${a.emoji}</span>`, esc(a.label), "Avatar: your profile picture",
+      `<span class="avatar md" aria-hidden="true">${a.emoji}</span>`, esc(a.label), "Profile picture",
       rewards.isAvatarUnlocked(S, a.id) ? useBtn(S.avatar === a.id, `data-wear-avatar="${a.id}"`) : buyBtn(`avatar:${a.id}`, a.price))).join("");
+    const rodRows = F.RODS.filter((r) => r.price).map((r) => row(
+      `<span class="shop-icon" aria-hidden="true">${r.emoji}</span>`, esc(r.name), esc(r.perk),
+      fishSt.rods.includes(r.id) ? useBtn(fishSt.rod === r.id, `data-rod="${r.id}"`) : buyBtn(`rod:${r.id}`, r.price))).join("");
+    const spotRows = F.SPOTS.filter((x) => x.price).map((x) => row(
+      `<span class="shop-icon" aria-hidden="true">${x.emoji}</span>`, esc(x.name), esc(x.desc),
+      fishSt.spots.includes(x.id) ? useBtn(fishSt.spot === x.id, `data-spot="${x.id}"`) : buyBtn(`spot:${x.id}`, x.price))).join("");
 
     v.innerHTML = `
       <div class="stack">
         <section class="panel wallet">
-          <span class="label-sm">High-Barrier Shop</span>
+          <span class="label-sm">SatWizz Shop</span>
           <div class="wallet-num"><span aria-hidden="true">⚡</span> ${fmt(S.sparks)} <small>Sparks</small></div>
           <ul class="earn-list">
             <li><b>×1.5</b> your bet back on every Derby win</li>
-            <li><b>+${RULES.sparksPerCorrect}</b> each correct answer · <b>+${RULES.comboBonus}</b> every ${RULES.comboEvery} in a row</li>
+            <li><b>+${RULES.sparksPerCorrect}</b> each correct Practice answer · <b>+${F.RULES.catchSparks}</b> each fish caught</li>
             <li><b>+${RULES.dailyGoalSparks}</b> for your daily goal · <b>+${RULES.chapterSparks}</b> per chapter completed</li>
           </ul>
+          <nav class="shop-jump" aria-label="Shop sections">
+            <a href="#shop-silks">🏇 Jockey Skins</a><a href="#shop-mounts">🦄 Mounts</a><a href="#shop-casts">🎭 Casts</a><a href="#shop-avatars">🙂 Avatars</a><a href="#shop-rods">🎣 Rods</a><a href="#shop-spots">🌊 Spots</a><a href="#shop-elixir">🧪 Elixir</a>
+          </nav>
         </section>
-        <section class="panel shop-tier">
-          <h2>Jockey &amp; Character Skins <span class="price-tag">1,000 ⚡</span></h2>
-          <p class="muted">Silks for your Derby jockey, and new character casts for every Practice question.</p>
-          <div class="shop-list">${silkRows}${packRows}</div>
-        </section>
-        <section class="panel shop-tier">
-          <h2>Custom Mounts &amp; Avatars <span class="price-tag">1,500 ⚡</span></h2>
-          <p class="muted">Ride something rarer than a horse, or wear it on your profile.</p>
-          <div class="shop-list">${mountRows}${avatarRows}</div>
-        </section>
-        <section class="panel shop-tier">
-          <h2>Focus Elixir <span class="price-tag">${fmt(RULES.elixirPrice)} ⚡</span></h2>
+        <div id="shop-silks">${section("🏇", "Jockey Skins", "Silks for your jockey in the Derby.", silkRows)}</div>
+        <div id="shop-mounts">${section("🦄", "Derby Mounts", "Ride something rarer than a horse.", mountRows)}</div>
+        <div id="shop-casts">${section("🎭", "Character Casts", "New names for every extra-practice question.", packRows)}</div>
+        <div id="shop-avatars">${section("🙂", "Avatars", "Rare profile pictures for the leaderboard.", avatarRows)}</div>
+        <div id="shop-rods">${section("🎣", "Fishing Rods", "Each rod has a small perk in Vocab Fishing.", rodRows)}</div>
+        <div id="shop-spots">${section("🌊", "Fishing Spots", "New scenery, and a different set of words to fish.", spotRows)}</div>
+        <section class="panel shop-tier" id="shop-elixir">
+          <h2><span>🧪 Focus Elixir</span> <span class="price-tag">${fmt(RULES.elixirPrice)} ⚡</span></h2>
           <div class="shop-list">
             ${row('<span class="shop-icon" aria-hidden="true">🧪</span>', "Focus Elixir",
               `Refills your Focus Meter to 100% right now, in Practice and the Derby. Otherwise only 2 right in a row restore it (+${FOCUS.RULES.restore}%). ${FOCUS.meterHtml(S.focus)}`,
@@ -11661,6 +12364,19 @@ window.SatWizz.curriculum.addChapter({
         </section>
       </div>`;
 
+    v.querySelectorAll(".shop-jump a").forEach((x) => x.addEventListener("click", (e) => {
+      e.preventDefault();
+      v.querySelector(x.getAttribute("href"))?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
+    }));
+    v.querySelectorAll("[data-rod], [data-spot]").forEach((b) => b.addEventListener("click", () => {
+      const st = fishStats();
+      if (b.dataset.rod) st.rod = b.dataset.rod;
+      else st.spot = b.dataset.spot;
+      st.at = Date.now();
+      save();
+      sfx.play("tap");
+      renderShop();
+    }));
     v.querySelectorAll("[data-silk], [data-mount]").forEach((b) => b.addEventListener("click", () => {
       const st = derbyStats();
       if (b.dataset.silk) st.silk = b.dataset.silk;
@@ -11721,6 +12437,9 @@ window.SatWizz.curriculum.addChapter({
     } else if (id === "elixir") {
       res = rewards.buyElixir(S);
       if (res.ok) toast("🧪 Focus Elixir: Focus back to 100%.");
+    } else if (id.startsWith("rod:") || id.startsWith("spot:")) {
+      res = SW.fishing.buyItem(fishStats(), S, id);
+      if (res.ok) toast(`${res.item.emoji} ${res.item.name} is yours, and equipped for Vocab Fishing.`);
     } else if (id === "burst" || id.startsWith("silk:") || id.startsWith("mount:")) {
       res = D.buyItem(derbyStats(), S, id, S);
       if (res.ok) toast(id === "burst" ? `💨 ${D.STABLE.burst.name} added` : "🏇 New Derby gear equipped!");
@@ -11762,30 +12481,95 @@ window.SatWizz.curriculum.addChapter({
       return `<div class="bar-row"><div class="top"><span>${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(ch.short)}</span><span>${s.right}/${s.seen} · ${pct}%</span></div><div class="bar"><i class="${tone}" style="width:${pct}%"></i></div></div>`;
     }).join("");
 
+    const tabsHtml = `
+      <div class="seg subtabs you-tabs" role="tablist" aria-label="Profile sections">
+        ${[["profile", "✏️", "Edit Profile", "Profile"], ["settings", "⚙️", "Settings", "Settings"], ["leaderboard", "🏆", "Leaderboard", "Leaders"]]
+          .map(([id, ico, long, short]) => `<button type="button" role="tab" data-you="${id}" aria-selected="${youTab === id}" aria-label="${long}"><span aria-hidden="true">${ico} <span class="lbl-long">${long}</span><span class="lbl-short">${short}</span></span></button>`).join("")}
+      </div>`;
+    const wireTabs = () => v.querySelectorAll("[data-you]").forEach((b) => b.addEventListener("click", () => {
+      youTab = b.dataset.you;
+      sfx.play("tap");
+      renderYou();
+      v.scrollTop = 0;
+    }));
+
+    // ---- Leaderboard & Friends ----
+    if (youTab === "leaderboard") {
+      v.innerHTML = `<div class="stack">${tabsHtml}<div id="you-ranks"></div></div>`;
+      $("#you-ranks", v).append(ranksMount);
+      wireTabs();
+      ranks.render();
+      return;
+    }
+
+    // ---- Settings ----
+    if (youTab === "settings") {
+      v.innerHTML = `
+        <div class="stack">
+          ${tabsHtml}
+          <section class="panel" id="settings-panel">
+            <h2>Settings</h2>
+            <label class="toggle"><input type="checkbox" id="set-sound" ${S.muted ? "" : "checked"}><span>Sound effects</span></label>
+            ${sfx.canVibrate() ? `<label class="toggle"><input type="checkbox" id="set-haptics" ${S.haptics ? "checked" : ""}><span>Vibration</span></label>` : ""}
+            <div id="set-push"></div>
+          </section>
+          <section class="panel">
+            <h2>Daily goal</h2>
+            <p class="muted">Questions per day to keep your Lock In Streak alive.</p>
+            <div class="seg" id="goal-seg">${GOALS.map((g) => `<button type="button" data-g="${g}" aria-pressed="${g === S.goal}">${g} / day</button>`).join("")}</div>
+          </section>
+          <section class="panel">
+            <h2>Start over</h2>
+            <p class="muted">Clears your streak, XP, Sparks, purchases and stats on this device${auth.user() ? " and in your account" : ""}.</p>
+            <div class="row" id="reset-row"><button class="btn ghost" type="button" id="reset-btn">Reset progress</button></div>
+          </section>
+        </div>`;
+      wireTabs();
+      renderSettings();
+      $("#goal-seg", v).querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+        S.goal = Number(b.dataset.g);
+        const goal = checkGoal();
+        const newBadges = rewards.checkBadges(S);
+        save();
+        $("#goal-seg", v).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        renderHud(goal ? ["streak", "sparks"] : []);
+        if (goal) celebrateGoal(goal);
+        newBadges.forEach(celebrateBadge);
+      }));
+      $("#reset-btn", v).addEventListener("click", () => {
+        const row = $("#reset-row", v);
+        row.innerHTML = '<button class="btn danger" type="button" id="reset-yes">Yes, erase everything</button><button class="btn ghost" type="button" id="reset-no">Keep my progress</button>';
+        $("#reset-no", v).addEventListener("click", renderYou);
+        $("#reset-yes", v).addEventListener("click", () => {
+          const keepUser = S.syncedUserId;
+          S = structuredClone(DEFAULTS);
+          S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
+          save();
+          renderHud();
+          startChapter(1);
+          youTab = "profile";
+          show("feed");
+          toast("Progress reset. Fresh start.");
+        });
+      });
+      return;
+    }
+
+    // ---- Edit Profile ----
     v.innerHTML = `
       <div class="stack">
+        ${tabsHtml}
         <section class="panel you-stats">
           <div><b>${fmt(S.xp)}</b><span>XP</span></div>
           <div><b>⚡ ${fmt(S.sparks)}</b><span>Sparks</span></div>
-          <div><b>🔥 ${S.streak}</b><span>Lock In Streak</span></div>
+          <div><b>🔥 ${S.streak}</b><span>Streak</span></div>
           <div><b>🧠 ${S.focus}%</b><span>Focus</span></div>
         </section>
-        <button class="panel nav-row" type="button" id="open-ranks">
-          <span class="shop-icon" aria-hidden="true">🏆</span>
-          <span class="shop-info"><b>Leaderboard &amp; Friends</b><span>Global and friends rankings, friend streaks and invites</span></span>
-          <span aria-hidden="true">→</span>
-        </button>
-        <div id="streak-slot"></div>
         <section class="panel" id="account-panel"></section>
-        <section class="panel" id="settings-panel">
-          <h2>Settings</h2>
-          <label class="toggle"><input type="checkbox" id="set-sound" ${S.muted ? "" : "checked"}><span>Sound effects</span></label>
-          ${sfx.canVibrate() ? `<label class="toggle"><input type="checkbox" id="set-haptics" ${S.haptics ? "checked" : ""}><span>Vibration</span></label>` : ""}
-          <div id="set-push"></div>
-        </section>
+        <div id="streak-slot"></div>
         <section class="panel">
           <h2>Your cast</h2>
-          <p class="muted">Names in every question switch to the cast you pick.</p>
+          <p class="muted">Names in the extra-practice questions switch to the cast you pick.</p>
           <div class="cast-grid" id="you-casts"></div>
           <div id="custom-box" class="stack" ${S.themeId === "custom" ? "" : "hidden"}>
             ${c.people.map((p, i) => `
@@ -11804,25 +12588,14 @@ window.SatWizz.curriculum.addChapter({
           <p class="preview" id="you-preview"></p>
         </section>
         <section class="panel">
-          <h2>Daily goal</h2>
-          <p class="muted">Questions per day to keep your streak alive.</p>
-          <div class="seg" id="goal-seg">${GOALS.map((g) => `<button type="button" data-g="${g}" aria-pressed="${g === S.goal}">${g} / day</button>`).join("")}</div>
-        </section>
-        <section class="panel">
           <h2>Skill check</h2>
           ${skillRows ? `<div class="bars">${skillRows}</div>` : '<p class="muted">Answer a few questions to see your accuracy for each chapter.</p>'}
         </section>
-        <section class="panel">
-          <h2>Start over</h2>
-          <p class="muted">Clears your streak, XP, Sparks, purchases and stats on this device${auth.user() ? " and in your account" : ""}.</p>
-          <div class="row" id="reset-row"><button class="btn ghost" type="button" id="reset-btn">Reset progress</button></div>
-        </section>
       </div>`;
 
-    $("#open-ranks", v).addEventListener("click", openRanks);
+    wireTabs();
     renderStreak();
     renderAccountPanel();
-    renderSettings();
     const grid = $("#you-casts", v);
     const all = [...themesForPicker(), { id: "custom", label: "Custom", people: [] }];
     for (const t of all) {
@@ -11849,32 +12622,6 @@ window.SatWizz.curriculum.addChapter({
     bindText("#c-craft", (val) => { c.craft = val; });
     bindText("#c-event", (val) => { c.event = val; });
 
-    $("#goal-seg", v).querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-      S.goal = Number(b.dataset.g);
-      const goal = checkGoal();
-      const newBadges = rewards.checkBadges(S);
-      save();
-      $("#goal-seg", v).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      renderHud(goal ? ["streak", "sparks"] : []);
-      if (goal) celebrateGoal(goal);
-      newBadges.forEach(celebrateBadge);
-    }));
-
-    $("#reset-btn", v).addEventListener("click", () => {
-      const row = $("#reset-row", v);
-      row.innerHTML = '<button class="btn danger" type="button" id="reset-yes">Yes, erase everything</button><button class="btn ghost" type="button" id="reset-no">Keep my progress</button>';
-      $("#reset-no", v).addEventListener("click", renderYou);
-      $("#reset-yes", v).addEventListener("click", () => {
-        const keepUser = S.syncedUserId;
-        S = structuredClone(DEFAULTS);
-        S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
-        save();
-        renderHud();
-        startChapter(1);
-        show("feed");
-        toast("Progress reset. Fresh start.");
-      });
-    });
   }
 
   let castTimer;

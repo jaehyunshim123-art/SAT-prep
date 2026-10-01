@@ -1,4 +1,4 @@
-// SatWizz rewards: Sparks economy, High-Barrier Shop, Focus Elixir, Aura Shields,
+// SatWizz rewards: Sparks economy, Shop, Focus Elixir, Aura Shields,
 // the Double-Spark Wager and achievement titles.
 // Pure state logic with no DOM. Each function takes the app state, changes it,
 // and returns what happened so the UI can react.
@@ -13,7 +13,7 @@
     comboEvery: 3,
     dailyGoalSparks: 50,
     chapterSparks: 50, // first completion of each chapter
-    startSparks: 2500, // new players' bankroll (Derby wagers, High-Barrier Shop)
+    startSparks: 2500, // new players' bankroll (Derby wagers, Shop)
     maxAura: 5,
     auraPrice: 50,
     auraBundleSize: 3,

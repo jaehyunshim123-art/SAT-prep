@@ -1803,3 +1803,116 @@ body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px)
 .fc-flag.ok { color: var(--good); background: var(--good-bg); }
 .fc-toggle[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--volt); }
 .rule-line { font-size: 0.9rem; padding: 8px 10px; border-left: 3px solid var(--volt); background: var(--surface-2); border-radius: 8px; margin-block: 8px; }
+
+/* ---------- Vocab Fishing (js/fishing.js) ---------- */
+.fish-btn .mode-ico { font-size: 1.5rem; }
+.fish-word { gap: 8px; }
+.fish-target { margin: 0; font-family: var(--font-display); font-size: 1.6rem; line-height: 1.1; }
+.fish-target b { font-weight: 800; letter-spacing: -0.02em; }
+.fish-context { margin: 0; font-size: 0.95rem; color: var(--muted); }
+.line-bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.line-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--ice), var(--volt)); transition: width 0.25s linear; }
+.water {
+  --water-a: #3fb6c9;
+  --water-b: #1d6f9e;
+  display: grid;
+  gap: 4px;
+  padding: 10px 8px 14px;
+  border-radius: var(--r);
+  background: linear-gradient(180deg, var(--water-a), var(--water-b));
+  box-shadow: inset 0 8px 20px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.spot-lake .water { --water-a: #9fb4c4; --water-b: #4d6a85; }
+.spot-reef .water { --water-a: #36d1c4; --water-b: #0f8fa8; }
+.spot-bay .water { --water-a: #2b3b78; --water-b: #0b1230; }
+.lane-water { padding-block: 2px; }
+/* Fish bob back and forth inside their lane, so the definition stays readable. */
+.fish {
+  position: relative;
+  width: 80%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 8px;
+  border: 2px solid transparent;
+  border-radius: 999px 22px 22px 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #16213a;
+  text-align: left;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.45);
+  animation: swim var(--swim, 8s) ease-in-out var(--delay, 0s) infinite alternate;
+  transition: opacity 0.3s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.fish.rtl { animation-direction: alternate-reverse; border-radius: 22px 999px 999px 22px; }
+.fish:hover:not(:disabled), .fish:focus-visible { border-color: #ffd23f; }
+.fish-body { flex: none; font-size: 1.5rem; line-height: 1; }
+.fish.rtl .fish-body { transform: scaleX(-1); }
+.fish-def b { display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; margin-right: 2px; border-radius: 50%; background: #16213a; color: #fff; font-size: 0.72rem; }
+@keyframes swim {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(12.5%, -2px); }
+  100% { transform: translate(25%, 0); }
+}
+.water.stopped .fish, .water.still .fish { animation-play-state: paused; }
+.water.still .fish { animation: none; }
+.fish.gone { opacity: 0.25; }
+.fish:disabled { cursor: default; }
+.fish.caught { border-color: var(--good); background: #dbf4e6; animation: reel 0.7s ease forwards; }
+.fish.reveal { border-color: var(--good); background: #dbf4e6; }
+.fish.wrong { border-color: var(--bad); background: #fde3e6; }
+@keyframes reel { 60% { transform: translateY(-10px) scale(1.04); } 100% { transform: translateY(-4px); } }
+.gear-list { display: grid; gap: 8px; }
+.gear {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  text-align: left;
+}
+.gear.on { border-color: var(--volt); background: var(--surface-2); }
+.gear:disabled { opacity: 0.6; cursor: default; }
+.gear-ico { font-size: 1.5rem; text-align: center; }
+.gear-info { display: grid; gap: 2px; min-width: 0; }
+.gear-info b { font-family: var(--font-display); font-weight: 700; }
+.gear-info small { color: var(--muted); font-size: 0.8rem; }
+@media (prefers-reduced-motion: reduce) {
+  .fish { animation: none; }
+}
+
+/* Derby unit picker */
+.unit-pick { display: grid; gap: 4px; }
+.derby-unit { margin-block: 4px; }
+
+/* Shop: jump links between sections */
+.shop-jump { display: flex; flex-wrap: wrap; gap: 6px; }
+.shop-jump a {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.shop-jump a:hover { outline: 2px solid var(--spark); }
+.shop-tier h2 .price-tag { flex: none; }
+#view-shop [id^="shop-"] { scroll-margin-top: 8px; }
+/* Profile sub-tabs */
+.you-tabs button { font-size: 0.85rem; padding: 8px 6px; }
+.you-tabs button { white-space: nowrap; }
+.you-tabs .lbl-short { display: none; }
+@media (max-width: 440px) {
+  .you-tabs .lbl-long { display: none; }
+  .you-tabs .lbl-short { display: inline; }
+}
+/* In the Profile pane the "Your rank" bar sits after the list (a sticky bar would cover the sign-in button). */
+#you-ranks .rank-bar { position: static; }
+.shop-tier h2 { font-size: 1.3rem; }

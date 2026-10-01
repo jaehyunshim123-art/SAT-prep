@@ -1,7 +1,7 @@
 // SatWizz casts that get swapped into every question.
 // Placeholders map to cast fields: {{NAME_1..3}} -> people, {{LOCATION}} -> place,
 // {{SKILL}} -> craft, {{EVENT}} -> event. Flavor is always used mid-sentence.
-// `price` is in Sparks; 0 means free. Paid packs are Character Skins in the High-Barrier Shop (1,000 ⚡).
+// `price` is in Sparks; 0 means free. Paid packs are Character Casts in the Shop (500 ⚡).
 //
 // Content rule: names are fine, but no franchise titles, brand names or coined
 // proprietary terms (no "Hogwarts", "Quidditch", "Avengers", league or award
@@ -32,7 +32,7 @@ window.SatWizz.themes = [
   {
     id: "wizard",
     icon: "🪄",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Wizard School",
     tagline: "Harry, Hermione and Ron",
     people: [
@@ -47,7 +47,7 @@ window.SatWizz.themes = [
   {
     id: "football",
     icon: "⚽",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Football Legends",
     tagline: "Ronaldo, Messi and Aitana",
     people: [
@@ -62,7 +62,7 @@ window.SatWizz.themes = [
   {
     id: "hoops",
     icon: "🏀",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Hoops Legends",
     tagline: "LeBron, Steph and Caitlin",
     people: [
@@ -77,7 +77,7 @@ window.SatWizz.themes = [
   {
     id: "anime",
     icon: "🍥",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Anime Pack",
     tagline: "Naruto, Mikasa and Goku",
     people: [
@@ -92,7 +92,7 @@ window.SatWizz.themes = [
   {
     id: "heroes",
     icon: "🦸",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Superhero Pack",
     tagline: "Peter, Wanda and Tony",
     people: [
@@ -107,7 +107,7 @@ window.SatWizz.themes = [
   {
     id: "pop",
     icon: "🎤",
-    price: 1000, // Character Skin (High-Barrier Shop)
+    price: 500, // Character Cast (Shop)
     label: "Pop Icons",
     tagline: "Taylor, Beyoncé and Olivia",
     people: [
@@ -144,10 +144,10 @@ window.SatWizz.avatars = [
   { id: "turtle", emoji: "🐢", label: "Turtle", price: 0 },
   { id: "bee", emoji: "🐝", label: "Bee", price: 0 },
   { id: "unicorn", emoji: "🦄", label: "Unicorn", price: 0 },
-  { id: "rocket", emoji: "🚀", label: "Rocket", price: 1500 },
-  { id: "brain", emoji: "🧠", label: "Big Brain", price: 1500 },
-  { id: "dragon", emoji: "🐲", label: "Dragon", price: 1500 },
-  { id: "wizard", emoji: "🧙", label: "Wizard", price: 1500 },
-  { id: "crown", emoji: "👑", label: "Crown", price: 1500 },
-  { id: "galaxy", emoji: "🌌", label: "Galaxy", price: 1500 },
+  { id: "rocket", emoji: "🚀", label: "Rocket", price: 500 },
+  { id: "brain", emoji: "🧠", label: "Big Brain", price: 500 },
+  { id: "dragon", emoji: "🐲", label: "Dragon", price: 500 },
+  { id: "wizard", emoji: "🧙", label: "Wizard", price: 500 },
+  { id: "crown", emoji: "👑", label: "Crown", price: 500 },
+  { id: "galaxy", emoji: "🌌", label: "Galaxy", price: 500 },
 ];

@@ -6,6 +6,7 @@
 // have the odd one out as the answer.
 // Vocab Vault: the same checks, plus a definition, root, context clue, synonyms/antonyms,
 // and the right target for each format (blank vs. underlined word).
+// Vocab Fishing: every cast has 4 distinct definitions and one right fish.
 // Vocab Derby: every generated question (context / definition / synonym /
 // antonym) has 4 distinct choices, the right answer, and no distractor drawn
 // from a word too close in meaning.
@@ -19,6 +20,7 @@ require(`${repo}/js/curriculum/clause.js`);
 for (let i = 1; i <= 9; i++) require(`${repo}/js/curriculum/ch${i}.js`);
 require(`${repo}/js/focus.js`);
 require(`${repo}/js/derby.js`);
+require(`${repo}/js/fishing.js`);
 require(`${repo}/js/vocab.js`);
 const SW = window.SatWizz;
 SW.curriculum.build();
@@ -127,6 +129,22 @@ for (const w of SW.vocab.WORDS) {
   }
   console.log("derby questions generated", made);
 }
+
+// ---------- Vocab Fishing ----------
+// Every cast: 4 fish with distinct definitions, exactly one right, no near-synonym distractors.
+let casts = 0;
+for (const w of SW.vocab.WORDS) {
+  for (let k = 0; k < 40; k++) {
+    const c = SW.fishing.makeCast(w);
+    casts++;
+    const defs = c.fish.map((f) => f.def);
+    if (c.fish.length !== 4 || new Set(defs).size !== 4) bad.push(`fishing ${w.word}: needs 4 distinct definitions`);
+    if (c.fish.filter((f) => f.right).length !== 1 || c.fish[c.answer].wordId !== w.id) bad.push(`fishing ${w.word}: exactly one right fish`);
+    if (c.fish.some((f) => !f.right && SW.derby.related(w, SW.vocab.WORDS.find((x) => x.id === f.wordId)))) bad.push(`fishing ${w.word}: related distractor`);
+  }
+}
+for (const spot of SW.fishing.SPOTS) if (SW.fishing.poolFor(spot.id, { words: {} }).length < SW.fishing.RULES.casts) bad.push(`fishing spot ${spot.id}: fewer words than casts`);
+console.log("fishing casts generated", casts);
 
 console.log("chapters", SW.chapters.map((c) => `${c.id}:${c.questions.length}`).join(" "), "| questions", SW.questions.length,
   "| vocab words", SW.vocab.WORDS.length, `(${SW.vocab.WORDS.filter((w) => w.format === "blank").length} blank, ${SW.vocab.WORDS.filter((w) => w.format === "meaning").length} meaning)`);

@@ -75,6 +75,7 @@
     displayName: "",
     lbScope: "global", // leaderboard tab: "global" | "friends"
     lbMetric: "xp", // rank by "xp" | "sparks"
+    derbyChapter: null, // unit the Derby races on (defaults to the current chapter)
     // settings
     muted: false,
     haptics: true,
@@ -237,11 +238,11 @@
       type: "button",
       "data-id": t.id,
       "aria-pressed": String(t.id === S.themeId),
-    }, `<b>${esc(t.label)}</b><span>${locked ? `🔒 ${fmt(t.price)} ⚡ in the High-Barrier Shop` : esc(sub)}</span>`);
+    }, `<b>${esc(t.label)}</b><span>${locked ? `🔒 ${fmt(t.price)} ⚡ in the Shop` : esc(sub)}</span>`);
     b.addEventListener("click", () => {
       if (locked) {
         show("shop");
-        toast(`Unlock ${t.label} in the High-Barrier Shop for ${fmt(t.price)} ⚡`);
+        toast(`Unlock ${t.label} in the Shop for ${fmt(t.price)} ⚡`);
         return;
       }
       onPick(t);
@@ -335,7 +336,7 @@
     <header class="hud">
       <div class="brand" id="brand" aria-label="SatWizz"><b class="b-pre">Sat</b><span>Wizz</span><em class="demo-badge" id="demo-badge" hidden>DEMO</em></div>
       <button class="pill flame" id="hud-streak" type="button" title="Lock In Streak: days in a row you met your daily goal"></button>
-      <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the High-Barrier Shop"></button>
+      <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the Shop"></button>
       <button class="pill focus-pill" id="hud-focus" type="button" title="Focus Meter"></button>
       <button class="avatar sm" id="hud-avatar" type="button" aria-label="Profile, leaderboard and friends"></button>
       <button class="acct" id="hud-account" type="button"><span class="acct-long">Save</span><span class="acct-short" aria-hidden="true">☁️</span></button>
@@ -354,22 +355,22 @@
     <main class="view scrollview" id="view-derby" hidden></main>
     <main class="view scrollview" id="view-shop" hidden></main>
     <main class="view scrollview" id="view-you" hidden></main>
-    <main class="view scrollview ranks-view" id="view-ranks" hidden>
-      <div class="subnav"><button class="linkbtn" type="button" id="ranks-back">← Profile</button><span class="label-sm">Leaderboard &amp; Friends</span></div>
-      <div id="ranks-mount"></div>
-    </main>
     <nav class="tabs" role="tablist" aria-label="SatWizz">
       <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">✏️</span>Practice</button>
       <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vault</button>
       <button class="tab" role="tab" data-view="derby" aria-selected="false"><span class="ico" aria-hidden="true">🐎</span>Derby</button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
+      <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Profile</button>
     </nav>
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  // Four tabs (Practice, Vault, Derby, Shop). Profile opens from the header
-  // avatar, and Leaderboard & Friends from Profile.
-  const VIEWS = ["feed", "vocab", "derby", "shop", "you", "ranks"];
+  // Five tabs: Practice, Vault, Derby, Shop, Profile. Profile has three
+  // sub-tabs: Edit Profile, Settings and Leaderboard (with friends).
+  const VIEWS = ["feed", "vocab", "derby", "shop", "you"];
+  let youTab = "profile"; // "profile" | "settings" | "leaderboard"
+  // The leaderboard module keeps its own DOM; it moves into the Profile pane.
+  const ranksMount = h("div", { id: "ranks-mount", class: "ranks-view" });
   let currentView = "feed";
   let streakTab = "streak"; // Profile's streak section: "streak" or "achievements"
 
@@ -377,6 +378,7 @@
   $("#hud-sparks").addEventListener("click", () => show("shop"));
   $("#hud-account").addEventListener("click", () => openSignup("save"));
   const openProfile = () => {
+    youTab = "profile";
     show("you");
     $("#view-you").scrollTop = 0;
   };
@@ -387,8 +389,6 @@
       ? "🧠 Focus 100%. A miss costs 25%, rushing (under 3s) 10%."
       : `🧠 Focus ${S.focus}%. Get 2 right in a row for +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2), or buy a Focus Elixir in the Shop.`);
   });
-  $("#ranks-back").addEventListener("click", () => show("you"));
-  const openRanks = () => show("ranks");
 
   function show(view) {
     const changed = view !== currentView;
@@ -408,7 +408,6 @@
       else if (derby.racing()) derby.sync();
       else derby.render();
     }
-    if (view === "ranks") ranks.render();
     if (view === "shop") renderShop();
     if (view === "you") renderYou();
   }
@@ -416,7 +415,7 @@
   function rerenderCurrent() {
     if (currentView === "vocab" && !vocab.busy()) vocab.render();
     if (currentView === "derby" && !derby.racing()) derby.render();
-    if (currentView === "ranks") ranks.render();
+    if (currentView === "you" && youTab === "leaderboard") ranks.render();
     if (currentView === "shop") renderShop();
     if (currentView === "you") renderYou();
   }
@@ -438,11 +437,13 @@
     openDerby: () => show("derby"),
   });
 
-  // The Vocab Derby has its own tab (js/derby.js). It shares the app's Focus
-  // Meter, so a rough race carries into Practice and the other way round.
+  // The Derby has its own tab (js/derby.js) and races on grammar questions
+  // from the unit you're on (or any unlocked one you pick). It shares the
+  // app's Focus Meter, so a rough race carries into Practice and back.
   const derby = SW.derby.mount({
     container: $("#view-derby"),
     tab: true,
+    source: grammarSource(),
     getState: () => S,
     save: () => save(),
     esc,
@@ -459,9 +460,96 @@
     onExit: () => derby.open(),
   });
 
+  // ---------- Derby question source: grammar from your unit ----------
+  function derbyChapter() {
+    const pick = [S.derbyChapter, S.chapterId].find((id) => Number.isInteger(id) && isUnlocked(id));
+    return chapterById(pick || 1);
+  }
+  function grammarSource() {
+    return {
+      title: "SatWizz Grammar Derby",
+      banner: "=== 🐎 SATWIZZ GRAMMAR DERBY 🐎 ===",
+      tagline: "Where clean sentences win photo finishes.",
+      intro: "Answer Digital SAT grammar questions from your unit as fast and as accurately as you can.",
+      // Grammar passages take longer to read than vocab cards, so the CPUs read
+      // longer too (tuned by simulation; see README).
+      read: [20, 26],
+      // Questions you missed come first, then ones you haven't got right yet, then the rest.
+      draw() {
+        const ch = derbyChapter();
+        const got = new Set(correctIn(ch.id));
+        const ids = ch.questions.map((q) => q.id);
+        const missed = shuffle(ids.filter((id) => S.missed.includes(id)));
+        const fresh = shuffle(ids.filter((id) => !got.has(id) && !missed.includes(id)));
+        const rest = shuffle(ids.filter((id) => got.has(id) && !missed.includes(id)));
+        return [...missed, ...fresh, ...rest];
+      },
+      question(id) {
+        const q = BY_ID[id];
+        const order = shuffle([0, 1, 2, 3]);
+        const ch = chapterById(q.chapterId);
+        return {
+          id,
+          meta: `${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${ch.short}`,
+          passage: q.text,
+          stem: SW.stemFor(q),
+          choices: order.map((i) => q.choices[i]),
+          answer: order.indexOf(q.answer),
+          notes: order.map((i) => q.notes[i]),
+          rule: q.rule || "",
+          explain: q.notes[q.answer],
+        };
+      },
+      // Derby answers count toward the unit like Practice answers do.
+      onAnswer(dq, correct) {
+        const q = BY_ID[dq.id];
+        const sk = (S.skills[q.skill] ||= { seen: 0, right: 0 });
+        sk.chapterId = q.chapterId;
+        sk.seen++;
+        if (correct) {
+          sk.right++;
+          S.totalCorrect++;
+          S.missed = S.missed.filter((id) => id !== q.id);
+          const got = correctIn(q.chapterId);
+          if (!got.includes(q.id)) got.push(q.id);
+          unlockNextAt60(chapterById(q.chapterId));
+        } else if (!S.missed.includes(q.id)) S.missed.push(q.id);
+        renderChapterBar();
+      },
+      missNote: () => "↺ Saved to your missed questions: it comes back first next race and in mixed review.",
+      lateNote: (dq) => `Answer: ${renderPassage(BY_ID[dq.id].text, castOf(), fill(BY_ID[dq.id].choices[BY_ID[dq.id].answer], castOf(), false))}`,
+      review: {
+        title: "Grammar review",
+        head: ["Question", "Why"],
+        row(dq) {
+          const q = BY_ID[dq.id];
+          const cast = castOf();
+          return [
+            `<small class="muted">${esc(q.skill)}</small><br>${renderPassage(q.text, cast, fill(q.choices[q.answer], cast, false))}`,
+            esc(q.rule || "") || fill(q.notes[q.answer], cast, false),
+          ];
+        },
+        note: "Missed questions come back first in your next race and in mixed review.",
+      },
+      unitHtml() {
+        const cur = derbyChapter();
+        const opts = CHAPTERS.filter((c) => isUnlocked(c.id))
+          .map((c) => `<option value="${c.id}" ${c.id === cur.id ? "selected" : ""}>${c.bonus ? "Bonus" : `Ch ${c.id}`} · ${esc(c.short)}</option>`).join("");
+        return `<label class="unit-pick"><span class="label-sm">Racing on</span><select class="select" id="derby-unit">${opts}</select></label>`;
+      },
+      wireUnit(el, rerender) {
+        el.querySelector("#derby-unit")?.addEventListener("change", (e) => {
+          S.derbyChapter = Number(e.target.value);
+          save();
+          rerender();
+        });
+      },
+    };
+  }
+
   // Leaderboards & friends live in their own module (js/social-view.js).
   const ranks = SW.socialView.mount({
-    container: $("#ranks-mount"),
+    container: ranksMount,
     getState: () => S,
     save: () => save(false),
     esc,
@@ -536,7 +624,7 @@
     st.innerHTML = `🔥 ${S.streak}${atRisk() ? ' <span class="risk" title="Streak at risk">⌛</span>' : ""}`;
     st.classList.toggle("cold", S.streak === 0 || atRisk());
     $("#hud-sparks").textContent = `⚡ ${compact(S.sparks)}`;
-    $("#hud-sparks").setAttribute("aria-label", `${S.sparks} Sparks. Open the High-Barrier Shop`);
+    $("#hud-sparks").setAttribute("aria-label", `${S.sparks} Sparks. Open the Shop`);
     st.setAttribute("aria-label", `Lock In Streak: ${S.streak} day${S.streak === 1 ? "" : "s"}${atRisk() ? ", at risk" : ""}`);
     const fp = $("#hud-focus");
     fp.innerHTML = FOCUS.meterHtml(S.focus);
@@ -1434,7 +1522,7 @@
       <section class="panel">
         <div class="freeze-row">
           <span class="ice" aria-hidden="true">${"💠".repeat(S.freezes) || "–"}</span>
-          <p><b>${S.freezes} of ${RULES.maxAura} Aura Shields.</b> Each one covers a missed day automatically. You get one free every ${RULES.auraEarnEvery} streak days, or buy one in the High-Barrier Shop.</p>
+          <p><b>${S.freezes} of ${RULES.maxAura} Aura Shields.</b> Each one covers a missed day automatically. You get one free every ${RULES.auraEarnEvery} streak days, or buy one in the Shop.</p>
         </div>
         ${wp ? `<p class="muted">🎲 Double-Spark Wager: day ${wp.days} of ${wp.of}</p>` : ""}
       </section>
@@ -1473,10 +1561,15 @@
       </section>`;
   }
 
-  // ---------- High-Barrier Shop ----------
-  // Prices: Jockey/Character Skins 1,000 · Custom Mounts/Avatars 1,500 ·
-  // Focus Elixir 500. Derby gear lives in the Derby stats (vocab progress).
+  // ---------- Shop ----------
+  // Every cosmetic is 500 ⚡: jockey skins, Derby mounts, character casts,
+  // avatars, fishing rods and fishing spots; the Focus Elixir is 500 too.
+  // Derby and fishing gear live in the Vault progress, so they sync.
   const D = SW.derby;
+  const fishStats = () => {
+    S.vocab.fishing = Object.assign(S.vocab.fishing || {}, SW.fishing.mergeStats(S.vocab.fishing, null));
+    return S.vocab.fishing;
+  };
   const derbyStats = () => {
     S.vocab.derby = Object.assign(S.vocab.derby || {}, D.mergeStats(S.vocab.derby, null));
     return S.vocab.derby;
@@ -1506,44 +1599,55 @@
         </article>`;
     const useBtn = (inUse, attrs) => (inUse ? '<button class="buy" type="button" disabled>In use</button>' : `<button class="buy owned" type="button" ${attrs}>Use</button>`);
 
-    // 1,000 ⚡: Derby jockey silks and character casts (theme packs).
+    const fishSt = fishStats();
+    const F = SW.fishing;
+    const section = (icon, title, sub, rows) => `
+        <section class="panel shop-tier">
+          <h2><span>${icon} ${title}</span> <span class="price-tag">500 ⚡ each</span></h2>
+          <p class="muted">${sub}</p>
+          <div class="shop-list">${rows}</div>
+        </section>`;
     const silkRows = D.STABLE.silks.map((x) => row(
-      `<span class="shop-icon silk-swatch silk-${x.id}" aria-hidden="true">🏇</span>`, esc(x.name), "Jockey silks for your Derby horse",
+      `<span class="shop-icon silk-swatch silk-${x.id}" aria-hidden="true">🏇</span>`, esc(x.name), "Jockey silks: colors your Derby lane",
       derbySt.silks.includes(x.id) ? useBtn(derbySt.silk === x.id, `data-silk="${x.id}"`) : buyBtn(`silk:${x.id}`, x.price))).join("");
-    const packRows = packs.map((t) => row(
-      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), `Character cast: ${esc(t.people.map((p) => p.name).join(", "))}`,
-      rewards.isThemeUnlocked(S, t.id) ? useBtn(S.themeId === t.id, `data-use="${t.id}"`) : buyBtn(`theme:${t.id}`, t.price))).join("");
-    // 1,500 ⚡: Derby mounts and profile avatars.
     const mountRows = D.STABLE.mounts.map((m) => row(
-      `<span class="shop-icon" aria-hidden="true">${m.emoji}</span>`, esc(m.name), "Custom mount: runs in your Derby lane",
+      `<span class="shop-icon" aria-hidden="true">${m.emoji}</span>`, esc(m.name), "Derby mount: runs in your lane",
       derbySt.mounts.includes(m.id) ? useBtn(derbySt.mount === m.id, `data-mount="${m.id}"`) : buyBtn(`mount:${m.id}`, m.price))).join("");
+    const packRows = packs.map((t) => row(
+      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), esc(t.people.map((p) => p.name).join(", ")),
+      rewards.isThemeUnlocked(S, t.id) ? useBtn(S.themeId === t.id, `data-use="${t.id}"`) : buyBtn(`theme:${t.id}`, t.price))).join("");
     const avatarRows = SW.avatars.filter((a) => a.price > 0).map((a) => row(
-      `<span class="avatar md" aria-hidden="true">${a.emoji}</span>`, esc(a.label), "Avatar: your profile picture",
+      `<span class="avatar md" aria-hidden="true">${a.emoji}</span>`, esc(a.label), "Profile picture",
       rewards.isAvatarUnlocked(S, a.id) ? useBtn(S.avatar === a.id, `data-wear-avatar="${a.id}"`) : buyBtn(`avatar:${a.id}`, a.price))).join("");
+    const rodRows = F.RODS.filter((r) => r.price).map((r) => row(
+      `<span class="shop-icon" aria-hidden="true">${r.emoji}</span>`, esc(r.name), esc(r.perk),
+      fishSt.rods.includes(r.id) ? useBtn(fishSt.rod === r.id, `data-rod="${r.id}"`) : buyBtn(`rod:${r.id}`, r.price))).join("");
+    const spotRows = F.SPOTS.filter((x) => x.price).map((x) => row(
+      `<span class="shop-icon" aria-hidden="true">${x.emoji}</span>`, esc(x.name), esc(x.desc),
+      fishSt.spots.includes(x.id) ? useBtn(fishSt.spot === x.id, `data-spot="${x.id}"`) : buyBtn(`spot:${x.id}`, x.price))).join("");
 
     v.innerHTML = `
       <div class="stack">
         <section class="panel wallet">
-          <span class="label-sm">High-Barrier Shop</span>
+          <span class="label-sm">SatWizz Shop</span>
           <div class="wallet-num"><span aria-hidden="true">⚡</span> ${fmt(S.sparks)} <small>Sparks</small></div>
           <ul class="earn-list">
             <li><b>×1.5</b> your bet back on every Derby win</li>
-            <li><b>+${RULES.sparksPerCorrect}</b> each correct answer · <b>+${RULES.comboBonus}</b> every ${RULES.comboEvery} in a row</li>
+            <li><b>+${RULES.sparksPerCorrect}</b> each correct Practice answer · <b>+${F.RULES.catchSparks}</b> each fish caught</li>
             <li><b>+${RULES.dailyGoalSparks}</b> for your daily goal · <b>+${RULES.chapterSparks}</b> per chapter completed</li>
           </ul>
+          <nav class="shop-jump" aria-label="Shop sections">
+            <a href="#shop-silks">🏇 Jockey Skins</a><a href="#shop-mounts">🦄 Mounts</a><a href="#shop-casts">🎭 Casts</a><a href="#shop-avatars">🙂 Avatars</a><a href="#shop-rods">🎣 Rods</a><a href="#shop-spots">🌊 Spots</a><a href="#shop-elixir">🧪 Elixir</a>
+          </nav>
         </section>
-        <section class="panel shop-tier">
-          <h2>Jockey &amp; Character Skins <span class="price-tag">1,000 ⚡</span></h2>
-          <p class="muted">Silks for your Derby jockey, and new character casts for every Practice question.</p>
-          <div class="shop-list">${silkRows}${packRows}</div>
-        </section>
-        <section class="panel shop-tier">
-          <h2>Custom Mounts &amp; Avatars <span class="price-tag">1,500 ⚡</span></h2>
-          <p class="muted">Ride something rarer than a horse, or wear it on your profile.</p>
-          <div class="shop-list">${mountRows}${avatarRows}</div>
-        </section>
-        <section class="panel shop-tier">
-          <h2>Focus Elixir <span class="price-tag">${fmt(RULES.elixirPrice)} ⚡</span></h2>
+        <div id="shop-silks">${section("🏇", "Jockey Skins", "Silks for your jockey in the Derby.", silkRows)}</div>
+        <div id="shop-mounts">${section("🦄", "Derby Mounts", "Ride something rarer than a horse.", mountRows)}</div>
+        <div id="shop-casts">${section("🎭", "Character Casts", "New names for every extra-practice question.", packRows)}</div>
+        <div id="shop-avatars">${section("🙂", "Avatars", "Rare profile pictures for the leaderboard.", avatarRows)}</div>
+        <div id="shop-rods">${section("🎣", "Fishing Rods", "Each rod has a small perk in Vocab Fishing.", rodRows)}</div>
+        <div id="shop-spots">${section("🌊", "Fishing Spots", "New scenery, and a different set of words to fish.", spotRows)}</div>
+        <section class="panel shop-tier" id="shop-elixir">
+          <h2><span>🧪 Focus Elixir</span> <span class="price-tag">${fmt(RULES.elixirPrice)} ⚡</span></h2>
           <div class="shop-list">
             ${row('<span class="shop-icon" aria-hidden="true">🧪</span>', "Focus Elixir",
               `Refills your Focus Meter to 100% right now, in Practice and the Derby. Otherwise only 2 right in a row restore it (+${FOCUS.RULES.restore}%). ${FOCUS.meterHtml(S.focus)}`,
@@ -1573,6 +1677,19 @@
         </section>
       </div>`;
 
+    v.querySelectorAll(".shop-jump a").forEach((x) => x.addEventListener("click", (e) => {
+      e.preventDefault();
+      v.querySelector(x.getAttribute("href"))?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
+    }));
+    v.querySelectorAll("[data-rod], [data-spot]").forEach((b) => b.addEventListener("click", () => {
+      const st = fishStats();
+      if (b.dataset.rod) st.rod = b.dataset.rod;
+      else st.spot = b.dataset.spot;
+      st.at = Date.now();
+      save();
+      sfx.play("tap");
+      renderShop();
+    }));
     v.querySelectorAll("[data-silk], [data-mount]").forEach((b) => b.addEventListener("click", () => {
       const st = derbyStats();
       if (b.dataset.silk) st.silk = b.dataset.silk;
@@ -1633,6 +1750,9 @@
     } else if (id === "elixir") {
       res = rewards.buyElixir(S);
       if (res.ok) toast("🧪 Focus Elixir: Focus back to 100%.");
+    } else if (id.startsWith("rod:") || id.startsWith("spot:")) {
+      res = SW.fishing.buyItem(fishStats(), S, id);
+      if (res.ok) toast(`${res.item.emoji} ${res.item.name} is yours, and equipped for Vocab Fishing.`);
     } else if (id === "burst" || id.startsWith("silk:") || id.startsWith("mount:")) {
       res = D.buyItem(derbyStats(), S, id, S);
       if (res.ok) toast(id === "burst" ? `💨 ${D.STABLE.burst.name} added` : "🏇 New Derby gear equipped!");
@@ -1674,30 +1794,95 @@
       return `<div class="bar-row"><div class="top"><span>${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(ch.short)}</span><span>${s.right}/${s.seen} · ${pct}%</span></div><div class="bar"><i class="${tone}" style="width:${pct}%"></i></div></div>`;
     }).join("");
 
+    const tabsHtml = `
+      <div class="seg subtabs you-tabs" role="tablist" aria-label="Profile sections">
+        ${[["profile", "✏️", "Edit Profile", "Profile"], ["settings", "⚙️", "Settings", "Settings"], ["leaderboard", "🏆", "Leaderboard", "Leaders"]]
+          .map(([id, ico, long, short]) => `<button type="button" role="tab" data-you="${id}" aria-selected="${youTab === id}" aria-label="${long}"><span aria-hidden="true">${ico} <span class="lbl-long">${long}</span><span class="lbl-short">${short}</span></span></button>`).join("")}
+      </div>`;
+    const wireTabs = () => v.querySelectorAll("[data-you]").forEach((b) => b.addEventListener("click", () => {
+      youTab = b.dataset.you;
+      sfx.play("tap");
+      renderYou();
+      v.scrollTop = 0;
+    }));
+
+    // ---- Leaderboard & Friends ----
+    if (youTab === "leaderboard") {
+      v.innerHTML = `<div class="stack">${tabsHtml}<div id="you-ranks"></div></div>`;
+      $("#you-ranks", v).append(ranksMount);
+      wireTabs();
+      ranks.render();
+      return;
+    }
+
+    // ---- Settings ----
+    if (youTab === "settings") {
+      v.innerHTML = `
+        <div class="stack">
+          ${tabsHtml}
+          <section class="panel" id="settings-panel">
+            <h2>Settings</h2>
+            <label class="toggle"><input type="checkbox" id="set-sound" ${S.muted ? "" : "checked"}><span>Sound effects</span></label>
+            ${sfx.canVibrate() ? `<label class="toggle"><input type="checkbox" id="set-haptics" ${S.haptics ? "checked" : ""}><span>Vibration</span></label>` : ""}
+            <div id="set-push"></div>
+          </section>
+          <section class="panel">
+            <h2>Daily goal</h2>
+            <p class="muted">Questions per day to keep your Lock In Streak alive.</p>
+            <div class="seg" id="goal-seg">${GOALS.map((g) => `<button type="button" data-g="${g}" aria-pressed="${g === S.goal}">${g} / day</button>`).join("")}</div>
+          </section>
+          <section class="panel">
+            <h2>Start over</h2>
+            <p class="muted">Clears your streak, XP, Sparks, purchases and stats on this device${auth.user() ? " and in your account" : ""}.</p>
+            <div class="row" id="reset-row"><button class="btn ghost" type="button" id="reset-btn">Reset progress</button></div>
+          </section>
+        </div>`;
+      wireTabs();
+      renderSettings();
+      $("#goal-seg", v).querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+        S.goal = Number(b.dataset.g);
+        const goal = checkGoal();
+        const newBadges = rewards.checkBadges(S);
+        save();
+        $("#goal-seg", v).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        renderHud(goal ? ["streak", "sparks"] : []);
+        if (goal) celebrateGoal(goal);
+        newBadges.forEach(celebrateBadge);
+      }));
+      $("#reset-btn", v).addEventListener("click", () => {
+        const row = $("#reset-row", v);
+        row.innerHTML = '<button class="btn danger" type="button" id="reset-yes">Yes, erase everything</button><button class="btn ghost" type="button" id="reset-no">Keep my progress</button>';
+        $("#reset-no", v).addEventListener("click", renderYou);
+        $("#reset-yes", v).addEventListener("click", () => {
+          const keepUser = S.syncedUserId;
+          S = structuredClone(DEFAULTS);
+          S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
+          save();
+          renderHud();
+          startChapter(1);
+          youTab = "profile";
+          show("feed");
+          toast("Progress reset. Fresh start.");
+        });
+      });
+      return;
+    }
+
+    // ---- Edit Profile ----
     v.innerHTML = `
       <div class="stack">
+        ${tabsHtml}
         <section class="panel you-stats">
           <div><b>${fmt(S.xp)}</b><span>XP</span></div>
           <div><b>⚡ ${fmt(S.sparks)}</b><span>Sparks</span></div>
-          <div><b>🔥 ${S.streak}</b><span>Lock In Streak</span></div>
+          <div><b>🔥 ${S.streak}</b><span>Streak</span></div>
           <div><b>🧠 ${S.focus}%</b><span>Focus</span></div>
         </section>
-        <button class="panel nav-row" type="button" id="open-ranks">
-          <span class="shop-icon" aria-hidden="true">🏆</span>
-          <span class="shop-info"><b>Leaderboard &amp; Friends</b><span>Global and friends rankings, friend streaks and invites</span></span>
-          <span aria-hidden="true">→</span>
-        </button>
-        <div id="streak-slot"></div>
         <section class="panel" id="account-panel"></section>
-        <section class="panel" id="settings-panel">
-          <h2>Settings</h2>
-          <label class="toggle"><input type="checkbox" id="set-sound" ${S.muted ? "" : "checked"}><span>Sound effects</span></label>
-          ${sfx.canVibrate() ? `<label class="toggle"><input type="checkbox" id="set-haptics" ${S.haptics ? "checked" : ""}><span>Vibration</span></label>` : ""}
-          <div id="set-push"></div>
-        </section>
+        <div id="streak-slot"></div>
         <section class="panel">
           <h2>Your cast</h2>
-          <p class="muted">Names in every question switch to the cast you pick.</p>
+          <p class="muted">Names in the extra-practice questions switch to the cast you pick.</p>
           <div class="cast-grid" id="you-casts"></div>
           <div id="custom-box" class="stack" ${S.themeId === "custom" ? "" : "hidden"}>
             ${c.people.map((p, i) => `
@@ -1716,25 +1901,14 @@
           <p class="preview" id="you-preview"></p>
         </section>
         <section class="panel">
-          <h2>Daily goal</h2>
-          <p class="muted">Questions per day to keep your streak alive.</p>
-          <div class="seg" id="goal-seg">${GOALS.map((g) => `<button type="button" data-g="${g}" aria-pressed="${g === S.goal}">${g} / day</button>`).join("")}</div>
-        </section>
-        <section class="panel">
           <h2>Skill check</h2>
           ${skillRows ? `<div class="bars">${skillRows}</div>` : '<p class="muted">Answer a few questions to see your accuracy for each chapter.</p>'}
         </section>
-        <section class="panel">
-          <h2>Start over</h2>
-          <p class="muted">Clears your streak, XP, Sparks, purchases and stats on this device${auth.user() ? " and in your account" : ""}.</p>
-          <div class="row" id="reset-row"><button class="btn ghost" type="button" id="reset-btn">Reset progress</button></div>
-        </section>
       </div>`;
 
-    $("#open-ranks", v).addEventListener("click", openRanks);
+    wireTabs();
     renderStreak();
     renderAccountPanel();
-    renderSettings();
     const grid = $("#you-casts", v);
     const all = [...themesForPicker(), { id: "custom", label: "Custom", people: [] }];
     for (const t of all) {
@@ -1761,32 +1935,6 @@
     bindText("#c-craft", (val) => { c.craft = val; });
     bindText("#c-event", (val) => { c.event = val; });
 
-    $("#goal-seg", v).querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-      S.goal = Number(b.dataset.g);
-      const goal = checkGoal();
-      const newBadges = rewards.checkBadges(S);
-      save();
-      $("#goal-seg", v).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      renderHud(goal ? ["streak", "sparks"] : []);
-      if (goal) celebrateGoal(goal);
-      newBadges.forEach(celebrateBadge);
-    }));
-
-    $("#reset-btn", v).addEventListener("click", () => {
-      const row = $("#reset-row", v);
-      row.innerHTML = '<button class="btn danger" type="button" id="reset-yes">Yes, erase everything</button><button class="btn ghost" type="button" id="reset-no">Keep my progress</button>';
-      $("#reset-no", v).addEventListener("click", renderYou);
-      $("#reset-yes", v).addEventListener("click", () => {
-        const keepUser = S.syncedUserId;
-        S = structuredClone(DEFAULTS);
-        S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
-        save();
-        renderHud();
-        startChapter(1);
-        show("feed");
-        toast("Progress reset. Fresh start.");
-      });
-    });
   }
 
   let castTimer;
