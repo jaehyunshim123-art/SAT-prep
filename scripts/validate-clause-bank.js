@@ -10,10 +10,14 @@ const B = window.ClauseBank;
 const bad = [];
 
 // Franchise and brand titles stay out (people and character names are fine).
+// Also: published test items the benchmarks were modeled on, and franchise
+// characters or gadgets (people come from the cast slots instead).
+const COPIED = /\b(Celts|Iron Age|FESTAC|Anna May Wong|Stina Chyn|Paramount|Daughter of Shanghai|iconicity|Voldemor[et]|Dark Lord|web-shooters?|synthetic webbing|ninja|power levels?|Guardian of the City.*league)\b/i;
 const BANNED = /\b(Justice League|Avengers|Marvel|DC Comics|Dragon Ball|Scouter|Hogwarts|Quidditch|Harry Potter|Star Wars|Pok[eé]mon|Grammys?|Champions League|NBA|NFL|FIFA|Olympics?|Olympic|Super Bowl|USC|Thornton)\b/;
 
 // The user's example questions, with the answer they stated (corrected for the
-// Celts list, A, and the restrictive title, C).
+// list with commas, A, and the restrictive title, C). The benchmark passages are
+// original: no wording copied from published test items.
 const EXAMPLES = [
   ["c1-01", "posts. With"],
   ["c2-01", "is"],
@@ -21,10 +25,10 @@ const EXAMPLES = [
   ["c4-01", "measures"],
   ["c5-01", "However,"],
   ["c7-01", "Starlight Letters (Deluxe Edition),"],
-  ["c1-bm", "significance; depictions"],
+  ["c1-bm", "scene; paintings"],
   ["c3-bm", "critic {{NAME_2}} claims"],
   ["c5-bm", "Granted,"],
-  ["c6-bm", "Culture—"],
+  ["c6-bm", "Light—"],
 ];
 // One benchmark per chapter, first in its Review for Understanding test.
 const BENCH = { 1: "c1-bm", 2: "c2-01", 3: "c3-bm", 4: "c4-01", 5: "c5-bm", 6: "c6-bm", 7: "c7-01" };
@@ -32,6 +36,8 @@ const BENCH = { 1: "c1-bm", 2: "c2-01", 3: "c3-bm", 4: "c4-01", 5: "c5-bm", 6: "
 if (B.chapters.length !== 7) bad.push(`expected 7 chapters, got ${B.chapters.length}`);
 const ids = new Set();
 for (const ch of B.chapters) {
+  const lesson = [ch.focus, ...ch.rules].join(" ").match(COPIED);
+  if (lesson) bad.push(`ch${ch.id} lesson: copied or franchise wording "${lesson[0]}"`);
   if (!ch.title || !ch.short || !ch.focus || !Array.isArray(ch.rules) || ch.rules.length < 3) bad.push(`ch${ch.id}: needs title, short, focus and rules`);
   // 25 questions, plus the chapter's benchmark when it isn't one of them.
   const extra = ch.questions.filter((q) => q.benchmark && /-bm$/.test(q.id)).length;
@@ -39,6 +45,7 @@ for (const ch of B.chapters) {
   const bms = ch.questions.filter((q) => q.benchmark);
   if (bms.length !== 1) bad.push(`ch${ch.id}: ${bms.length} benchmarks (want exactly 1)`);
   else if (!bms[0].ruleName) bad.push(`ch${ch.id}: the benchmark needs a ruleName`);
+  else if (!/\{\{NAME_\d\}\}/.test(bms[0].text)) bad.push(`ch${ch.id}: the benchmark needs a cast slot ({{NAME_n}}) so it shows your cast`);
   for (const q of ch.questions) {
     const tag = q.id;
     if (ids.has(q.id)) bad.push(`${tag}: duplicate id`);
@@ -57,6 +64,8 @@ for (const ch of B.chapters) {
     const all = [q.text, ...q.choices, q.rule, ...q.notes].join(" ");
     const hit = all.match(BANNED);
     if (hit) bad.push(`${tag}: banned title "${hit[0]}"`);
+    const copied = all.match(COPIED);
+    if (copied) bad.push(`${tag}: copied or franchise wording "${copied[0]}"`);
     if (/\s{2,}/.test(q.text.replace(/______/, "X"))) bad.push(`${tag}: double space in passage`);
   }
 }

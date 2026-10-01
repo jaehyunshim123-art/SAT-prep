@@ -16,10 +16,10 @@
     ],
     questions: [
       // Benchmark (Review for Understanding).
-      B("Present Tense for General Facts", Q("c4-01", "Present (general fact)", "In recent years, scientists across the anime universe have developed advanced devices that evaluate the power levels of supernatural fighters. Researchers in one martial-arts anime world, for example, use a digital power visor. This tool ______ a warrior's raw combat capability, speed, and energy output.",
-        ["measures", "had measured", "would have measured", "will have been measuring"], 0,
-        "The passage describes what the tool does in general, in the present (\"use\"), so the present tense fits.",
-        ["Correct. \"This tool measures…\": the present tense for what the tool does, matching \"use.\"",
+      B("Present Tense for General Facts", Q("c4-01", "Present (general fact)", "In {{NAME_1}}'s favorite science-fiction series, engineers have built handheld scanners that rate the strength of every fighter. Explorers on the series' desert planet, for example, carry a scanner called the Gauge. This tool ______ a fighter's raw strength, speed, and stamina.",
+        ["measures","had measured","would have measured","will have been measuring"], 0,
+        "The passage describes what the tool does in general, in the present (\"carry\"), so the present tense fits.",
+        ["Correct. \"This tool measures…\": the present tense for what the tool does, matching \"carry.\"",
           "Past perfect needs an earlier past event; the passage is in the present.",
           "\"Would have measured\" describes something hypothetical that didn't happen.",
           "Future perfect progressive points to a future deadline that the passage never mentions."])),

@@ -71,18 +71,19 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 - **Diagnostic Feedback screen:** opens automatically on submit. A **PASS / FAIL** banner with the score %, then an item-by-item review: the passage with the right answer filled in, **your answer vs. the correct one**, the **rule's name** (e.g. "Terminal Boundary Rule", "Restrictive Title Rule", "Dash Pair Rule") and a short explanation (the rule line, then why the right answer works; on a miss, why your choice fails). Buttons: Retake (new questions), the next chapter, Dashboard.
 - **Saved** in `localStorage` (`satwizz.v1`): `tests[ch]` and `practiceSets[ch]` = `{ best, last, n, passed, attempts, at }`.
 - **Rule names** come from `js/curriculum/rules.js` (`SatWizz.ruleName`, a skill → rule table per chapter; a question's own `ruleName` wins). `validate-content.js` checks every question gets a named rule.
-- **Benchmarks** (one per chapter, `ClauseBank.B(ruleName, q)` in `clause-derby/src`; names are cast slots and titles are invented):
+- **Benchmarks** (one "challenge" question per chapter, `ClauseBank.B(ruleName, q)` in `clause-derby/src`). Each is an **original passage** modeled on the rule a sample question tested, with no wording copied from published test items and no franchise characters. Every one has cast slots, so it shows generic names until a pack is bought and the pack's names after. `validate-clause-bank.js` enforces both: it rejects known copied or franchise wording and requires a `{{NAME_n}}` slot in every benchmark.
 
-  | Ch | Benchmark | Answer |
+  | Ch | Benchmark (original passage) | Answer |
   |---|---|---|
-  | 1 | Celtic art: patterns…; depictions of birds, horses, and other animals; and enamel | `significance; depictions` (a list whose items contain commas takes semicolons) |
-  | 2 | The Dark Lord's name ___ pronounced | `is` |
-  | 3 | Screen actor {{NAME_1}}'s starring role in *Harbor of Lanterns*, a film that ___ "expanded the range…" | `critic {{NAME_2}} claims` (a title right before a name takes no commas) |
-  | 4 | A digital power visor ___ a warrior's combat capability | `measures` |
-  | 5 | Sign-language iconicity study | `Granted,` |
-  | 6 | FESTAC '77 | `Culture—` (pairs with the closing dash) |
-  | 7 | A specific re-recorded album, ___ due to the bonus tracks | `Starlight Letters (Deluxe Edition),` |
+  | 1 | Art historian {{NAME_1}} on village pottery: borders…; paintings of foxes, herons, and other animals; and copper glazes | `scene; paintings` (a list whose items contain commas takes semicolons) |
+  | 2 | How {{NAME_1}} and {{NAME_2}} should say the invented villain "Lord Malgrecourt" | `is` |
+  | 3 | Stage actor {{NAME_1}}'s lead in *The Lantern Keeper*, a play that ___ "changed what audiences expected…" | `critic {{NAME_2}} claims` (a title right before a name takes no commas) |
+  | 4 | A scanner in {{NAME_1}}'s favorite science-fiction series ___ a fighter's strength | `measures` |
+  | 5 | Linguist {{NAME_1}}'s study of words that sound like their meaning | `Granted,` |
+  | 6 | The Riverbend Festival of Music and Light, "or Riverfest, as {{NAME_1}} … called it—" | `Light—` (pairs with the closing dash) |
+  | 7 | Fans of {{NAME_1}} and an invented re-recorded album | `Starlight Letters (Deluxe Edition),` |
 
+- **Franchise-free questions:** questions that pointed at a franchise (web-shooters, a ninja village leader, a growth mushroom, a frozen-castle scene, a city guardian) were rewritten as everyday scenes; people in them are still cast slots.
 - **`index.html#practice`** opens straight into the practice feed instead of the Dashboard.
 
 ## Question generator (`js/curriculum/gen/`)
