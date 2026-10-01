@@ -1536,6 +1536,7 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
 .lane-track {
   position: relative;
   height: 2rem;
+  border-bottom: 2px dashed var(--good);
   border-bottom: 2px dashed color-mix(in srgb, var(--good) 45%, transparent);
   /* five step ticks */
   background-image: linear-gradient(to right, color-mix(in srgb, var(--good) 30%, transparent) 1px, transparent 1px);
@@ -1784,7 +1785,7 @@ body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(
 /* High-Barrier Shop */
 .shop-tier h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .price-tag { font-size: 0.85rem; padding: 2px 10px; border-radius: 999px; color: var(--spark); background: var(--spark-bg); font-variant-numeric: tabular-nums; }
-.silk-swatch { border-radius: 10px; background: color-mix(in srgb, var(--silk, var(--volt)) 28%, transparent); }
+.silk-swatch { border-radius: 10px; background: var(--surface-2); background: color-mix(in srgb, var(--silk, var(--volt)) 28%, transparent); }
 .shop-info .fmeter { margin-top: 4px; }
 
 /* Vault: card status chips and toggles; rule line in explanations */
@@ -1994,7 +1995,7 @@ body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(
 .test-dots button.done { background: var(--volt); border-color: var(--volt); color: var(--volt-ink); }
 .test-dots button.on { outline: 3px solid var(--flame-2); outline-offset: 1px; }
 .test-card { min-height: 0; padding-block: 0; }
-.choice.picked { border-color: var(--volt); background: color-mix(in srgb, var(--volt) 12%, var(--surface)); }
+.choice.picked { border-color: var(--volt); background: var(--surface-2); background: color-mix(in srgb, var(--volt) 12%, var(--surface)); }
 .choice.picked .letter { border-color: var(--volt); background: var(--volt); color: var(--volt-ink); }
 .test-nav { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
 .center { text-align: center; }
@@ -2280,3 +2281,8 @@ kbd {
    and sync status live in Profile (tap the avatar). */
 @media (max-width: 340px) { #hud-account { display: none; } }
 .rule-acc .ch-badge { flex: none; white-space: nowrap; }
+
+/* Older Safari (before 16.2) has no color-mix(): a steady ring instead of the glow. */
+@supports not (color: color-mix(in srgb, red 50%, white)) {
+  .trophy.recent { animation: none; box-shadow: 0 0 0 3px var(--flame-2); }
+}

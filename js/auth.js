@@ -39,6 +39,9 @@
   }
 
   const available = () => client !== null;
+  // Has this copy of the site been given Supabase keys (js/config.js)?
+  // Without them it's a guest-only site: no sign-up buttons anywhere.
+  const configured = () => Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey);
   const reason = () => unavailableReason;
   const user = () => (session && session.user) || null;
 
@@ -130,6 +133,13 @@
         unlocked_avatars: state.unlockedAvatars,
         combo_savers: state.comboSavers,
         vocab_progress: state.vocab,
+        // Tests, practice sets, Trophy Case and practice progress (schema.sql)
+        chapter_tests: state.tests || {},
+        practice_sets: state.practiceSets || {},
+        badge_times: state.badgeAt || {},
+        flawless_runs: Math.max(0, Math.round(state.flawless || 0)),
+        practice_progress: { chapterCorrect: state.chapterCorrect || {}, missed: state.missed || [], genCursor: state.genCursor || {} },
+        focus_state: { focus: state.focus, streak: state.focusStreak || 0, resetAt: state.focusResetAt || 0, at: state.updatedAt || 0 },
         updated_at: now,
       },
       settings: {
@@ -156,13 +166,30 @@
     return { profile: p.data, settings: s.data };
   }
 
+  // Columns added with the Dashboard / Trophy Case (see supabase/schema.sql).
+  const NEW_COLUMNS = ["chapter_tests", "practice_sets", "badge_times", "flawless_runs", "practice_progress", "focus_state"];
+  let legacySchema = false;
+
   async function push(state) {
     requireClient();
     const u = user();
     if (!u) return;
     const rows = toRows(state, u);
+    if (legacySchema) for (const k of NEW_COLUMNS) delete rows.profile[k];
+    const upsertProfile = async () => {
+      const res = await client.from("profiles").upsert(rows.profile, { onConflict: "user_id" });
+      // A project set up with an older schema.sql lacks the newer columns:
+      // sync the rest instead of failing, and say how to fix it.
+      if (res.error && !legacySchema && /column|schema cache/i.test(res.error.message || "")) {
+        legacySchema = true;
+        console.warn("SatWizz: re-run supabase/schema.sql to sync tests, Trophy Case dates and practice progress.", res.error.message);
+        for (const k of NEW_COLUMNS) delete rows.profile[k];
+        return client.from("profiles").upsert(rows.profile, { onConflict: "user_id" });
+      }
+      return res;
+    };
     const [a, b, c] = await Promise.all([
-      client.from("profiles").upsert(rows.profile, { onConflict: "user_id" }),
+      upsertProfile(),
       client.from("user_settings").upsert(rows.settings, { onConflict: "user_id" }),
       client.from("user_public").upsert(publicRow(state, u), { onConflict: "user_id" }),
     ]);
@@ -209,6 +236,61 @@
         setStatus("error");
       }
     }, PUSH_DELAY_MS);
+  }
+
+  // Test scores and practice sets: per chapter, the best score and attempts
+  // are the max, "passed" sticks, and the newer side's last score wins.
+  function mergeScores(a, b) {
+    const out = {};
+    const x = a && typeof a === "object" ? a : {};
+    const y = b && typeof b === "object" ? b : {};
+    for (const k of new Set([...Object.keys(x), ...Object.keys(y)])) {
+      const l = x[k] || {};
+      const r = y[k] || {};
+      const newer = (r.at || 0) > (l.at || 0) ? r : l;
+      out[k] = {
+        best: Math.max(l.best || 0, r.best || 0),
+        last: newer.last || 0,
+        n: newer.n || l.n || r.n || 10,
+        passed: Boolean(l.passed || r.passed),
+        attempts: Math.max(l.attempts || 0, r.attempts || 0),
+        at: Math.max(l.at || 0, r.at || 0),
+      };
+    }
+    return out;
+  }
+
+  // The newer columns: tests, practice sets, badge times, flawless runs,
+  // per-question progress and Focus. Missing columns (an older schema) are
+  // simply skipped, so local progress is never lost.
+  function mergePractice(local, p) {
+    const out = {};
+    if (p.chapter_tests) out.tests = mergeScores(local.tests, p.chapter_tests);
+    if (p.practice_sets) out.practiceSets = mergeScores(local.practiceSets, p.practice_sets);
+    if (p.badge_times && typeof p.badge_times === "object") {
+      const t = { ...(local.badgeAt || {}) };
+      for (const [id, ms] of Object.entries(p.badge_times)) if (Number(ms) > 0) t[id] = t[id] ? Math.min(t[id], Number(ms)) : Number(ms); // earliest unlock
+      out.badgeAt = t;
+    }
+    if (typeof p.flawless_runs === "number") out.flawless = Math.max(local.flawless || 0, p.flawless_runs);
+    const pp = p.practice_progress;
+    if (pp && typeof pp === "object") {
+      const cc = { ...(local.chapterCorrect || {}) };
+      for (const [ch, ids] of Object.entries(pp.chapterCorrect || {})) cc[ch] = union(cc[ch], ids);
+      out.chapterCorrect = cc;
+      const gc = { ...(local.genCursor || {}) };
+      for (const [ch, n] of Object.entries(pp.genCursor || {})) gc[ch] = Math.max(gc[ch] || 0, clampInt(n, 0, 1e7));
+      out.genCursor = gc;
+      // Missed on either device: they come back first in review until answered right.
+      out.missed = union(local.missed, pp.missed);
+    }
+    const f = p.focus_state;
+    if (f && typeof f === "object" && (Number(f.at) || 0) > (local.updatedAt || 0)) {
+      out.focus = clampInt(f.focus, 0, 100);
+      out.focusStreak = clampInt(f.streak, 0, 1);
+      if (Number(f.resetAt) > 0) out.focusResetAt = Number(f.resetAt);
+    }
+    return out;
   }
 
   const union = (a, b) => [...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])].filter((x) => typeof x === "string");
@@ -285,6 +367,7 @@
         }
       }
     }
+    if (p) Object.assign(out, mergePractice(local, p));
     const s = cloud.settings;
     if (s) {
       if (s.selected_theme) out.themeId = s.selected_theme;
@@ -305,6 +388,24 @@
       out.castChosen = true;
     }
     return out;
+  }
+
+  // ======================================================================
+  // Feedback ("Suggest a Feature / Report a Bug"): write-only, guests too.
+  // Throws when the site has no backend or the network is down; the caller
+  // keeps the entry and retries later. A repeat of the same entry is ignored.
+  // ======================================================================
+  async function sendFeedback(entry) {
+    requireClient();
+    const u = user();
+    const { error } = await client.from("feedback").insert({
+      user_id: u ? u.id : null,
+      kind: entry.kind === "bug" ? "bug" : "feature",
+      body: String(entry.text || "").slice(0, 1000),
+      view: String(entry.view || "").slice(0, 20),
+      client_id: String(entry.id || "").slice(0, 40),
+    });
+    if (error && error.code !== "23505") throw friendly(error); // 23505: already sent
   }
 
   // ======================================================================
@@ -571,6 +672,8 @@
   SW.auth = {
     init,
     available,
+    configured,
+    sendFeedback,
     reason,
     user,
     onChange,

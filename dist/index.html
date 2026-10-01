@@ -1560,6 +1560,7 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
 .lane-track {
   position: relative;
   height: 2rem;
+  border-bottom: 2px dashed var(--good);
   border-bottom: 2px dashed color-mix(in srgb, var(--good) 45%, transparent);
   /* five step ticks */
   background-image: linear-gradient(to right, color-mix(in srgb, var(--good) 30%, transparent) 1px, transparent 1px);
@@ -1808,7 +1809,7 @@ body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(
 /* High-Barrier Shop */
 .shop-tier h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .price-tag { font-size: 0.85rem; padding: 2px 10px; border-radius: 999px; color: var(--spark); background: var(--spark-bg); font-variant-numeric: tabular-nums; }
-.silk-swatch { border-radius: 10px; background: color-mix(in srgb, var(--silk, var(--volt)) 28%, transparent); }
+.silk-swatch { border-radius: 10px; background: var(--surface-2); background: color-mix(in srgb, var(--silk, var(--volt)) 28%, transparent); }
 .shop-info .fmeter { margin-top: 4px; }
 
 /* Vault: card status chips and toggles; rule line in explanations */
@@ -2018,7 +2019,7 @@ body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(
 .test-dots button.done { background: var(--volt); border-color: var(--volt); color: var(--volt-ink); }
 .test-dots button.on { outline: 3px solid var(--flame-2); outline-offset: 1px; }
 .test-card { min-height: 0; padding-block: 0; }
-.choice.picked { border-color: var(--volt); background: color-mix(in srgb, var(--volt) 12%, var(--surface)); }
+.choice.picked { border-color: var(--volt); background: var(--surface-2); background: color-mix(in srgb, var(--volt) 12%, var(--surface)); }
 .choice.picked .letter { border-color: var(--volt); background: var(--volt); color: var(--volt-ink); }
 .test-nav { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
 .center { text-align: center; }
@@ -2304,6 +2305,11 @@ kbd {
    and sync status live in Profile (tap the avatar). */
 @media (max-width: 340px) { #hud-account { display: none; } }
 .rule-acc .ch-badge { flex: none; white-space: nowrap; }
+
+/* Older Safari (before 16.2) has no color-mix(): a steady ring instead of the glow. */
+@supports not (color: color-mix(in srgb, red 50%, white)) {
+  .trophy.recent { animation: none; box-shadow: 0 0 0 3px var(--flame-2); }
+}
 
 </style>
 </head>
@@ -11425,6 +11431,9 @@ window.SatWizz.curriculum.addChapter({
   }
 
   const available = () => client !== null;
+  // Has this copy of the site been given Supabase keys (js/config.js)?
+  // Without them it's a guest-only site: no sign-up buttons anywhere.
+  const configured = () => Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey);
   const reason = () => unavailableReason;
   const user = () => (session && session.user) || null;
 
@@ -11516,6 +11525,13 @@ window.SatWizz.curriculum.addChapter({
         unlocked_avatars: state.unlockedAvatars,
         combo_savers: state.comboSavers,
         vocab_progress: state.vocab,
+        // Tests, practice sets, Trophy Case and practice progress (schema.sql)
+        chapter_tests: state.tests || {},
+        practice_sets: state.practiceSets || {},
+        badge_times: state.badgeAt || {},
+        flawless_runs: Math.max(0, Math.round(state.flawless || 0)),
+        practice_progress: { chapterCorrect: state.chapterCorrect || {}, missed: state.missed || [], genCursor: state.genCursor || {} },
+        focus_state: { focus: state.focus, streak: state.focusStreak || 0, resetAt: state.focusResetAt || 0, at: state.updatedAt || 0 },
         updated_at: now,
       },
       settings: {
@@ -11542,13 +11558,30 @@ window.SatWizz.curriculum.addChapter({
     return { profile: p.data, settings: s.data };
   }
 
+  // Columns added with the Dashboard / Trophy Case (see supabase/schema.sql).
+  const NEW_COLUMNS = ["chapter_tests", "practice_sets", "badge_times", "flawless_runs", "practice_progress", "focus_state"];
+  let legacySchema = false;
+
   async function push(state) {
     requireClient();
     const u = user();
     if (!u) return;
     const rows = toRows(state, u);
+    if (legacySchema) for (const k of NEW_COLUMNS) delete rows.profile[k];
+    const upsertProfile = async () => {
+      const res = await client.from("profiles").upsert(rows.profile, { onConflict: "user_id" });
+      // A project set up with an older schema.sql lacks the newer columns:
+      // sync the rest instead of failing, and say how to fix it.
+      if (res.error && !legacySchema && /column|schema cache/i.test(res.error.message || "")) {
+        legacySchema = true;
+        console.warn("SatWizz: re-run supabase/schema.sql to sync tests, Trophy Case dates and practice progress.", res.error.message);
+        for (const k of NEW_COLUMNS) delete rows.profile[k];
+        return client.from("profiles").upsert(rows.profile, { onConflict: "user_id" });
+      }
+      return res;
+    };
     const [a, b, c] = await Promise.all([
-      client.from("profiles").upsert(rows.profile, { onConflict: "user_id" }),
+      upsertProfile(),
       client.from("user_settings").upsert(rows.settings, { onConflict: "user_id" }),
       client.from("user_public").upsert(publicRow(state, u), { onConflict: "user_id" }),
     ]);
@@ -11595,6 +11628,61 @@ window.SatWizz.curriculum.addChapter({
         setStatus("error");
       }
     }, PUSH_DELAY_MS);
+  }
+
+  // Test scores and practice sets: per chapter, the best score and attempts
+  // are the max, "passed" sticks, and the newer side's last score wins.
+  function mergeScores(a, b) {
+    const out = {};
+    const x = a && typeof a === "object" ? a : {};
+    const y = b && typeof b === "object" ? b : {};
+    for (const k of new Set([...Object.keys(x), ...Object.keys(y)])) {
+      const l = x[k] || {};
+      const r = y[k] || {};
+      const newer = (r.at || 0) > (l.at || 0) ? r : l;
+      out[k] = {
+        best: Math.max(l.best || 0, r.best || 0),
+        last: newer.last || 0,
+        n: newer.n || l.n || r.n || 10,
+        passed: Boolean(l.passed || r.passed),
+        attempts: Math.max(l.attempts || 0, r.attempts || 0),
+        at: Math.max(l.at || 0, r.at || 0),
+      };
+    }
+    return out;
+  }
+
+  // The newer columns: tests, practice sets, badge times, flawless runs,
+  // per-question progress and Focus. Missing columns (an older schema) are
+  // simply skipped, so local progress is never lost.
+  function mergePractice(local, p) {
+    const out = {};
+    if (p.chapter_tests) out.tests = mergeScores(local.tests, p.chapter_tests);
+    if (p.practice_sets) out.practiceSets = mergeScores(local.practiceSets, p.practice_sets);
+    if (p.badge_times && typeof p.badge_times === "object") {
+      const t = { ...(local.badgeAt || {}) };
+      for (const [id, ms] of Object.entries(p.badge_times)) if (Number(ms) > 0) t[id] = t[id] ? Math.min(t[id], Number(ms)) : Number(ms); // earliest unlock
+      out.badgeAt = t;
+    }
+    if (typeof p.flawless_runs === "number") out.flawless = Math.max(local.flawless || 0, p.flawless_runs);
+    const pp = p.practice_progress;
+    if (pp && typeof pp === "object") {
+      const cc = { ...(local.chapterCorrect || {}) };
+      for (const [ch, ids] of Object.entries(pp.chapterCorrect || {})) cc[ch] = union(cc[ch], ids);
+      out.chapterCorrect = cc;
+      const gc = { ...(local.genCursor || {}) };
+      for (const [ch, n] of Object.entries(pp.genCursor || {})) gc[ch] = Math.max(gc[ch] || 0, clampInt(n, 0, 1e7));
+      out.genCursor = gc;
+      // Missed on either device: they come back first in review until answered right.
+      out.missed = union(local.missed, pp.missed);
+    }
+    const f = p.focus_state;
+    if (f && typeof f === "object" && (Number(f.at) || 0) > (local.updatedAt || 0)) {
+      out.focus = clampInt(f.focus, 0, 100);
+      out.focusStreak = clampInt(f.streak, 0, 1);
+      if (Number(f.resetAt) > 0) out.focusResetAt = Number(f.resetAt);
+    }
+    return out;
   }
 
   const union = (a, b) => [...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])].filter((x) => typeof x === "string");
@@ -11671,6 +11759,7 @@ window.SatWizz.curriculum.addChapter({
         }
       }
     }
+    if (p) Object.assign(out, mergePractice(local, p));
     const s = cloud.settings;
     if (s) {
       if (s.selected_theme) out.themeId = s.selected_theme;
@@ -11691,6 +11780,24 @@ window.SatWizz.curriculum.addChapter({
       out.castChosen = true;
     }
     return out;
+  }
+
+  // ======================================================================
+  // Feedback ("Suggest a Feature / Report a Bug"): write-only, guests too.
+  // Throws when the site has no backend or the network is down; the caller
+  // keeps the entry and retries later. A repeat of the same entry is ignored.
+  // ======================================================================
+  async function sendFeedback(entry) {
+    requireClient();
+    const u = user();
+    const { error } = await client.from("feedback").insert({
+      user_id: u ? u.id : null,
+      kind: entry.kind === "bug" ? "bug" : "feature",
+      body: String(entry.text || "").slice(0, 1000),
+      view: String(entry.view || "").slice(0, 20),
+      client_id: String(entry.id || "").slice(0, 40),
+    });
+    if (error && error.code !== "23505") throw friendly(error); // 23505: already sent
   }
 
   // ======================================================================
@@ -11957,6 +12064,8 @@ window.SatWizz.curriculum.addChapter({
   SW.auth = {
     init,
     available,
+    configured,
+    sendFeedback,
     reason,
     user,
     onChange,
@@ -12585,6 +12694,9 @@ window.SatWizz.curriculum.addChapter({
   const FOCUS = SW.focus; // the 0-100% Focus Meter (js/focus.js)
   const REVIEW_LENGTH = FOCUS.RULES.restoreStreak; // Focus Break: this many right in a row
 
+  // Deep copy of plain data. structuredClone is missing on iOS before 15.4.
+  const clone = (o) => (typeof structuredClone === "function" ? structuredClone(o) : JSON.parse(JSON.stringify(o)));
+
   // ---------- State ----------
   const DEFAULTS = {
     name: "",
@@ -12662,7 +12774,7 @@ window.SatWizz.curriculum.addChapter({
   if (!S.genSeed) S.genSeed = (Math.floor(Math.random() * 2 ** 31) || 1);
 
   function normalize(saved) {
-    const s = { ...structuredClone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
+    const s = { ...clone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
     if (!Array.isArray(s.unlockedThemes)) s.unlockedThemes = [];
     if (!Array.isArray(s.badges)) s.badges = [];
     if (!Array.isArray(s.missed)) s.missed = [];
@@ -12718,7 +12830,7 @@ window.SatWizz.curriculum.addChapter({
       const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_STORE_KEY);
       if (raw) return normalize(JSON.parse(raw));
     } catch (e) { /* storage unavailable: start fresh */ }
-    return structuredClone(DEFAULTS);
+    return clone(DEFAULTS);
   }
 
   // touch=false for bookkeeping (day rollover) so a stale device doesn't look
@@ -12739,7 +12851,7 @@ window.SatWizz.curriculum.addChapter({
       badgeTimer = null;
       const fresh = rewards.checkBadges(S, {});
       if (!fresh.length) return;
-      save();
+      save(false); // derived from progress already saved: not a newer change
       announceBadges(fresh);
       if (currentView === "you" && youTab === "profile") renderStreak();
     }, 0);
@@ -13347,8 +13459,11 @@ window.SatWizz.curriculum.addChapter({
   function startChapter(id) {
     if (id !== REVIEW_ID && !isUnlocked(id)) return;
     if (id === REVIEW_ID && !reviewOpen()) return;
+    // Reopening the same chapter (e.g. at start-up) isn't a change worth
+    // syncing, so it doesn't make this device look newer than the cloud.
+    const changed = S.chapterId !== id;
     S.chapterId = id;
-    save();
+    save(changed);
     feed.innerHTML = "";
     served = 0;
     cardCount = 0;
@@ -14468,6 +14583,33 @@ window.SatWizz.curriculum.addChapter({
       return [];
     }
   };
+  const writeFeedback = (list) => { try { localStorage.setItem(FEEDBACK_KEY, JSON.stringify(list)); } catch (e) { /* storage blocked */ } };
+  // Sends entries not sent yet (Supabase "feedback" table). Returns how many
+  // went out; quietly does nothing on a guest-only site or offline.
+  let flushing = false;
+  async function flushFeedback() {
+    if (flushing || !auth.available() || !navigator.onLine) return 0;
+    flushing = true;
+    let sent = 0;
+    try {
+      const list = readFeedback();
+      for (const f of list.filter((x) => !x.sent)) {
+        try {
+          await auth.sendFeedback(f);
+          f.sent = true;
+          sent++;
+        } catch (e) {
+          break; // offline or no table yet: try again later
+        }
+      }
+      if (sent) writeFeedback(list);
+    } finally {
+      flushing = false;
+    }
+    return sent;
+  }
+  window.addEventListener("online", () => flushFeedback());
+
   let helpSheet = null;
   let helpReturn = null;
 
@@ -14546,7 +14688,7 @@ window.SatWizz.curriculum.addChapter({
       e.preventDefault();
       box.querySelector(a.getAttribute("href")).scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
     }));
-    box.querySelector("#feedback-form").addEventListener("submit", (e) => {
+    box.querySelector("#feedback-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const ta = box.querySelector("#fb-text");
       const text = ta.value.trim();
@@ -14556,12 +14698,22 @@ window.SatWizz.curriculum.addChapter({
         return;
       }
       const list = readFeedback();
-      list.push({ id: `fb-${Date.now().toString(36)}`, at: new Date().toISOString(), kind: box.querySelector('[name="fb-kind"]:checked').value, text: text.slice(0, 1000), view: currentView });
-      try { localStorage.setItem(FEEDBACK_KEY, JSON.stringify(list)); } catch (err) { /* storage blocked: still thank them */ }
+      const entry = { id: `fb-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), kind: box.querySelector('[name="fb-kind"]:checked').value, text: text.slice(0, 1000), view: currentView, sent: false };
+      list.push(entry);
+      writeFeedback(list); // saved locally first, so nothing is lost offline
       ta.value = "";
       box.querySelector("#fb-count").textContent = `${list.length} saved on this device`;
       sfx.play("correct");
-      toast("Thanks! Your suggestion has been saved locally.");
+      if (!auth.configured()) {
+        toast("Thanks! Your suggestion has been saved locally.");
+        return;
+      }
+      const btn = box.querySelector("#fb-submit");
+      btn.disabled = true;
+      await flushFeedback();
+      btn.disabled = false;
+      const sent = readFeedback().find((f) => f.id === entry.id)?.sent;
+      toast(sent ? "Thanks! Your suggestion was sent to the SatWizz team." : "Thanks! Your suggestion has been saved locally. It'll send when you're back online.");
     });
     if (section) box.querySelector(`#help-${section}`)?.scrollIntoView({ block: "start" });
     (section === "feedback" ? box.querySelector("#fb-text") : box.querySelector("[data-close]")).focus({ preventScroll: Boolean(section) });
@@ -15012,6 +15164,7 @@ window.SatWizz.curriculum.addChapter({
   // ---------- Personalize view ----------
   function renderYou() {
     const v = $("#view-you");
+    if (youTab === "leaderboard" && !auth.configured()) youTab = "profile"; // leaderboards need accounts
     const c = S.custom;
     const proOpts = (sel) => ["he", "she", "they"].map((p) => `<option value="${p}" ${p === sel ? "selected" : ""}>${p}</option>`).join("");
     // Accuracy per chapter, in curriculum order (skills are tagged with their chapter).
@@ -15031,7 +15184,7 @@ window.SatWizz.curriculum.addChapter({
 
     const tabsHtml = `
       <div class="seg subtabs you-tabs" role="tablist" aria-label="Profile sections">
-        ${[["profile", "✏️", "Edit Profile", "Profile"], ["settings", "⚙️", "Settings", "Settings"], ["leaderboard", "🏆", "Leaderboard", "Leaders"]]
+        ${[["profile", "✏️", "Edit Profile", "Profile"], ["settings", "⚙️", "Settings", "Settings"], ...(auth.configured() ? [["leaderboard", "🏆", "Leaderboard", "Leaders"]] : [])]
           .map(([id, ico, long, short]) => `<button type="button" role="tab" data-you="${id}" aria-selected="${youTab === id}" aria-label="${long}"><span aria-hidden="true">${ico} <span class="lbl-long">${long}</span><span class="lbl-short">${short}</span></span></button>`).join("")}
       </div>`;
     const wireTabs = () => v.querySelectorAll("[data-you]").forEach((b) => b.addEventListener("click", () => {
@@ -15098,7 +15251,7 @@ window.SatWizz.curriculum.addChapter({
         $("#reset-no", v).addEventListener("click", renderYou);
         $("#reset-yes", v).addEventListener("click", () => {
           const keepUser = S.syncedUserId;
-          S = structuredClone(DEFAULTS);
+          S = clone(DEFAULTS);
           S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
           save();
           renderHud();
@@ -15221,7 +15374,7 @@ window.SatWizz.curriculum.addChapter({
       : "Profile (guest)");
     av.title = u ? `${u.email} · ${SYNC_LABEL[st]}` : "Your profile";
     const btn = $("#hud-account");
-    btn.hidden = Boolean(u);
+    btn.hidden = Boolean(u) || !auth.configured(); // guest-only site: nothing to sign up for
     btn.title = "Save progress to an account";
     btn.setAttribute("aria-label", "Save progress");
   }
@@ -15269,8 +15422,10 @@ window.SatWizz.curriculum.addChapter({
            </form>
            <p class="sync-line" data-status="${auth.status()}">☁︎ ${esc(SYNC_LABEL[auth.status()])}</p>
            <div class="row"><button class="btn ghost" type="button" id="signout-btn">Sign out</button></div>`
-        : `<p class="muted">Sign up to sync your streak, Sparks, unlocks, avatar and cast across devices, and to join leaderboards.</p>
-           <div class="row"><button class="btn" type="button" id="save-progress-btn">Save Progress</button></div>`}
+        : auth.configured()
+          ? `<p class="muted">Sign up to sync your streak, Sparks, unlocks, avatar and cast across devices, and to join leaderboards.</p>
+           <div class="row"><button class="btn" type="button" id="save-progress-btn">Save Progress</button></div>`
+          : '<p class="muted">Everything you earn is saved in this browser automatically. Use the same browser on this device to keep your progress.</p>'}
       <span class="label-sm">Profile picture</span>
       <div class="avatar-grid">${grid}</div>`;
 
@@ -15335,7 +15490,7 @@ window.SatWizz.curriculum.addChapter({
         }
       });
     } else {
-      $("#save-progress-btn", panel).addEventListener("click", () => openSignup("save"));
+      $("#save-progress-btn", panel)?.addEventListener("click", () => openSignup("save"));
     }
   }
 
@@ -15356,6 +15511,10 @@ window.SatWizz.curriculum.addChapter({
       sfx.buzz(50);
     });
     const slot = $("#set-push", panel);
+    if (!auth.configured()) {
+      slot.remove(); // friend alerts need accounts
+      return;
+    }
     if (!auth.user()) {
       slot.innerHTML = '<p class="muted">🔔 Sign in to get Lock In alerts from friends.</p>';
       return;
@@ -15591,6 +15750,7 @@ window.SatWizz.curriculum.addChapter({
   auth.init();
   focusTick();
   setInterval(focusTick, 60 * 1000);
+  setTimeout(() => flushFeedback(), 3000); // feedback written while offline
   // First run of the Trophy Case: award what existing progress has already
   // earned, quietly, with one toast instead of a celebration for each.
   if (!S.trophySeeded) {

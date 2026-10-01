@@ -365,7 +365,7 @@ node scripts/build-derby.js
 - **Keyboard (everywhere):** <kbd>A</kbd>–<kbd>D</kbd> or <kbd>1</kbd>–<kbd>4</kbd> answer the question on screen in practice, tests, Vocab sprints, the Focus Break review and the Derby. <kbd>Space</kbd> or <kbd>Enter</kbd> continues (the explanation drawer, the next question, test Next/Submit, the Derby's Next). <kbd>←</kbd>/<kbd>→</kbd> move through a test. <kbd>Esc</kbd> closes panels. <kbd>?</kbd> opens Help. On a focused button, Space/Enter press that button as usual. Space/Enter never buys anything (the Focus Elixir needs a click).
 - **Hotkey hints:** on desktop (a mouse and a window at least 700px wide), each answer choice shows a small A–D keycap on its right. Phones don't show them.
 - **❓ Help overlay** (header button or <kbd>?</kbd>): How to Play (Focus, Sparks, chapter unlocks, streaks, Vault, Trophy Case), a Keyboard Controls cheat sheet, and an SAT Grammar Rules cheat sheet (an accordion with each chapter's rules, filled in with your cast). <kbd>Esc</kbd> or ✕ closes it.
-- **Suggest a Feature / Report a Bug:** a form in Help (also reachable from Profile → Settings → Help & feedback). Pick 💡 Feature idea or 🐞 Bug report, type, and Submit Feedback. Entries are saved to `localStorage` under `satwizz.feedback` as an array of `{ id, at, kind, text, view }`, and a toast says "Thanks! Your suggestion has been saved locally." Nothing is sent anywhere yet.
+- **Suggest a Feature / Report a Bug:** a form in Help (also reachable from Profile → Settings → Help & feedback). Pick 💡 Feature idea or 🐞 Bug report, type, and Submit Feedback. Each entry is saved first to `localStorage` under `satwizz.feedback` (an array of `{ id, at, kind, text, view, sent }`). With Supabase set up, it's then sent to your `feedback` table ("Thanks! Your suggestion was sent to the SatWizz team."); offline, it waits and sends later. On a guest-only copy of the site it stays in the browser ("Thanks! Your suggestion has been saved locally.").
 
 ## Social
 
@@ -385,16 +385,24 @@ python3 -m http.server 8000   # then open http://localhost:8000
 
 Without Supabase settings it runs in guest mode, and progress stays in `localStorage`.
 
-## Set up Supabase (accounts, sync, leaderboards, friends)
+## Set up Supabase (accounts, sync, leaderboards, friends, feedback)
+
+**Without Supabase keys the website runs guest-only.** Everything works and saves in each visitor's browser, but there are no accounts. The header has no Save/sign-up button, Profile has no Leaderboard tab, and feedback stays in the browser that wrote it. Add the keys (steps below) to turn on accounts, cross-device sync, leaderboards, friends and feedback collection.
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. In **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql). It's safe to re-run. **Existing projects must re-run it** to add the social tables and the `vocab_progress` column.
+2. In **SQL Editor**, run [`supabase/schema.sql`](supabase/schema.sql). It's safe to re-run. **Existing projects must re-run it** to add the newer tables and columns. Until you do, the site still syncs everything else and logs "re-run supabase/schema.sql" in the browser console.
    - It creates `profiles` and `user_settings` (private sync), `user_public` (leaderboard cards), `friendships` (with the friend streak), `lock_ins` and `push_subscriptions`.
    - It adds row-level security and the functions `send_friend_request`, `respond_friend_request`, `record_practice` and `send_lock_in`.
    - It adds `lock_ins` to Supabase Realtime.
+   - It adds the columns that sync the Dashboard and Trophy Case between devices: `chapter_tests`, `practice_sets`, `badge_times`, `flawless_runs`, `practice_progress` (right answers, missed questions and the no-repeat question order) and `focus_state`.
+   - It creates the write-only **`feedback`** table (see below).
 3. Put the **Project URL** and **anon public key** (from **Project Settings → API**) in [`js/config.js`](js/config.js).
 4. In **Authentication → URL Configuration**, add your site's URL to **Redirect URLs**.
 5. For Google sign-in, enable **Authentication → Providers → Google** with an OAuth client from Google Cloud.
+
+**Reading feedback.** Suggestions and bug reports from the Help overlay go to **Table Editor → feedback** (`kind` is `feature` or `bug`, plus the text, the screen it was sent from, the time, and the user id for signed-in visitors). Anyone can add a row, guests included, but nobody can read the table from the website; only you can, in the dashboard. Entries written offline are kept in the browser and sent on the next visit or when the connection returns, never twice.
+
+**Sync rules.** Test and practice-set scores: best score and attempts take the max, and a pass sticks. Trophy Case: badges are united and the earliest unlock date is kept. Right answers and missed questions are united, and the no-repeat question position takes the max, so a second device doesn't repeat questions. Focus: the most recently used device wins. Just opening the site, or unlocking a badge from progress you already had, doesn't count as a newer change.
 
 **What's public:** `user_public` holds only the display name, @username, avatar, XP, Sparks, streak and last-practice time. Every signed-in user can read it, because leaderboards and friend search need it. Everything else is readable only by its owner. Friendships can't be written directly: requests, accepts, streaks and Lock Ins all go through the checked SQL functions.
 

@@ -24,6 +24,9 @@
   const FOCUS = SW.focus; // the 0-100% Focus Meter (js/focus.js)
   const REVIEW_LENGTH = FOCUS.RULES.restoreStreak; // Focus Break: this many right in a row
 
+  // Deep copy of plain data. structuredClone is missing on iOS before 15.4.
+  const clone = (o) => (typeof structuredClone === "function" ? structuredClone(o) : JSON.parse(JSON.stringify(o)));
+
   // ---------- State ----------
   const DEFAULTS = {
     name: "",
@@ -101,7 +104,7 @@
   if (!S.genSeed) S.genSeed = (Math.floor(Math.random() * 2 ** 31) || 1);
 
   function normalize(saved) {
-    const s = { ...structuredClone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
+    const s = { ...clone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
     if (!Array.isArray(s.unlockedThemes)) s.unlockedThemes = [];
     if (!Array.isArray(s.badges)) s.badges = [];
     if (!Array.isArray(s.missed)) s.missed = [];
@@ -157,7 +160,7 @@
       const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem(LEGACY_STORE_KEY);
       if (raw) return normalize(JSON.parse(raw));
     } catch (e) { /* storage unavailable: start fresh */ }
-    return structuredClone(DEFAULTS);
+    return clone(DEFAULTS);
   }
 
   // touch=false for bookkeeping (day rollover) so a stale device doesn't look
@@ -178,7 +181,7 @@
       badgeTimer = null;
       const fresh = rewards.checkBadges(S, {});
       if (!fresh.length) return;
-      save();
+      save(false); // derived from progress already saved: not a newer change
       announceBadges(fresh);
       if (currentView === "you" && youTab === "profile") renderStreak();
     }, 0);
@@ -786,8 +789,11 @@
   function startChapter(id) {
     if (id !== REVIEW_ID && !isUnlocked(id)) return;
     if (id === REVIEW_ID && !reviewOpen()) return;
+    // Reopening the same chapter (e.g. at start-up) isn't a change worth
+    // syncing, so it doesn't make this device look newer than the cloud.
+    const changed = S.chapterId !== id;
     S.chapterId = id;
-    save();
+    save(changed);
     feed.innerHTML = "";
     served = 0;
     cardCount = 0;
@@ -1907,6 +1913,33 @@
       return [];
     }
   };
+  const writeFeedback = (list) => { try { localStorage.setItem(FEEDBACK_KEY, JSON.stringify(list)); } catch (e) { /* storage blocked */ } };
+  // Sends entries not sent yet (Supabase "feedback" table). Returns how many
+  // went out; quietly does nothing on a guest-only site or offline.
+  let flushing = false;
+  async function flushFeedback() {
+    if (flushing || !auth.available() || !navigator.onLine) return 0;
+    flushing = true;
+    let sent = 0;
+    try {
+      const list = readFeedback();
+      for (const f of list.filter((x) => !x.sent)) {
+        try {
+          await auth.sendFeedback(f);
+          f.sent = true;
+          sent++;
+        } catch (e) {
+          break; // offline or no table yet: try again later
+        }
+      }
+      if (sent) writeFeedback(list);
+    } finally {
+      flushing = false;
+    }
+    return sent;
+  }
+  window.addEventListener("online", () => flushFeedback());
+
   let helpSheet = null;
   let helpReturn = null;
 
@@ -1985,7 +2018,7 @@
       e.preventDefault();
       box.querySelector(a.getAttribute("href")).scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
     }));
-    box.querySelector("#feedback-form").addEventListener("submit", (e) => {
+    box.querySelector("#feedback-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const ta = box.querySelector("#fb-text");
       const text = ta.value.trim();
@@ -1995,12 +2028,22 @@
         return;
       }
       const list = readFeedback();
-      list.push({ id: `fb-${Date.now().toString(36)}`, at: new Date().toISOString(), kind: box.querySelector('[name="fb-kind"]:checked').value, text: text.slice(0, 1000), view: currentView });
-      try { localStorage.setItem(FEEDBACK_KEY, JSON.stringify(list)); } catch (err) { /* storage blocked: still thank them */ }
+      const entry = { id: `fb-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, at: new Date().toISOString(), kind: box.querySelector('[name="fb-kind"]:checked').value, text: text.slice(0, 1000), view: currentView, sent: false };
+      list.push(entry);
+      writeFeedback(list); // saved locally first, so nothing is lost offline
       ta.value = "";
       box.querySelector("#fb-count").textContent = `${list.length} saved on this device`;
       sfx.play("correct");
-      toast("Thanks! Your suggestion has been saved locally.");
+      if (!auth.configured()) {
+        toast("Thanks! Your suggestion has been saved locally.");
+        return;
+      }
+      const btn = box.querySelector("#fb-submit");
+      btn.disabled = true;
+      await flushFeedback();
+      btn.disabled = false;
+      const sent = readFeedback().find((f) => f.id === entry.id)?.sent;
+      toast(sent ? "Thanks! Your suggestion was sent to the SatWizz team." : "Thanks! Your suggestion has been saved locally. It'll send when you're back online.");
     });
     if (section) box.querySelector(`#help-${section}`)?.scrollIntoView({ block: "start" });
     (section === "feedback" ? box.querySelector("#fb-text") : box.querySelector("[data-close]")).focus({ preventScroll: Boolean(section) });
@@ -2451,6 +2494,7 @@
   // ---------- Personalize view ----------
   function renderYou() {
     const v = $("#view-you");
+    if (youTab === "leaderboard" && !auth.configured()) youTab = "profile"; // leaderboards need accounts
     const c = S.custom;
     const proOpts = (sel) => ["he", "she", "they"].map((p) => `<option value="${p}" ${p === sel ? "selected" : ""}>${p}</option>`).join("");
     // Accuracy per chapter, in curriculum order (skills are tagged with their chapter).
@@ -2470,7 +2514,7 @@
 
     const tabsHtml = `
       <div class="seg subtabs you-tabs" role="tablist" aria-label="Profile sections">
-        ${[["profile", "✏️", "Edit Profile", "Profile"], ["settings", "⚙️", "Settings", "Settings"], ["leaderboard", "🏆", "Leaderboard", "Leaders"]]
+        ${[["profile", "✏️", "Edit Profile", "Profile"], ["settings", "⚙️", "Settings", "Settings"], ...(auth.configured() ? [["leaderboard", "🏆", "Leaderboard", "Leaders"]] : [])]
           .map(([id, ico, long, short]) => `<button type="button" role="tab" data-you="${id}" aria-selected="${youTab === id}" aria-label="${long}"><span aria-hidden="true">${ico} <span class="lbl-long">${long}</span><span class="lbl-short">${short}</span></span></button>`).join("")}
       </div>`;
     const wireTabs = () => v.querySelectorAll("[data-you]").forEach((b) => b.addEventListener("click", () => {
@@ -2537,7 +2581,7 @@
         $("#reset-no", v).addEventListener("click", renderYou);
         $("#reset-yes", v).addEventListener("click", () => {
           const keepUser = S.syncedUserId;
-          S = structuredClone(DEFAULTS);
+          S = clone(DEFAULTS);
           S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
           save();
           renderHud();
@@ -2660,7 +2704,7 @@
       : "Profile (guest)");
     av.title = u ? `${u.email} · ${SYNC_LABEL[st]}` : "Your profile";
     const btn = $("#hud-account");
-    btn.hidden = Boolean(u);
+    btn.hidden = Boolean(u) || !auth.configured(); // guest-only site: nothing to sign up for
     btn.title = "Save progress to an account";
     btn.setAttribute("aria-label", "Save progress");
   }
@@ -2708,8 +2752,10 @@
            </form>
            <p class="sync-line" data-status="${auth.status()}">☁︎ ${esc(SYNC_LABEL[auth.status()])}</p>
            <div class="row"><button class="btn ghost" type="button" id="signout-btn">Sign out</button></div>`
-        : `<p class="muted">Sign up to sync your streak, Sparks, unlocks, avatar and cast across devices, and to join leaderboards.</p>
-           <div class="row"><button class="btn" type="button" id="save-progress-btn">Save Progress</button></div>`}
+        : auth.configured()
+          ? `<p class="muted">Sign up to sync your streak, Sparks, unlocks, avatar and cast across devices, and to join leaderboards.</p>
+           <div class="row"><button class="btn" type="button" id="save-progress-btn">Save Progress</button></div>`
+          : '<p class="muted">Everything you earn is saved in this browser automatically. Use the same browser on this device to keep your progress.</p>'}
       <span class="label-sm">Profile picture</span>
       <div class="avatar-grid">${grid}</div>`;
 
@@ -2774,7 +2820,7 @@
         }
       });
     } else {
-      $("#save-progress-btn", panel).addEventListener("click", () => openSignup("save"));
+      $("#save-progress-btn", panel)?.addEventListener("click", () => openSignup("save"));
     }
   }
 
@@ -2795,6 +2841,10 @@
       sfx.buzz(50);
     });
     const slot = $("#set-push", panel);
+    if (!auth.configured()) {
+      slot.remove(); // friend alerts need accounts
+      return;
+    }
     if (!auth.user()) {
       slot.innerHTML = '<p class="muted">🔔 Sign in to get Lock In alerts from friends.</p>';
       return;
@@ -3030,6 +3080,7 @@
   auth.init();
   focusTick();
   setInterval(focusTick, 60 * 1000);
+  setTimeout(() => flushFeedback(), 3000); // feedback written while offline
   // First run of the Trophy Case: award what existing progress has already
   // earned, quietly, with one toast instead of a celebration for each.
   if (!S.trophySeeded) {

@@ -29,6 +29,17 @@ alter table public.profiles add column if not exists combo_savers integer not nu
 -- Vocab Vault: { words: { [id]: { tier, seen, correct, wrong, lastAt, lastDay, advancedDay, mastered } }, sprintDay, sprints }
 alter table public.profiles add column if not exists vocab_progress jsonb not null default '{}'::jsonb;
 
+-- Dashboard tests and practice sets: { [chapterId]: { best, last, n, passed, attempts, at } }
+alter table public.profiles add column if not exists chapter_tests jsonb not null default '{}'::jsonb;
+alter table public.profiles add column if not exists practice_sets jsonb not null default '{}'::jsonb;
+-- Trophy Case: { [badgeId]: ms unlocked } and the count of 10/10 sets
+alter table public.profiles add column if not exists badge_times jsonb not null default '{}'::jsonb;
+alter table public.profiles add column if not exists flawless_runs integer not null default 0;
+-- Per-question progress: { chapterCorrect: { [ch]: ids }, missed: ids, genCursor: { [ch]: n } }
+alter table public.profiles add column if not exists practice_progress jsonb not null default '{}'::jsonb;
+-- Focus Meter: { focus, streak, resetAt, at }
+alter table public.profiles add column if not exists focus_state jsonb;
+
 alter table public.profiles drop constraint if exists profiles_streak_freezes_check;
 alter table public.profiles add constraint profiles_streak_freezes_check check (streak_freezes between 0 and 5);
 alter table public.profiles drop constraint if exists profiles_sparks_check;
@@ -297,3 +308,27 @@ begin
     alter publication supabase_realtime add table public.lock_ins;
   end if;
 end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- Feedback: "Suggest a Feature / Report a Bug" (Help overlay).
+-- Anyone using the site (guest or signed in) can ADD feedback; no one can read
+-- it through the site. Read it in Supabase → Table Editor → feedback.
+-- ---------------------------------------------------------------------------
+create table if not exists public.feedback (
+  id         bigint generated always as identity primary key,
+  user_id    uuid references auth.users (id) on delete set null,
+  kind       text not null check (kind in ('feature', 'bug')),
+  body       text not null check (char_length(body) between 1 and 1000),
+  view       text check (char_length(view) <= 20),
+  client_id  text check (char_length(client_id) <= 40), -- the browser's entry id, so a retry never doubles up
+  created_at timestamptz not null default now()
+);
+create unique index if not exists feedback_client_id_key on public.feedback (client_id);
+alter table public.feedback enable row level security;
+drop policy if exists "feedback: anyone can add" on public.feedback;
+create policy "feedback: anyone can add" on public.feedback
+  for insert to anon, authenticated
+  with check (user_id is null or user_id = (select auth.uid()));
+-- No select/update/delete policies: entries are write-only from the site.
+grant insert on public.feedback to anon, authenticated;
