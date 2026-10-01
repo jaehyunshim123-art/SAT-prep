@@ -74,39 +74,42 @@ The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
   - The bet is taken at the gate, and a win pays it back **×1.5**.
   - Up to **3 betting races a day**; Fun runs are unlimited.
   - Leaving mid-race forfeits the bet, after a confirm tap.
-- **Field:** eight horses on a 5-step track. You are Galloping Lexicon. Seven rivals each have a racing style:
+- **Field:** eight horses on a 5-step track. You are Galloping Lexicon. The seven rivals are **CPU players on their own clocks**: each reads a question (10–14s, like you), then answers in its own time range at its own accuracy.
 
-  | Rival | Style |
-  |---|---|
-  | Verbal Velocity | fast starter |
-  | Grammar Galloper | steady |
-  | Syntax Sprinter | closer |
-  | Thesaurus Rex | streaky |
-  | Diction Dash | front-runner |
-  | Rhetoric Rocket | pounces on your misses |
-  | Prose Pony | underdog |
+  | Rival | Style | Answer time | Accuracy |
+  |---|---|---|---|
+  | Verbal Velocity | Fast & unsteady | 1–3s | 60% |
+  | Grammar Galloper | Slow & precise | 5–8s | 85% |
+  | Syntax Sprinter | Quick & solid | 2–4s | 66% |
+  | Thesaurus Rex | Erratic | 1–7s | 68% |
+  | Diction Dash | Balanced | 3–5s | 70% |
+  | Rhetoric Rocket | Reckless | 1–2s | 54% |
+  | Prose Pony | Careful | 6–9s | 95% |
 
-- **Turns:** each turn is one advanced question: Words in Context, definition, synonym or antonym (the antonym's trap is a synonym).
-  - **Right:** you gallop +1.
-  - **Wrong:** you're held back, lose 1 Focus, and the word is flagged 🔁.
-  - **Rivals** roll their own chance to move +1 every turn, whatever you answer. Each moves at most one step per turn and you move first, so a perfect run always wins.
+- **Turns:** each turn is one advanced question (Words in Context, definition, synonym or antonym) on a live ⏱ clock. The clock pauses if you leave the tab.
+  - The seconds you take, plus any Focus penalties, are the window in which the CPUs keep answering their own questions. Each right CPU answer moves that horse +1.
+  - A commentary log lists every CPU answer in order (e.g. "Verbal Velocity rushed an answer in 2s and missed ✗").
+  - A rival that crosses the line while you're still thinking wins.
+  - **Right:** you gallop +1. **Wrong:** you're held back, and the word is flagged 🔁.
 - **🧠 Focus** (max 3) carries between races.
-  - At 0 you're **Spooked**: right answers don't move you.
-  - Two right answers in a row restore 1 Focus. A spooked horse spends that turn recovering.
-  - A **Focus Elixir** (500 ⚡) refills Focus instantly, in the race or in the Stable.
-- **Balance:** rival speed is tuned by simulation (`PACE.scale` in `js/derby.js`):
+  - Each miss costs 1 Focus and adds a **4s stumble**.
+  - Every missing Focus bar adds **3s of hesitation** to every answer, so at 0 Focus each answer costs an extra 9s.
+  - Two right answers in a row restore 1 Focus.
+  - A **Focus Booster** (500 ⚡) refills Focus instantly, in the race or in the Stable.
+- **Balance:** CPU reading time is tuned by simulation (`CPU.read` in `js/derby.js`). With the literal clocks and no reading time, a human could never win.
 
-  | Your accuracy | Races won | Average return per bet |
+  | Your pace | Races won | At ×1.5 |
   |---|---|---|
-  | 90% | ~85% | +27% |
-  | 80% | ~67% | break-even |
-  | 70% | ~47% | −30% |
+  | 8s/question at 90% | ~92% | |
+  | 10s at 85% | ~70% | break-even |
+  | 12s at 80% | ~38% | |
+  | 15s at 75% | ~12% | |
 
 - **Results:** winner, payout, balance, Focus, final standings, and a **vocabulary review table** (word, meaning, synonyms, ✓/✗).
 - **🛍️ The Stable:** reached from the intro, the results, or the Shop tab. Prices are in real Sparks, using a higher baseline than the main Shop:
   - Jockey silks: **1,000 ⚡** (Scholar's Gold, Midnight Ink, Crimson Cadence, Emerald Essay);
   - Mounts: **1,500 ⚡** (🦄 🦓 🐉 🦌, which race in your lane);
-  - Focus Elixir and Starting Burst (start 1 step ahead): **500 ⚡** each.
+  - Focus Booster and Starting Burst (start 1 step ahead): **500 ⚡** each.
 
   Purchases need two taps. The main Shop's prices are unchanged.
 - **Practice and sync:** answers count toward the daily goal (+5 XP each). Stats, Focus, owned gear and Bursts sync in `vocab_progress.derby`.
@@ -186,7 +189,7 @@ js/themes.js                casts and avatars
 js/questions.js             curriculum framework: chapter plan, official stems, addChapter/build API
 js/curriculum/ch1-ch10.js   one file per chapter: lesson + 20 questions with per-choice notes
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
-js/derby.js                 SAT Vocabulary Derby: race rules, rivals, Focus, Stable, question generator, views
+js/derby.js                 SAT Vocabulary Derby: CPU rival engine, Focus, Stable, question generator, views
 js/rewards.js               Sparks, shop, Focus, Aura Shields, wager, badges (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push

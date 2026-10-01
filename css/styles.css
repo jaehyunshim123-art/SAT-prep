@@ -1651,6 +1651,24 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
 .stable-link { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
 .wager-chips { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 
+/* ---------- Vocab Derby: CPU commentary + clock ---------- */
+.q-timer {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font: 800 0.85rem/1.4 ui-monospace, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.race-log { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; font-size: 0.85rem; }
+.race-log:empty { display: none; }
+.race-log li { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; padding: 4px 6px; border-radius: 8px; background: var(--surface-2); line-height: 1.35; }
+.race-log li.ok { box-shadow: inset 3px 0 0 var(--good); }
+.race-log li.no { box-shadow: inset 3px 0 0 var(--bad); }
+.race-log li.muted { display: block; background: none; }
+.race-log .silk-dot { width: 1.1rem; height: 1.1rem; font-size: 0.65rem; margin-top: 1px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition: none !important; }
   .confetti { display: none; }

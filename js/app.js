@@ -1423,7 +1423,7 @@
         </section>
         <section class="panel stable-link">
           <span class="shop-icon" aria-hidden="true">🐎</span>
-          <div class="shop-info"><b>Derby Stable</b><span>Jockey silks, mounts, Focus Elixirs and Starting Bursts for the SAT Vocabulary Derby.</span></div>
+          <div class="shop-info"><b>Derby Stable</b><span>Jockey silks, mounts, Focus Boosters and Starting Bursts for the SAT Vocabulary Derby.</span></div>
           <button class="buy owned" type="button" id="goto-stable">Visit →</button>
         </section>
         <section class="panel">

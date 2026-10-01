@@ -2,21 +2,24 @@
 //
 // Flow: intro (title + rules) → START → place a bet → race → results
 // (review table, balance, Stable). The Stable sells jockey silks, mounts,
-// Focus Elixirs and Starting Bursts for real Sparks.
+// Focus Boosters and Starting Bursts for real Sparks.
 //
 //   • Bet real Sparks (50 / 100 / 250 / 500) or race for fun. The bet is taken
 //     at the gate; a win pays it back ×1.5. Up to 3 betting races a day.
-//   • Eight horses, 5 steps. Each turn is one advanced vocab question (Words
-//     in Context, definition, synonym or antonym). Right → you gallop +1.
-//     Wrong → you're held back and lose 1 Focus. Every rival rolls its own
-//     chance to move each turn, whatever you answer; each has a racing style.
-//   • 🧠 Focus (max 3) carries between races. At 0 you're Spooked: right
-//     answers don't move you. Two right answers in a row restore 1 Focus
-//     (spooked horses spend that turn recovering); a Focus Elixir refills it.
-//   • You move first, so a perfect race always wins.
+//   • Eight horses, 5 steps. You answer advanced vocab questions on a live
+//     clock; each right answer moves you +1.
+//   • The seven rivals are CPU players on their own clocks: each reads the
+//     passage, answers in its own time range, and is right at its own rate
+//     (Verbal Velocity 1–3s at 60%, Grammar Galloper 5–8s at 85%, …). While
+//     you think, they keep racing; the time you take is the window in which
+//     they attempt questions. Commentary reports every CPU answer.
+//   • 🧠 Focus (max 3) carries between races. Each miss costs 1 Focus and a
+//     4s stumble; every missing Focus bar adds 3s of hesitation to each answer.
+//     Two right in a row restore 1; a Focus Booster (500 ⚡) refills it.
 //
-// Exposes SatWizz.derby = { RULES, MODES, HORSES, STABLE, PACE, newRace, step,
-// rivalChance, makeQuestion, related, emptyStats, mergeStats, mount }.
+// Exposes SatWizz.derby = { RULES, MODES, HORSES, PROFILES, CPU, PENALTY,
+// STABLE, newRace, step, penaltyFor, makeQuestion, related, emptyStats,
+// mergeStats, mount }.
 (function () {
   "use strict";
 
@@ -34,33 +37,44 @@
     derby: { id: "derby", name: "Grand Derby", field: 8, payout: 1.5 },
   });
 
-  // Racing styles: each rival's chance to move +1 on a turn. Tuned by
-  // simulation (see README) so accuracy, not luck, decides most races.
-  const STYLES = {
-    starter: { label: "Fast starter", chance: (h, r) => (r.turn <= 2 ? 0.5 : 0.26) },
-    steady: { label: "Steady", chance: () => 0.33 },
-    closer: { label: "Closer", chance: (h, r) => (r.turn <= 3 ? 0.18 : 0.46) },
-    streaky: { label: "Streaky: speeds up after a gallop", chance: (h) => (h.hot ? 0.42 : 0.2) },
-    front: { label: "Front-runner", chance: (h, r, lead) => (h.pos >= lead ? 0.42 : 0.24) },
-    pouncer: { label: "Pounces on your misses", chance: (h, r, lead, correct) => (correct ? 0.18 : 0.52) },
-    underdog: { label: "Underdog: surges from the back", chance: (h, r, lead, correct, last) => (h.pos <= last ? 0.46 : 0.27) },
+  // ---------- CPU rivals ----------
+  // Every rival is a CPU player on its own clock. Each attempt = reading the
+  // passage (CPU.read, like you) + its answer time (min–max seconds), then it
+  // is right with probability `acc` (+1 step). Your answer time, plus any
+  // Focus penalties, is the window in which the CPUs keep racing.
+  const CPU = {
+    // Seconds a CPU spends reading each question before its answer clock.
+    // Tuned by simulation (8 horses, Focus carrying over): 8s/question at 90%
+    // wins ~92% of races, 10s at 85% ~70% (break-even at ×1.5), 12s at 80%
+    // ~38%, 15s at 75% ~12%. Without reading time, rivals win every race.
+    read: [10, 14],
+  };
+  const PROFILES = {
+    velocity: { label: "Fast & unsteady", min: 1, max: 3, acc: 0.6, rush: true },
+    galloper: { label: "Slow & precise", min: 5, max: 8, acc: 0.85 },
+    syntax: { label: "Quick & solid", min: 2, max: 4, acc: 0.66, rush: true },
+    rex: { label: "Erratic", min: 1, max: 7, acc: 0.68 },
+    diction: { label: "Balanced", min: 3, max: 5, acc: 0.7 },
+    rhetoric: { label: "Reckless", min: 1, max: 2, acc: 0.54, rush: true },
+    prose: { label: "Careful", min: 6, max: 9, acc: 0.95 },
   };
 
-  // Overall rival speed (tuned by simulation; see README).
-  // At 1.6: 90% accuracy wins ~85% of races (+27% per bet at ×1.5), 80% wins
-  // ~67% (break-even), 70% wins ~47%, 60% wins ~28%.
-  const PACE = { scale: 1.6 };
+  // Focus penalties (seconds added to your clock, during which CPUs race on).
+  const PENALTY = {
+    hesitation: 3, // per missing Focus bar, on every answer
+    stumble: 4, // extra on each wrong answer
+  };
 
   // Silks map to colors in css/styles.css (.silk-*).
   const HORSES = [
     { id: "lexicon", name: "Galloping Lexicon", short: "You", silk: "volt", you: true },
-    { id: "velocity", name: "Verbal Velocity", short: "Velocity", silk: "flame", style: "starter" },
-    { id: "galloper", name: "Grammar Galloper", short: "Galloper", silk: "good", style: "steady" },
-    { id: "syntax", name: "Syntax Sprinter", short: "Syntax", silk: "bad", style: "closer" },
-    { id: "rex", name: "Thesaurus Rex", short: "T. Rex", silk: "spark", style: "streaky" },
-    { id: "diction", name: "Diction Dash", short: "Diction", silk: "ice", style: "front" },
-    { id: "rhetoric", name: "Rhetoric Rocket", short: "Rocket", silk: "plum", style: "pouncer" },
-    { id: "prose", name: "Prose Pony", short: "Prose", silk: "slate", style: "underdog" },
+    { id: "velocity", name: "Verbal Velocity", short: "Velocity", silk: "flame" },
+    { id: "galloper", name: "Grammar Galloper", short: "Galloper", silk: "good" },
+    { id: "syntax", name: "Syntax Sprinter", short: "Syntax", silk: "bad" },
+    { id: "rex", name: "Thesaurus Rex", short: "T. Rex", silk: "spark" },
+    { id: "diction", name: "Diction Dash", short: "Diction", silk: "ice" },
+    { id: "rhetoric", name: "Rhetoric Rocket", short: "Rocket", silk: "plum" },
+    { id: "prose", name: "Prose Pony", short: "Prose", silk: "slate" },
   ];
   const HORSE = Object.fromEntries(HORSES.map((h) => [h.id, h]));
 
@@ -78,7 +92,7 @@
       { id: "dragon", name: "Dragon of Diction", emoji: "🐉", price: 1500 },
       { id: "stag", name: "Stag of Syntax", emoji: "🦌", price: 1500 },
     ],
-    elixir: { name: "Focus Elixir", price: 500 },
+    elixir: { name: "Focus Booster", price: 500 },
     burst: { name: "Starting Burst", price: 500 },
   });
 
@@ -91,65 +105,95 @@
     return a;
   };
   const pick = (arr, rand) => arr[Math.floor(rand() * arr.length)];
+  const between = (a, b, rand) => a + rand() * (b - a);
+  const round1 = (n) => Math.round(n * 10) / 10;
+
+  // One CPU attempt: how long it reads, how long it answers, and the result.
+  function attempt(id, rand) {
+    const p = PROFILES[id];
+    const read = between(CPU.read[0], CPU.read[1], rand);
+    const answer = between(p.min, p.max, rand);
+    return { read, answer, total: read + answer, correct: rand() < p.acc };
+  }
 
   // ---------- Race (pure) ----------
-  // focus/streak come from (and go back to) the saved stats.
+  // focus/streak come from (and go back to) the saved stats. `clock` is race
+  // time in seconds; each CPU has `next` (when its current attempt lands).
   function newRace(modeId, wager, wordIds, { focus = RULES.focusMax, streak = 0, burst = false } = {}, rand = Math.random) {
     const mode = MODES[modeId];
     return {
       mode: mode.id,
       wager,
-      horses: HORSES.slice(0, mode.field).map((h) => ({ id: h.id, pos: h.you && burst ? 1 : 0 })),
+      horses: HORSES.slice(0, mode.field).map((h) => {
+        if (h.you) return { id: h.id, pos: burst ? 1 : 0 };
+        const a = attempt(h.id, rand);
+        return { id: h.id, pos: 0, pending: a, next: a.total, tries: 0, hits: 0 };
+      }),
       words: wordIds.slice(),
       focus,
       streak,
+      clock: 0,
       turn: 0,
       winner: null,
     };
   }
 
-  function rivalChance(h, race, correct) {
-    const others = race.horses.filter((x) => x !== h);
-    const lead = Math.max(...others.map((x) => x.pos));
-    const last = Math.min(...others.map((x) => x.pos));
-    return Math.min(0.9, STYLES[HORSE[h.id].style].chance(h, race, lead, correct, last) * PACE.scale);
+  // Seconds this answer costs you: your time + hesitation (+ stumble if wrong).
+  function penaltyFor(focus, correct) {
+    return (RULES.focusMax - focus) * PENALTY.hesitation + (correct ? 0 : PENALTY.stumble);
   }
 
-  // Resolves one answer. Mutates the race; returns what happened, in order.
-  function step(race, correct, rand = Math.random) {
+  // Resolves one answer that took `seconds` of your time. Mutates the race.
+  // Returns { you: {...}, cpu: [{ id, at, read, answer, correct, pos }], window }.
+  function step(race, correct, seconds, rand = Math.random) {
     const L = RULES.trackLength;
     const [you, ...rivals] = race.horses;
-    const events = [];
-    const move = (h, n, kind) => {
-      h.pos = Math.min(L, h.pos + n);
-      events.push({ id: h.id, kind });
-    };
+    const penalty = penaltyFor(race.focus, correct);
+    const window = Math.max(0, seconds) + penalty;
+    const start = race.clock;
+    const end = start + window;
     race.turn += 1;
+
+    // CPUs race through the window, attempt by attempt, in time order.
+    const cpu = [];
+    let firstFinish = null;
+    for (const r of rivals) {
+      while (r.pos < L && r.next <= end) {
+        const a = r.pending;
+        r.tries += 1;
+        if (a.correct) { r.pos += 1; r.hits += 1; }
+        cpu.push({ id: r.id, at: r.next, read: a.read, answer: a.answer, correct: a.correct, pos: r.pos });
+        if (r.pos >= L && (!firstFinish || r.next < firstFinish.at)) firstFinish = { id: r.id, at: r.next };
+        r.pending = attempt(r.id, rand);
+        r.next += r.pending.total;
+      }
+    }
+    cpu.sort((a, b) => a.at - b.at);
+    race.clock = end;
+
+    // You answer at the end of your window (penalties come after a miss).
+    const youResult = { seconds: round1(seconds), penalty, correct, focusBefore: race.focus, restored: false };
     if (correct) {
       race.streak += 1;
-      if (race.focus > 0) move(you, 1, "advance");
-      else events.push({ id: you.id, kind: "spooked" }); // held while spooked
       if (race.focus < RULES.focusMax && race.streak >= RULES.focusRestoreStreak) {
         race.focus += 1;
         race.streak = 0;
-        events.push({ id: you.id, kind: "focus" });
+        youResult.restored = true;
       }
-      if (you.pos >= L) { race.winner = you.id; return events; }
     } else {
       race.streak = 0;
       race.focus = Math.max(0, race.focus - 1);
-      events.push({ id: you.id, kind: race.focus === 0 ? "spook" : "slip" });
     }
-    // Rivals roll independently, from the positions at the start of their turn.
-    const chances = rivals.map((r) => rivalChance(r, race, correct));
-    // One step at most per turn, so a perfect run (you move first) always wins.
-    rivals.forEach((r, i) => {
-      r.hot = r.pos < L && rand() < chances[i];
-      if (r.hot) move(r, 1, "gallop");
-    });
-    const finished = rivals.filter((r) => r.pos >= L);
-    if (finished.length) race.winner = pick(finished, rand).id; // photo finish
-    return events;
+    // A CPU that crossed the line while you were still answering wins.
+    const answeredAt = start + Math.max(0, seconds) + (correct ? (RULES.focusMax - youResult.focusBefore) * PENALTY.hesitation : 0);
+    if (firstFinish && (!correct || you.pos + 1 < L || firstFinish.at < answeredAt)) {
+      race.winner = firstFinish.id;
+    } else if (correct) {
+      you.pos = Math.min(L, you.pos + 1);
+      if (you.pos >= L) race.winner = you.id;
+    }
+    youResult.focusAfter = race.focus;
+    return { you: youResult, cpu, window };
   }
 
   // ---------- Questions (pure) ----------
@@ -288,6 +332,29 @@
     const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
     const mode = MODES.derby;
 
+    // Your answer clock: counts while a question is open and visible, and
+    // pauses when the tab is hidden or you switch away from the Vocab tab.
+    let tick = null;
+    let lastTick = 0;
+    function startClock() {
+      stopClock();
+      lastTick = performance.now();
+      tick = setInterval(() => {
+        const now = performance.now();
+        const dt = Math.min(1, (now - lastTick) / 1000);
+        lastTick = now;
+        if (!race || screen !== "race" || race.picked !== null || race.winner) return;
+        if (document.hidden || container.hidden) return;
+        race.qClock += dt;
+        const el = container.querySelector("#derby-timer");
+        if (el) el.textContent = `⏱ ${race.qClock.toFixed(1)}s`;
+      }, 100);
+    }
+    function stopClock() {
+      clearInterval(tick);
+      tick = null;
+    }
+
     const S = () => ctx.getState();
     const stats = () => {
       const p = S().vocab;
@@ -303,6 +370,7 @@
     const payoutFor = (wager) => Math.round(wager * mode.payout);
     const myEmoji = () => (STABLE.mounts.find((m) => m.id === stats().mount) || { emoji: "🏇" }).emoji;
     const mySilk = () => (stats().silk ? `silk-${stats().silk}` : `silk-${HORSE.lexicon.silk}`);
+    const focusNote = (f) => (f < RULES.focusMax ? ` <b class="bad-text">+${(RULES.focusMax - f) * PENALTY.hesitation}s per answer</b>` : "");
     const focusBar = (f, label = true) => `<span class="focus-bar${f === 0 ? " spooked" : ""}" role="img" aria-label="Focus ${f} of ${RULES.focusMax}">${label ? "🧠 " : ""}${"■".repeat(f)}${"□".repeat(RULES.focusMax - f)}</span>`;
 
     function go(next) {
@@ -357,19 +425,19 @@
             <p class="muted center">Where precise words win photo finishes.</p>
             <ol class="rule-list">
               <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. ${RULES.ratedPerDay} betting races a day.</li>
-              <li><b>One advanced SAT word per turn.</b> Right → you gallop +1. Wrong → you're held back.</li>
-              <li><b>Seven rivals roll every turn</b>, whatever you answer, and each has its own style. A perfect run always wins; one slip can cost the race.</li>
-              <li><b>🧠 Focus:</b> each miss costs 1. At 0 you're <b>Spooked</b> and right answers won't move you. Two right in a row restore 1 Focus, or drink a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡). Focus carries between races.</li>
+              <li><b>One advanced SAT word per turn, on the clock ⏱.</b> Right → you gallop +1. Wrong → you're held back.</li>
+              <li><b>Seven CPU rivals race on their own clocks.</b> Each reads the passage (${CPU.read[0]}–${CPU.read[1]}s), then answers at its own speed and accuracy. While you think, they keep answering, so speed and precision both count.</li>
+              <li><b>🧠 Focus:</b> each miss costs 1 Focus and a ${PENALTY.stumble}s stumble. Every missing Focus bar adds ${PENALTY.hesitation}s of hesitation to each answer. Two right in a row restore 1, or use a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡). Focus carries between races.</li>
               <li><b>After the race:</b> your balance, a review table of every word, and the 🛍️ Stable.</li>
             </ol>
-            <div class="intro-focus">Your Focus: ${focusBar(st.focus)}${st.focus === 0 ? ' <b class="bad-text">Spooked</b>' : ""}</div>
+            <div class="intro-focus">Your Focus: ${focusBar(st.focus)}${focusNote(st.focus)}</div>
             <button class="btn wide start-btn" type="button" id="derby-start-race">START ▶</button>
             <button class="btn ghost wide" type="button" id="derby-stable">🛍️ Visit the Stable</button>
           </section>
           <section class="panel">
             <h2>The field</h2>
             <ul class="field-list">
-              ${HORSES.map((h, i) => `<li class="${h.you ? mySilk() : `silk-${h.silk}`}"><i class="silk-dot" aria-hidden="true">${i + 1}</i><b>${esc(h.name)}</b><span class="muted small">${h.you ? "You" : esc(STYLES[h.style].label)}</span></li>`).join("")}
+              ${HORSES.map((h, i) => `<li class="${h.you ? mySilk() : `silk-${h.silk}`}"><i class="silk-dot" aria-hidden="true">${i + 1}</i><b>${esc(h.name)}</b><span class="muted small">${h.you ? "You" : `${esc(PROFILES[h.id].label)} · ${PROFILES[h.id].min}–${PROFILES[h.id].max}s · ${Math.round(PROFILES[h.id].acc * 100)}%`}</span></li>`).join("")}
             </ul>
           </section>
           <section class="panel derby-stats">
@@ -412,7 +480,7 @@
             <p class="muted small">${left ? `${left} of ${RULES.ratedPerDay} betting races left today.` : "No betting races left today. Fun runs are unlimited!"}
               ${setup.wager ? ` Your ${fmt(setup.wager)} ⚡ goes in at the gate; a win pays back ${fmt(payoutFor(setup.wager))} ⚡.` : ""}</p>
             <div class="setup-row">
-              <span>Focus ${focusBar(st.focus, false)}${st.focus === 0 ? ' <b class="bad-text">Spooked</b>' : ""}</span>
+              <span>Focus ${focusBar(st.focus, false)}${focusNote(st.focus)}</span>
               ${st.bursts ? `<label class="toggle"><input type="checkbox" id="use-burst" ${setup.burst ? "checked" : ""}><span>Use a Starting Burst (${st.bursts} left)</span></label>` : ""}
             </div>
             ${startLanes()}
@@ -447,10 +515,12 @@
       const ids = [...shuffle(W.filter((w) => w.level === "advanced"), Math.random), ...shuffle(W.filter((w) => w.level !== "advanced"), Math.random)].map((w) => w.id);
       race = newRace(mode.id, wager, ids, { focus: st.focus, streak: st.streak, burst });
       race.log = [];
+      race.times = [];
       race.call = burst ? "And they're off! 🔔 Your Starting Burst puts you a step ahead." : "And they're off! 🔔";
       nextQuestion();
       ctx.sfx.play("bell");
       go("race");
+      startClock();
     }
 
     function nextQuestion() {
@@ -458,14 +528,15 @@
       const w = SW.vocab.WORDS.find((x) => x.id === race.words[race.turn]);
       race.q = makeQuestion(w);
       race.picked = null;
+      race.qClock = 0;
     }
 
     // ---------- Race ----------
     function focusPanel() {
       const f = race.focus;
-      const status = f === 0
-        ? `<b class="bad-text">Spooked!</b> Answer ${RULES.focusRestoreStreak} in a row to recover (${race.streak}/${RULES.focusRestoreStreak}).`
-        : f < RULES.focusMax ? `${RULES.focusRestoreStreak} in a row restores 1 (${race.streak}/${RULES.focusRestoreStreak}).` : "Full focus.";
+      const status = f < RULES.focusMax
+        ? `<b class="bad-text">+${(RULES.focusMax - f) * PENALTY.hesitation}s</b> hesitation per answer. ${RULES.focusRestoreStreak} right in a row restores 1 (${race.streak}/${RULES.focusRestoreStreak}).`
+        : "Full focus: no hesitation.";
       const price = STABLE.elixir.price;
       return `
         <div class="focus-row" id="focus-row">
@@ -485,6 +556,7 @@
             <div id="derby-track">${lanes(race.horses, true)}</div>
             <div id="focus-slot">${focusPanel()}</div>
             <p class="race-call" id="race-call" aria-live="polite">${esc(race.call)}</p>
+            <ul class="race-log" id="race-log">${race.logHtml || ""}</ul>
             <div id="derby-next-slot"></div>
           </section>
           <section class="card-inner bb vocab-card" id="derby-q"></section>
@@ -511,7 +583,7 @@
       ctx.save();
       ctx.renderHud(["sparks"]);
       ctx.sfx.play("combo");
-      race.call = `🧪 Focus Elixir! Galloping Lexicon is locked in again.`;
+      race.call = `🧪 Focus Booster! Galloping Lexicon is locked in again.`;
       container.querySelector("#race-call").textContent = race.call;
       container.querySelector("#focus-slot").innerHTML = focusPanel();
       wireFocus();
@@ -533,6 +605,7 @@
         <div class="bb-top">
           <span class="bb-num">${race.turn + (answered ? 0 : 1)}</span>
           <span class="bb-meta">${kindLabel}</span>
+          <span class="q-timer" id="derby-timer" aria-hidden="true">⏱ ${race.qClock.toFixed(1)}s</span>
         </div>
         ${passage ? `<div class="bb-passage"><p class="passage">${passage}</p></div>` : ""}
         <p class="bb-stem">${esc(q.stem)}</p>
@@ -547,7 +620,7 @@
         </ol>
         ${answered ? `
           <div class="feedback ${right ? "ok" : "no"}">
-            <h3>${right ? "Correct!" : "Not quite. You're held back."}</h3>
+            <h3>${right ? "Correct!" : `Not quite. You're held back (+${PENALTY.stumble}s stumble).`}</h3>
             <p>${ctx.fill(q.explain, undefined, false)}</p>
             ${right ? "" : `<p class="muted small">🔁 “${esc(w.word)}” is flagged for review in the Vault.</p>`}
           </div>` : ""}`;
@@ -561,20 +634,29 @@
       container.querySelector("#derby-next")?.addEventListener("click", advance);
     }
 
-    function callFor(events) {
-      const name = (id) => HORSE[id].name;
-      const parts = [];
-      for (const e of events) {
-        if (e.kind === "advance") parts.push("Galloping Lexicon gallops ahead!");
-        if (e.kind === "slip") parts.push("A slip! You're held back and lose 1 Focus.");
-        if (e.kind === "spook") parts.push("😵 Spooked! Focus is gone. Right answers won't move you until you recover.");
-        if (e.kind === "spooked") parts.push("Right, but still spooked: you hold your ground.");
-        if (e.kind === "focus") parts.push("🧠 Focus restored +1.");
-      }
-      const moved = events.filter((e) => e.kind === "gallop").map((e) => name(e.id));
-      if (moved.length) parts.push(`${moved.join(", ")} ${moved.length === 1 ? "moves" : "move"} up.`);
-      else if (!race.winner || race.winner !== "lexicon") parts.push("The rivals hold.");
-      if (race.winner) parts.push(race.winner === "lexicon" ? "🏁 Galloping Lexicon wins!" : `🏁 ${name(race.winner)} crosses the line first!`);
+    // Commentary for one turn: your answer, then every CPU answer in time order.
+    function commentary(res) {
+      const y = res.you;
+      const hes = (RULES.focusMax - y.focusBefore) * PENALTY.hesitation;
+      const extras = [hes ? `+${hes}s hesitation` : "", y.correct ? "" : `+${PENALTY.stumble}s stumble`].filter(Boolean);
+      const secs = (n) => `${Math.max(1, Math.round(n))}s`;
+      const lines = [`<li class="${mySilk()} ${y.correct ? "ok" : "no"}"><i class="silk-dot" aria-hidden="true">1</i><span><b>You</b> answered in ${y.seconds}s${extras.length ? ` (${extras.join(", ")})` : ""} and ${y.correct ? "got it right ✓" : "missed ✗"}${y.restored ? " · 🧠 Focus +1" : ""}</span></li>`];
+      const cpu = res.cpu.map((e) => {
+        const p = PROFILES[e.id];
+        const n = HORSES.findIndex((h) => h.id === e.id) + 1;
+        return `<li class="silk-${HORSE[e.id].silk} ${e.correct ? "ok" : "no"}"><i class="silk-dot" aria-hidden="true">${n}</i><span>${esc(HORSE[e.id].name)} ${p.rush ? `rushed an answer in ${secs(e.answer)}` : `spent ${secs(e.answer)}`} and ${e.correct ? "got it right ✓" : "missed ✗"}</span></li>`;
+      });
+      const shown = cpu.slice(0, 9);
+      if (cpu.length > shown.length) shown.push(`<li class="muted small">…and ${cpu.length - shown.length} more rival answers</li>`);
+      if (!cpu.length) shown.push('<li class="muted small">No rival finished an answer in that time.</li>');
+      return lines.concat(shown).join("");
+    }
+
+    function summaryFor(res) {
+      const y = res.you;
+      const hits = res.cpu.filter((e) => e.correct).length;
+      const parts = [`You ${y.correct ? "got it right" : "missed"} in ${y.seconds}s.`, res.cpu.length ? `Rivals answered ${res.cpu.length} (${hits} right).` : "No rival answered in time."];
+      if (race.winner) parts.push(race.winner === "lexicon" ? "🏁 Galloping Lexicon wins!" : `🏁 ${HORSE[race.winner].name} crosses the line first!`);
       return parts.join(" ");
     }
 
@@ -582,12 +664,16 @@
       if (race.picked !== null || race.winner) return;
       const q = race.q;
       const correct = ci === q.answer;
+      const seconds = race.qClock;
       race.picked = ci;
       race.log.push({ wordId: q.wordId, kind: q.kind, correct });
+      race.times.push(seconds);
       if (!correct) SW.vocab.flag(S().vocab, q.wordId);
       ctx.recordAnswer(correct);
-      const events = step(race, correct);
-      race.call = callFor(events);
+      const before = Object.fromEntries(race.horses.map((h) => [h.id, h.pos]));
+      const res = step(race, correct, seconds);
+      race.call = summaryFor(res);
+      race.logHtml = commentary(res);
       race.confirmQuit = false;
       const st = stats();
       st.focus = race.focus; // Focus carries over between races
@@ -595,7 +681,8 @@
       touch();
       ctx.sfx.play(correct ? "correct" : "wrong");
       if (correct) ctx.sfx.buzz(50);
-      if (events.some((e) => e.kind === "gallop" || e.kind === "advance")) setTimeout(() => ctx.sfx.play("gallop"), 120);
+      const anyMove = race.horses.some((h) => h.pos !== before[h.id]);
+      if (anyMove) setTimeout(() => ctx.sfx.play("gallop"), 120);
       ctx.save();
       // Move horses in place so the CSS transition animates them.
       for (const h of race.horses) {
@@ -604,10 +691,11 @@
         lane.querySelector(".lane-horse").style.setProperty("--p", h.pos);
         lane.querySelector(".lane-pos").textContent = `${h.pos}/${RULES.trackLength}`;
         lane.setAttribute("aria-label", `${HORSE[h.id].name}${HORSE[h.id].you ? " (you)" : ""}: ${h.pos} of ${RULES.trackLength}`);
-        lane.classList.toggle("moved", events.some((e) => e.id === h.id && (e.kind === "gallop" || e.kind === "advance")));
+        lane.classList.toggle("moved", h.pos !== before[h.id]);
         lane.classList.toggle("spooked", Boolean(HORSE[h.id].you) && race.focus === 0);
       }
       container.querySelector("#race-call").textContent = race.call;
+      container.querySelector("#race-log").innerHTML = race.logHtml;
       container.querySelector("#focus-slot").innerHTML = focusPanel();
       wireFocus();
       container.querySelector("#derby-quit").textContent = "✕ Leave race";
@@ -628,6 +716,7 @@
         st.bestWin = Math.max(st.bestWin, payout);
       }
       race.payout = payout;
+      stopClock();
       touch();
       ctx.save();
       ctx.renderHud(payout ? ["sparks"] : []);
@@ -655,6 +744,7 @@
         return;
       }
       if (race.wager) { stats().races += 1; touch(); ctx.save(); } // a scratched bet counts as a loss
+      stopClock();
       race = null;
       go("setup");
     }
@@ -681,6 +771,7 @@
               ? won ? `+${fmt(race.payout)} ⚡ · your ${fmt(race.wager)} ⚡ bet paid ×${mode.payout}` : `−${fmt(race.wager)} ⚡ · better luck next race`
               : "Fun run: no Sparks on the line"}</p>
             <p class="wallet-line">Balance: <b>⚡ ${fmt(S().sparks || 0)}</b> · Focus ${focusBar(race.focus, false)}</p>
+            <p class="muted small">Your average answer: ${race.times.length ? (race.times.reduce((a, b) => a + b, 0) / race.times.length).toFixed(1) : 0}s · race clock ${Math.round(race.clock)}s</p>
             <ol class="standings">
               ${standings.map((h, i) => `<li class="${HORSE[h.id].you ? `${mySilk()} you` : `silk-${HORSE[h.id].silk}`}"><i class="silk-dot" aria-hidden="true">${i + 1}</i>${esc(HORSE[h.id].name)}<span class="muted small">${h.pos}/${RULES.trackLength}</span></li>`).join("")}
             </ol>
@@ -813,6 +904,7 @@
     }
 
     function exit() {
+      stopClock();
       screen = null;
       race = null;
       ctx.onExit();
@@ -836,5 +928,5 @@
     };
   }
 
-  SW.derby = { RULES, MODES, HORSES, STABLE, PACE, newRace, step, rivalChance, makeQuestion, related, emptyStats, mergeStats, mount };
+  SW.derby = { RULES, MODES, HORSES, PROFILES, CPU, PENALTY, STABLE, newRace, step, penaltyFor, makeQuestion, related, emptyStats, mergeStats, mount };
 })();
