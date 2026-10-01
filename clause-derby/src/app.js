@@ -220,7 +220,7 @@
           <li><b>Pick a chapter</b>, from Clause Connectors to Appositives. Get ${RULES.unlockAt} of 25 right to unlock the next one.</li>
           <li><b>Bet before every race</b> (${RULES.wagers.join(" / ")} ⚡ or a fun run). Win and your bet pays back <b>×${RULES.payout}</b>; lose and it's gone.</li>
           <li><b>The race never pauses.</b> Seven CPU rivals read and answer on their own clocks: Verbal Velocity answers in 1–3s at 60%, Grammar Galloper in 5–8s at 85%. Right answer → you gallop +1. First to ${RULES.trackLength} wins.</li>
-          <li><b>🧠 Focus (0–100%).</b> A miss costs ${RULES.focusMiss}%, and a slow answer (over ${RULES.slowAfter}s) costs ${RULES.focusSlow}%. Low Focus blurs and shakes the screen and locks each question while rivals run. Only 2 right in a row (+${RULES.focusRestore}%) or a Focus Elixir (${fmt(SHOP.elixir.price)} ⚡) restore it.</li>
+          <li><b>🧠 Focus (0–100%).</b> A miss costs ${RULES.focusMiss}%, and a slow answer (over ${RULES.slowAfter}s) costs ${RULES.focusSlow}%. Low Focus outlines the question in orange or red, shakes the screen on misses and locks each question while rivals run (the text always stays sharp). Only 2 right in a row (+${RULES.focusRestore}%) or a Focus Elixir (${fmt(SHOP.elixir.price)} ⚡) restore it.</li>
           <li><b>After each race</b>, the Post-Race Vault explains every question, choice by choice.</li>
         </ol>
         ${focusMeter(S.focus, true)}
@@ -436,7 +436,7 @@
       </section>`;
     $("#quit").addEventListener("click", quit);
     paintLanes();
-    paintFocus(); // blur/tint the card when you start a race with low Focus
+    paintFocus(); // outline the card when you start a race with low Focus
     renderQuestion();
   }
 
@@ -510,7 +510,7 @@
     const locked = !answered && !over && race.lockLeft > 0;
     race.lockShown = locked;
     const right = answered && race.picked === q.answer;
-    card.classList.toggle("answered", answered || over); // reviewing isn't blurred
+    card.classList.toggle("answered", answered || over); // reviewing isn't outlined
     const plain = (note) => note.replace(/^Correct\.\s*/, "");
     card.innerHTML = `
       <div class="q-top">

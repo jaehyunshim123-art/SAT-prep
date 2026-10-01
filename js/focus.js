@@ -5,8 +5,9 @@
 //   • Only two right answers in a row (+25%) or a Focus Elixir (back to 100%)
 //     restore it.
 //   • Every hour Focus recharges to 100% on its own (hourly()).
-//   • Low Focus (under 50%) blurs the question; critical (under 25%) also
-//     shakes the screen on a miss. In the Derby, missing Focus locks each
+//   • Low Focus (under 50%) outlines open questions in orange; critical
+//     (under 25%) in red and shakes the screen on a miss. Question text is
+//     never blurred. In the Derby, missing Focus locks each
 //     question for up to 9s while the rivals keep running, plus 4s after a miss.
 //
 // `st` is any object holding { focus, focusStreak } (the app state, or the
@@ -94,7 +95,7 @@
   };
 
   // Screen effects (browser only): <body data-focus="ok|low|critical"> drives
-  // the blur in CSS; shake() runs a one-off shake on a miss at critical Focus.
+  // the low-Focus outline in CSS (question text is never blurred); shake() runs a one-off shake on a miss at critical Focus.
   function paint(focus) {
     if (typeof document === "undefined") return;
     document.body.dataset.focus = level(clamp(focus));

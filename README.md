@@ -5,7 +5,7 @@ A mobile-first, gamified Digital SAT grammar and vocabulary website. You work th
 - **Header (every screen):** ⚡ **Spark balance** (new players start with **2,500**), 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%).
 - **Bottom nav, five tabs:**
   - 🏠 **Dashboard** ("Home" on phones): chapter select 1–7 plus the bonus chapters. Each chapter card opens **Learn & practice** (the lesson and question feed), a **Practice set** (10) or the **Review for Understanding** test (10). After every set the **Diagnostic** screen opens.
-  - 📚 **Vault:** flashcards, sprints and 🎣 Vocab Fishing.
+  - 📚 **Vocab Vault:** flashcards, sprints and 🎣 Vocab Fishing.
   - 🐎 **Derby:** a grammar horse race on your unit.
   - 🛍️ **Shop.**
   - 🎭 **Profile:** three sub-tabs, **Edit Profile** · **Settings** · **Leaderboard**.
@@ -115,10 +115,10 @@ One meter, shown in the header and shared by Practice and the Derby (`js/focus.j
   - **rushing** costs **10%**: answering in under 3s in Practice, or under 1.5s in the Derby.
 - **Restoring Focus:** **2 right answers in a row** (+25%), a **🧪 Focus Elixir** (500 ⚡, back to 100%), or the clock: **Focus recharges to 100% every hour** on its own (checked at start-up, every minute and when you come back to the tab; a toast says "🧠 Focus recharged"). An Elixir restarts the hour. The header's Focus tooltip shows "full recharge in N min". The standalone Derby has the same hourly recharge.
 - **Effects:**
-  - under 50%, open questions blur slightly;
-  - under 25%, they blur more and the screen **shakes** on each miss.
+  - under 50%, open questions get an **orange outline**;
+  - under 25%, a **red outline**, and the screen **shakes** on each miss.
 
-  Answered questions and explanations never blur. With reduced motion turned on, a desaturated tint replaces the blur and shake.
+  Question text is **never blurred or faded**, so it's always easy to read. With reduced motion turned on, there's no shake.
 - **At 0% in Practice,** a **Focus Break** opens: the chapter's rules, then review questions until you get 2 right in a row. The Elixir skips it.
 - **In the Derby,** missing Focus locks each question for up to 9s while the rivals keep running, plus 4s after a miss.
 
@@ -273,7 +273,7 @@ A separate **grammar racing game** in one self-contained, dark-themed HTML file.
 - **Losses:** a miss costs −25%, and a slow answer (over 25s) costs −10%.
 - **Restoring:** 2 right in a row give +25%, or a **Focus Elixir** (500 ⚡) refills Focus.
 - **Locks:** lost Focus locks each question for up to 9s, plus 4s after a miss, while the rivals keep running.
-- **Effects:** under 50% the question blurs; under 25% it blurs more and shakes on misses. Reduced-motion users get a tint instead. Feedback is never blurred.
+- **Effects:** under 50% the question gets an orange outline; under 25% a red one, and the screen shakes on misses (not with reduced motion). Text is never blurred.
 
 **Economy:**
 - 2,500 ⚡ to start. Bets of 50/100/250/500 pay ×1.5.
@@ -419,7 +419,7 @@ js/curriculum/clause.js     registers the pop-culture sets (clause-derby/src/ch1
 js/curriculum/ch1-ch9.js    extra practice per chapter: lesson patterns + questions with per-choice notes
 js/curriculum/gen/          question generator: core.js + one builder per chapter (~3,600 questions)
 js/curriculum/rules.js      rule names and short explanations for the Diagnostic screen
-js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row restore, Elixir, hourly recharge, locks, blur/shake
+js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row restore, Elixir, hourly recharge, locks, low-Focus outline/shake
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI, 🔊 pronunciation (Web Speech)
 js/fishing.js               Vocab Fishing (Vault): casts, rods, spots, view
 js/derby.js                 Grammar Derby (Derby tab, pluggable question source): real-time CPU rival engine and tactics, Stable purchases, question generator, views

@@ -408,7 +408,7 @@
     <main class="view scrollview" id="view-you" hidden></main>
     <nav class="tabs" role="tablist" aria-label="SatWizz">
       <button class="tab" role="tab" data-view="dash" aria-selected="true" aria-label="Dashboard"><span class="ico" aria-hidden="true">🏠</span><span class="lbl-long">Dashboard</span><span class="lbl-short">Home</span></button>
-      <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vault</button>
+      <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vocab Vault</button>
       <button class="tab" role="tab" data-view="derby" aria-selected="false"><span class="ico" aria-hidden="true">🐎</span>Derby</button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
       <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Profile</button>
@@ -416,7 +416,7 @@
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  // Five tabs: Dashboard, Vault, Derby, Shop, Profile. The Dashboard opens a
+  // Five tabs: Dashboard, Vocab Vault, Derby, Shop, Profile. The Dashboard opens a
   // chapter's practice feed, its practice sets and its Review for
   // Understanding test (with the Diagnostic screen after), which have no tab
   // of their own. Profile has three sub-tabs: Edit Profile, Settings and
@@ -700,7 +700,7 @@
     fp.className = `pill focus-pill ${FOCUS.level(S.focus)}`;
     fp.setAttribute("aria-label", `Focus ${S.focus}%`);
     fp.title = S.focus < FOCUS.RULES.max ? `Focus Meter · full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus Meter · recharges to 100% every hour";
-    FOCUS.paint(S.focus); // <body data-focus>: low-Focus blur
+    FOCUS.paint(S.focus); // <body data-focus>: low-Focus outline on open questions
     $("#demo-badge").hidden = !S.demo;
     renderAccountButton();
     renderFocus();

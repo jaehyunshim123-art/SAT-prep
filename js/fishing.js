@@ -37,7 +37,7 @@
   const SPOTS = [
     { id: "pond", name: "Village Pond", emoji: "🪷", price: 0, desc: "Core high-frequency words.", pool: "core" },
     { id: "lake", name: "Misty Lake", emoji: "🌫️", price: 500, desc: "Advanced words only.", pool: "advanced" },
-    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "All 55 Vault words.", pool: "all" },
+    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "All 55 Vocab Vault words.", pool: "all" },
     { id: "bay", name: "Moonlit Bay", emoji: "🌙", price: 500, desc: "Words you flagged for review bite first.", pool: "review" },
   ];
   const rodById = (id) => RODS.find((r) => r.id === id) || RODS[0];
@@ -154,7 +154,7 @@
       container.innerHTML = `
         <div class="stack vault fishing spot-${spot.id}">
           <div class="sprint-top">
-            <button class="linkbtn" type="button" id="fish-exit">✕ Back to the Vault</button>
+            <button class="linkbtn" type="button" id="fish-exit">✕ Back to the Vocab Vault</button>
             <span class="pill-sm">⚡ ${fmt(S().sparks)}</span>
           </div>
           <section class="panel fish-intro">
@@ -388,7 +388,7 @@
           <div class="stack">
             <button class="btn wide" type="button" id="fish-again">🎣 Fish again</button>
             <button class="btn ghost wide" type="button" id="fish-dock">Change rod or spot</button>
-            <button class="btn ghost wide" type="button" id="fish-exit">Back to the Vault</button>
+            <button class="btn ghost wide" type="button" id="fish-exit">Back to the Vocab Vault</button>
           </div>
         </div>`;
       round = null;

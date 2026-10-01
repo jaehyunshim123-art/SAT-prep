@@ -412,7 +412,7 @@
         return { ...q, meta: KIND_LABEL[q.kind] };
       },
       onAnswer: (q, correct) => { if (!correct && !ctx.standalone) SW.vocab.flag(ctx.getState().vocab, q.wordId); },
-      missNote: (q) => (ctx.standalone ? "" : `🔁 “${ctx.esc(word(q).word)}” is flagged for review in the Vault.`),
+      missNote: (q) => (ctx.standalone ? "" : `🔁 “${ctx.esc(word(q).word)}” is flagged for review in the Vocab Vault.`),
       lateNote: (q) => `“${ctx.esc(word(q).word)}”: ${ctx.esc(word(q).definition)}.`,
       review: {
         title: "Vocabulary review",
@@ -511,7 +511,7 @@
       container.innerHTML = `
         <div class="stack vault derby">
           <div class="sprint-top">
-            ${solo || tab ? '<span class="label-sm">Welcome to the track</span>' : '<button class="linkbtn" type="button" id="derby-exit">✕ Back to the Vault</button>'}
+            ${solo || tab ? '<span class="label-sm">Welcome to the track</span>' : '<button class="linkbtn" type="button" id="derby-exit">✕ Back to the Vocab Vault</button>'}
             <span class="pill-sm">⚡ ${fmt(S().sparks || 0)}</span>
           </div>
           ${solo && stipendOpen() ? `
@@ -527,7 +527,7 @@
               <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. Bet on as many races as you like.</li>
               <li><b>The race never pauses ⏱.</b> ${esc(src.intro)} Right → you gallop +1. Wrong → you're held back.</li>
               <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${(src.read || CPU.read)[0]}–${(src.read || CPU.read)[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
-              <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running, and blurs the screen. Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it, and it recharges to 100% every hour on its own. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
+              <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running (question text always stays sharp). Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it, and it recharges to 100% every hour on its own. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
               <li><b>After the race:</b> your balance, a review of every question, and the 🛍️ Stable.</li>
             </ol>
             <div class="intro-focus">Your Focus: ${focusBar(fst().focus)}${focusNote(fst().focus)}</div>
@@ -839,7 +839,7 @@
         : "";
       const kindLabel = esc(q.meta || "");
       const right = race.picked === q.answer;
-      el.classList.toggle("answered", answered || over); // low-Focus blur only hits open questions
+      el.classList.toggle("answered", answered || over); // the low-Focus outline only marks open questions
       el.dataset.qid = q.id || q.wordId || "";
       el.innerHTML = `
         <div class="bb-top">
@@ -1003,7 +1003,7 @@
           <div class="stack">
             <button class="btn wide" type="button" id="derby-again">🏇 Race again</button>
             <button class="btn ghost wide" type="button" id="derby-stable">🛍️ Visit the Stable</button>
-            <button class="btn ghost wide" type="button" id="derby-home">${solo || tab ? "📜 Rules & stats" : "Back to the Vault"}</button>
+            <button class="btn ghost wide" type="button" id="derby-home">${solo || tab ? "📜 Rules & stats" : "Back to the Vocab Vault"}</button>
           </div>
         </div>`;
       race = null;

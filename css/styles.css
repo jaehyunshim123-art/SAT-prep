@@ -1749,19 +1749,15 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
   .acct { height: 28px; min-width: 28px; padding: 0 4px; }
 }
 
-/* Low Focus: open questions blur (answered cards and explanations never do). */
-.card[data-qid]:not(.answered) .bb-passage,
-.card[data-qid]:not(.answered) .choices,
-#derby-q:not(.answered) .bb-passage,
-#derby-q:not(.answered) .choices { transition: filter 0.4s ease; }
-body[data-focus="low"] .card[data-qid]:not(.answered) .bb-passage,
-body[data-focus="low"] .card[data-qid]:not(.answered) .choices,
-body[data-focus="low"] #derby-q:not(.answered) .bb-passage,
-body[data-focus="low"] #derby-q:not(.answered) .choices { filter: blur(1px); }
-body[data-focus="critical"] .card[data-qid]:not(.answered) .bb-passage,
-body[data-focus="critical"] .card[data-qid]:not(.answered) .choices,
-body[data-focus="critical"] #derby-q:not(.answered) .bb-passage,
-body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px); }
+/* Low Focus: question text always stays sharp. Open questions get a colored
+   outline instead (orange under 50%, red under 25%), and the screen shakes
+   on a miss at critical Focus. */
+.card[data-qid]:not(.answered) > .card-inner,
+#derby-q:not(.answered) { transition: box-shadow 0.4s ease; }
+body[data-focus="low"] .card[data-qid]:not(.answered) > .card-inner,
+body[data-focus="low"] #derby-q:not(.answered) { box-shadow: 0 0 0 2px var(--flame), var(--shadow); }
+body[data-focus="critical"] .card[data-qid]:not(.answered) > .card-inner,
+body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(--bad), var(--shadow); }
 .focus-shake { animation: focus-shake 0.5s ease; }
 @keyframes focus-shake {
   15%, 55% { transform: translateX(-7px); }
@@ -1769,15 +1765,7 @@ body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px)
   90% { transform: translateX(-2px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  /* No blur or shake: a desaturated tint says the same thing. */
-  body[data-focus] .card[data-qid]:not(.answered) .bb-passage,
-  body[data-focus] .card[data-qid]:not(.answered) .choices,
-  body[data-focus] #derby-q:not(.answered) .bb-passage,
-  body[data-focus] #derby-q:not(.answered) .choices { filter: none; }
-  body[data-focus="low"] .card[data-qid]:not(.answered) .bb-passage,
-  body[data-focus="low"] #derby-q:not(.answered) .bb-passage { filter: saturate(0.4); }
-  body[data-focus="critical"] .card[data-qid]:not(.answered) .bb-passage,
-  body[data-focus="critical"] #derby-q:not(.answered) .bb-passage { filter: grayscale(1) opacity(0.8); }
+  /* No shake; the outline alone shows low Focus. */
   .focus-shake { animation: none; }
 }
 
@@ -2106,3 +2094,5 @@ body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px)
    midnight"), so the pill drops it; below 400px the brand drops "Sat" too. */
 @media (max-width: 440px) { .hud .risk { display: none; } }
 @media (max-width: 400px) { .brand .b-pre { display: none; } }
+/* Tab labels may wrap ("Vocab / Vault" on phones) instead of being cut off. */
+.tab { white-space: normal; line-height: 1.15; text-align: center; align-content: start; overflow-wrap: normal; }

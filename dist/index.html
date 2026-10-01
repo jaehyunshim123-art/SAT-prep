@@ -1773,19 +1773,15 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
   .acct { height: 28px; min-width: 28px; padding: 0 4px; }
 }
 
-/* Low Focus: open questions blur (answered cards and explanations never do). */
-.card[data-qid]:not(.answered) .bb-passage,
-.card[data-qid]:not(.answered) .choices,
-#derby-q:not(.answered) .bb-passage,
-#derby-q:not(.answered) .choices { transition: filter 0.4s ease; }
-body[data-focus="low"] .card[data-qid]:not(.answered) .bb-passage,
-body[data-focus="low"] .card[data-qid]:not(.answered) .choices,
-body[data-focus="low"] #derby-q:not(.answered) .bb-passage,
-body[data-focus="low"] #derby-q:not(.answered) .choices { filter: blur(1px); }
-body[data-focus="critical"] .card[data-qid]:not(.answered) .bb-passage,
-body[data-focus="critical"] .card[data-qid]:not(.answered) .choices,
-body[data-focus="critical"] #derby-q:not(.answered) .bb-passage,
-body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px); }
+/* Low Focus: question text always stays sharp. Open questions get a colored
+   outline instead (orange under 50%, red under 25%), and the screen shakes
+   on a miss at critical Focus. */
+.card[data-qid]:not(.answered) > .card-inner,
+#derby-q:not(.answered) { transition: box-shadow 0.4s ease; }
+body[data-focus="low"] .card[data-qid]:not(.answered) > .card-inner,
+body[data-focus="low"] #derby-q:not(.answered) { box-shadow: 0 0 0 2px var(--flame), var(--shadow); }
+body[data-focus="critical"] .card[data-qid]:not(.answered) > .card-inner,
+body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(--bad), var(--shadow); }
 .focus-shake { animation: focus-shake 0.5s ease; }
 @keyframes focus-shake {
   15%, 55% { transform: translateX(-7px); }
@@ -1793,15 +1789,7 @@ body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px)
   90% { transform: translateX(-2px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  /* No blur or shake: a desaturated tint says the same thing. */
-  body[data-focus] .card[data-qid]:not(.answered) .bb-passage,
-  body[data-focus] .card[data-qid]:not(.answered) .choices,
-  body[data-focus] #derby-q:not(.answered) .bb-passage,
-  body[data-focus] #derby-q:not(.answered) .choices { filter: none; }
-  body[data-focus="low"] .card[data-qid]:not(.answered) .bb-passage,
-  body[data-focus="low"] #derby-q:not(.answered) .bb-passage { filter: saturate(0.4); }
-  body[data-focus="critical"] .card[data-qid]:not(.answered) .bb-passage,
-  body[data-focus="critical"] #derby-q:not(.answered) .bb-passage { filter: grayscale(1) opacity(0.8); }
+  /* No shake; the outline alone shows low Focus. */
   .focus-shake { animation: none; }
 }
 
@@ -2130,6 +2118,8 @@ body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px)
    midnight"), so the pill drops it; below 400px the brand drops "Sat" too. */
 @media (max-width: 440px) { .hud .risk { display: none; } }
 @media (max-width: 400px) { .brand .b-pre { display: none; } }
+/* Tab labels may wrap ("Vocab / Vault" on phones) instead of being cut off. */
+.tab { white-space: normal; line-height: 1.15; text-align: center; align-content: start; overflow-wrap: normal; }
 
 </style>
 </head>
@@ -7400,8 +7390,9 @@ window.SatWizz.curriculum.addChapter({
 //   • Only two right answers in a row (+25%) or a Focus Elixir (back to 100%)
 //     restore it.
 //   • Every hour Focus recharges to 100% on its own (hourly()).
-//   • Low Focus (under 50%) blurs the question; critical (under 25%) also
-//     shakes the screen on a miss. In the Derby, missing Focus locks each
+//   • Low Focus (under 50%) outlines open questions in orange; critical
+//     (under 25%) in red and shakes the screen on a miss. Question text is
+//     never blurred. In the Derby, missing Focus locks each
 //     question for up to 9s while the rivals keep running, plus 4s after a miss.
 //
 // `st` is any object holding { focus, focusStreak } (the app state, or the
@@ -7489,7 +7480,7 @@ window.SatWizz.curriculum.addChapter({
   };
 
   // Screen effects (browser only): <body data-focus="ok|low|critical"> drives
-  // the blur in CSS; shake() runs a one-off shake on a miss at critical Focus.
+  // the low-Focus outline in CSS (question text is never blurred); shake() runs a one-off shake on a miss at critical Focus.
   function paint(focus) {
     if (typeof document === "undefined") return;
     document.body.dataset.focus = level(clamp(focus));
@@ -7923,7 +7914,7 @@ window.SatWizz.curriculum.addChapter({
         return { ...q, meta: KIND_LABEL[q.kind] };
       },
       onAnswer: (q, correct) => { if (!correct && !ctx.standalone) SW.vocab.flag(ctx.getState().vocab, q.wordId); },
-      missNote: (q) => (ctx.standalone ? "" : `🔁 “${ctx.esc(word(q).word)}” is flagged for review in the Vault.`),
+      missNote: (q) => (ctx.standalone ? "" : `🔁 “${ctx.esc(word(q).word)}” is flagged for review in the Vocab Vault.`),
       lateNote: (q) => `“${ctx.esc(word(q).word)}”: ${ctx.esc(word(q).definition)}.`,
       review: {
         title: "Vocabulary review",
@@ -8022,7 +8013,7 @@ window.SatWizz.curriculum.addChapter({
       container.innerHTML = `
         <div class="stack vault derby">
           <div class="sprint-top">
-            ${solo || tab ? '<span class="label-sm">Welcome to the track</span>' : '<button class="linkbtn" type="button" id="derby-exit">✕ Back to the Vault</button>'}
+            ${solo || tab ? '<span class="label-sm">Welcome to the track</span>' : '<button class="linkbtn" type="button" id="derby-exit">✕ Back to the Vocab Vault</button>'}
             <span class="pill-sm">⚡ ${fmt(S().sparks || 0)}</span>
           </div>
           ${solo && stipendOpen() ? `
@@ -8038,7 +8029,7 @@ window.SatWizz.curriculum.addChapter({
               <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. Bet on as many races as you like.</li>
               <li><b>The race never pauses ⏱.</b> ${esc(src.intro)} Right → you gallop +1. Wrong → you're held back.</li>
               <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${(src.read || CPU.read)[0]}–${(src.read || CPU.read)[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
-              <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running, and blurs the screen. Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it, and it recharges to 100% every hour on its own. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
+              <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running (question text always stays sharp). Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it, and it recharges to 100% every hour on its own. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
               <li><b>After the race:</b> your balance, a review of every question, and the 🛍️ Stable.</li>
             </ol>
             <div class="intro-focus">Your Focus: ${focusBar(fst().focus)}${focusNote(fst().focus)}</div>
@@ -8350,7 +8341,7 @@ window.SatWizz.curriculum.addChapter({
         : "";
       const kindLabel = esc(q.meta || "");
       const right = race.picked === q.answer;
-      el.classList.toggle("answered", answered || over); // low-Focus blur only hits open questions
+      el.classList.toggle("answered", answered || over); // the low-Focus outline only marks open questions
       el.dataset.qid = q.id || q.wordId || "";
       el.innerHTML = `
         <div class="bb-top">
@@ -8514,7 +8505,7 @@ window.SatWizz.curriculum.addChapter({
           <div class="stack">
             <button class="btn wide" type="button" id="derby-again">🏇 Race again</button>
             <button class="btn ghost wide" type="button" id="derby-stable">🛍️ Visit the Stable</button>
-            <button class="btn ghost wide" type="button" id="derby-home">${solo || tab ? "📜 Rules & stats" : "Back to the Vault"}</button>
+            <button class="btn ghost wide" type="button" id="derby-home">${solo || tab ? "📜 Rules & stats" : "Back to the Vocab Vault"}</button>
           </div>
         </div>`;
       race = null;
@@ -8683,7 +8674,7 @@ window.SatWizz.curriculum.addChapter({
   const SPOTS = [
     { id: "pond", name: "Village Pond", emoji: "🪷", price: 0, desc: "Core high-frequency words.", pool: "core" },
     { id: "lake", name: "Misty Lake", emoji: "🌫️", price: 500, desc: "Advanced words only.", pool: "advanced" },
-    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "All 55 Vault words.", pool: "all" },
+    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "All 55 Vocab Vault words.", pool: "all" },
     { id: "bay", name: "Moonlit Bay", emoji: "🌙", price: 500, desc: "Words you flagged for review bite first.", pool: "review" },
   ];
   const rodById = (id) => RODS.find((r) => r.id === id) || RODS[0];
@@ -8800,7 +8791,7 @@ window.SatWizz.curriculum.addChapter({
       container.innerHTML = `
         <div class="stack vault fishing spot-${spot.id}">
           <div class="sprint-top">
-            <button class="linkbtn" type="button" id="fish-exit">✕ Back to the Vault</button>
+            <button class="linkbtn" type="button" id="fish-exit">✕ Back to the Vocab Vault</button>
             <span class="pill-sm">⚡ ${fmt(S().sparks)}</span>
           </div>
           <section class="panel fish-intro">
@@ -9034,7 +9025,7 @@ window.SatWizz.curriculum.addChapter({
           <div class="stack">
             <button class="btn wide" type="button" id="fish-again">🎣 Fish again</button>
             <button class="btn ghost wide" type="button" id="fish-dock">Change rod or spot</button>
-            <button class="btn ghost wide" type="button" id="fish-exit">Back to the Vault</button>
+            <button class="btn ghost wide" type="button" id="fish-exit">Back to the Vocab Vault</button>
           </div>
         </div>`;
       round = null;
@@ -10476,7 +10467,7 @@ window.SatWizz.curriculum.addChapter({
             <div class="stack">
               <button class="btn wide" type="button" id="deck-sprint">Test yourself: Daily Sprint</button>
               <button class="btn ghost wide" type="button" id="deck-again">New deck</button>
-              <button class="btn ghost wide" type="button" id="deck-home">Back to the Vault</button>
+              <button class="btn ghost wide" type="button" id="deck-home">Back to the Vocab Vault</button>
             </div>
           </section>
         </div>`;
@@ -10629,7 +10620,7 @@ window.SatWizz.curriculum.addChapter({
             <ul class="sum-list">${rows}</ul>
             <div class="stack">
               <button class="btn wide" type="button" id="sprint-again">Another sprint</button>
-              <button class="btn ghost wide" type="button" id="sprint-home">Back to the Vault</button>
+              <button class="btn ghost wide" type="button" id="sprint-home">Back to the Vocab Vault</button>
             </div>
           </section>
         </div>`;
@@ -12669,7 +12660,7 @@ window.SatWizz.curriculum.addChapter({
     <main class="view scrollview" id="view-you" hidden></main>
     <nav class="tabs" role="tablist" aria-label="SatWizz">
       <button class="tab" role="tab" data-view="dash" aria-selected="true" aria-label="Dashboard"><span class="ico" aria-hidden="true">🏠</span><span class="lbl-long">Dashboard</span><span class="lbl-short">Home</span></button>
-      <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vault</button>
+      <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vocab Vault</button>
       <button class="tab" role="tab" data-view="derby" aria-selected="false"><span class="ico" aria-hidden="true">🐎</span>Derby</button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
       <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Profile</button>
@@ -12677,7 +12668,7 @@ window.SatWizz.curriculum.addChapter({
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  // Five tabs: Dashboard, Vault, Derby, Shop, Profile. The Dashboard opens a
+  // Five tabs: Dashboard, Vocab Vault, Derby, Shop, Profile. The Dashboard opens a
   // chapter's practice feed, its practice sets and its Review for
   // Understanding test (with the Diagnostic screen after), which have no tab
   // of their own. Profile has three sub-tabs: Edit Profile, Settings and
@@ -12961,7 +12952,7 @@ window.SatWizz.curriculum.addChapter({
     fp.className = `pill focus-pill ${FOCUS.level(S.focus)}`;
     fp.setAttribute("aria-label", `Focus ${S.focus}%`);
     fp.title = S.focus < FOCUS.RULES.max ? `Focus Meter · full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus Meter · recharges to 100% every hour";
-    FOCUS.paint(S.focus); // <body data-focus>: low-Focus blur
+    FOCUS.paint(S.focus); // <body data-focus>: low-Focus outline on open questions
     $("#demo-badge").hidden = !S.demo;
     renderAccountButton();
     renderFocus();

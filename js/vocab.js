@@ -1397,7 +1397,7 @@
             <div class="stack">
               <button class="btn wide" type="button" id="deck-sprint">Test yourself: Daily Sprint</button>
               <button class="btn ghost wide" type="button" id="deck-again">New deck</button>
-              <button class="btn ghost wide" type="button" id="deck-home">Back to the Vault</button>
+              <button class="btn ghost wide" type="button" id="deck-home">Back to the Vocab Vault</button>
             </div>
           </section>
         </div>`;
@@ -1550,7 +1550,7 @@
             <ul class="sum-list">${rows}</ul>
             <div class="stack">
               <button class="btn wide" type="button" id="sprint-again">Another sprint</button>
-              <button class="btn ghost wide" type="button" id="sprint-home">Back to the Vault</button>
+              <button class="btn ghost wide" type="button" id="sprint-home">Back to the Vocab Vault</button>
             </div>
           </section>
         </div>`;

@@ -179,9 +179,10 @@ button:disabled { cursor: not-allowed; }
 .feedback.no h3 { color: var(--bad); }
 .rule { margin: 0; font-weight: 600; }
 
-/* Low Focus: blur the question, then shake on misses. */
-.screen.focus-low .qcard:not(.answered) .passage, .screen.focus-low .qcard:not(.answered) .choices { filter: blur(0.8px); }
-.screen.focus-critical .qcard:not(.answered) .passage, .screen.focus-critical .qcard:not(.answered) .choices { filter: blur(1.6px); }
+/* Low Focus: the question text stays sharp; the open card gets an orange
+   outline (red when critical), and misses shake the screen. */
+.screen.focus-low .qcard:not(.answered) { box-shadow: 0 0 0 2px #ff8a3d; }
+.screen.focus-critical .qcard:not(.answered) { box-shadow: 0 0 0 3px #e5484d; }
 .screen.focus-critical .qcard { box-shadow: 0 0 0 2px var(--bad), 0 0 30px -6px var(--bad); }
 .screen.shake .qcard { animation: shake 0.45s ease; }
 @keyframes shake { 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
@@ -263,7 +264,4 @@ button:disabled { cursor: not-allowed; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition: none !important; }
-  /* No shake or blur: a desaturated tint signals low Focus instead. */
-  .screen.focus-low .qcard:not(.answered) .passage, .screen.focus-low .qcard:not(.answered) .choices,
-  .screen.focus-critical .qcard:not(.answered) .passage, .screen.focus-critical .qcard:not(.answered) .choices { filter: grayscale(0.6) brightness(0.85); }
 }

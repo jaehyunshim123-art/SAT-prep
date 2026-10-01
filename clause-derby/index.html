@@ -193,9 +193,10 @@ button:disabled { cursor: not-allowed; }
 .feedback.no h3 { color: var(--bad); }
 .rule { margin: 0; font-weight: 600; }
 
-/* Low Focus: blur the question, then shake on misses. */
-.screen.focus-low .qcard:not(.answered) .passage, .screen.focus-low .qcard:not(.answered) .choices { filter: blur(0.8px); }
-.screen.focus-critical .qcard:not(.answered) .passage, .screen.focus-critical .qcard:not(.answered) .choices { filter: blur(1.6px); }
+/* Low Focus: the question text stays sharp; the open card gets an orange
+   outline (red when critical), and misses shake the screen. */
+.screen.focus-low .qcard:not(.answered) { box-shadow: 0 0 0 2px #ff8a3d; }
+.screen.focus-critical .qcard:not(.answered) { box-shadow: 0 0 0 3px #e5484d; }
 .screen.focus-critical .qcard { box-shadow: 0 0 0 2px var(--bad), 0 0 30px -6px var(--bad); }
 .screen.shake .qcard { animation: shake 0.45s ease; }
 @keyframes shake { 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
@@ -277,9 +278,6 @@ button:disabled { cursor: not-allowed; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition: none !important; }
-  /* No shake or blur: a desaturated tint signals low Focus instead. */
-  .screen.focus-low .qcard:not(.answered) .passage, .screen.focus-low .qcard:not(.answered) .choices,
-  .screen.focus-critical .qcard:not(.answered) .passage, .screen.focus-critical .qcard:not(.answered) .choices { filter: grayscale(0.6) brightness(0.85); }
 }
 
 </style>
@@ -705,7 +703,7 @@ window.SatWizz = window.SatWizz || {};
         return { ...q, meta: KIND_LABEL[q.kind] };
       },
       onAnswer: (q, correct) => { if (!correct && !ctx.standalone) SW.vocab.flag(ctx.getState().vocab, q.wordId); },
-      missNote: (q) => (ctx.standalone ? "" : `🔁 “${ctx.esc(word(q).word)}” is flagged for review in the Vault.`),
+      missNote: (q) => (ctx.standalone ? "" : `🔁 “${ctx.esc(word(q).word)}” is flagged for review in the Vocab Vault.`),
       lateNote: (q) => `“${ctx.esc(word(q).word)}”: ${ctx.esc(word(q).definition)}.`,
       review: {
         title: "Vocabulary review",
@@ -804,7 +802,7 @@ window.SatWizz = window.SatWizz || {};
       container.innerHTML = `
         <div class="stack vault derby">
           <div class="sprint-top">
-            ${solo || tab ? '<span class="label-sm">Welcome to the track</span>' : '<button class="linkbtn" type="button" id="derby-exit">✕ Back to the Vault</button>'}
+            ${solo || tab ? '<span class="label-sm">Welcome to the track</span>' : '<button class="linkbtn" type="button" id="derby-exit">✕ Back to the Vocab Vault</button>'}
             <span class="pill-sm">⚡ ${fmt(S().sparks || 0)}</span>
           </div>
           ${solo && stipendOpen() ? `
@@ -820,7 +818,7 @@ window.SatWizz = window.SatWizz || {};
               <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. Bet on as many races as you like.</li>
               <li><b>The race never pauses ⏱.</b> ${esc(src.intro)} Right → you gallop +1. Wrong → you're held back.</li>
               <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${(src.read || CPU.read)[0]}–${(src.read || CPU.read)[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
-              <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running, and blurs the screen. Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it, and it recharges to 100% every hour on its own. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
+              <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running (question text always stays sharp). Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it, and it recharges to 100% every hour on its own. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
               <li><b>After the race:</b> your balance, a review of every question, and the 🛍️ Stable.</li>
             </ol>
             <div class="intro-focus">Your Focus: ${focusBar(fst().focus)}${focusNote(fst().focus)}</div>
@@ -1132,7 +1130,7 @@ window.SatWizz = window.SatWizz || {};
         : "";
       const kindLabel = esc(q.meta || "");
       const right = race.picked === q.answer;
-      el.classList.toggle("answered", answered || over); // low-Focus blur only hits open questions
+      el.classList.toggle("answered", answered || over); // the low-Focus outline only marks open questions
       el.dataset.qid = q.id || q.wordId || "";
       el.innerHTML = `
         <div class="bb-top">
@@ -1296,7 +1294,7 @@ window.SatWizz = window.SatWizz || {};
           <div class="stack">
             <button class="btn wide" type="button" id="derby-again">🏇 Race again</button>
             <button class="btn ghost wide" type="button" id="derby-stable">🛍️ Visit the Stable</button>
-            <button class="btn ghost wide" type="button" id="derby-home">${solo || tab ? "📜 Rules & stats" : "Back to the Vault"}</button>
+            <button class="btn ghost wide" type="button" id="derby-home">${solo || tab ? "📜 Rules & stats" : "Back to the Vocab Vault"}</button>
           </div>
         </div>`;
       race = null;
@@ -2999,7 +2997,7 @@ window.SatWizz = window.SatWizz || {};
           <li><b>Pick a chapter</b>, from Clause Connectors to Appositives. Get ${RULES.unlockAt} of 25 right to unlock the next one.</li>
           <li><b>Bet before every race</b> (${RULES.wagers.join(" / ")} ⚡ or a fun run). Win and your bet pays back <b>×${RULES.payout}</b>; lose and it's gone.</li>
           <li><b>The race never pauses.</b> Seven CPU rivals read and answer on their own clocks: Verbal Velocity answers in 1–3s at 60%, Grammar Galloper in 5–8s at 85%. Right answer → you gallop +1. First to ${RULES.trackLength} wins.</li>
-          <li><b>🧠 Focus (0–100%).</b> A miss costs ${RULES.focusMiss}%, and a slow answer (over ${RULES.slowAfter}s) costs ${RULES.focusSlow}%. Low Focus blurs and shakes the screen and locks each question while rivals run. Only 2 right in a row (+${RULES.focusRestore}%) or a Focus Elixir (${fmt(SHOP.elixir.price)} ⚡) restore it.</li>
+          <li><b>🧠 Focus (0–100%).</b> A miss costs ${RULES.focusMiss}%, and a slow answer (over ${RULES.slowAfter}s) costs ${RULES.focusSlow}%. Low Focus outlines the question in orange or red, shakes the screen on misses and locks each question while rivals run (the text always stays sharp). Only 2 right in a row (+${RULES.focusRestore}%) or a Focus Elixir (${fmt(SHOP.elixir.price)} ⚡) restore it.</li>
           <li><b>After each race</b>, the Post-Race Vault explains every question, choice by choice.</li>
         </ol>
         ${focusMeter(S.focus, true)}
@@ -3215,7 +3213,7 @@ window.SatWizz = window.SatWizz || {};
       </section>`;
     $("#quit").addEventListener("click", quit);
     paintLanes();
-    paintFocus(); // blur/tint the card when you start a race with low Focus
+    paintFocus(); // outline the card when you start a race with low Focus
     renderQuestion();
   }
 
@@ -3289,7 +3287,7 @@ window.SatWizz = window.SatWizz || {};
     const locked = !answered && !over && race.lockLeft > 0;
     race.lockShown = locked;
     const right = answered && race.picked === q.answer;
-    card.classList.toggle("answered", answered || over); // reviewing isn't blurred
+    card.classList.toggle("answered", answered || over); // reviewing isn't outlined
     const plain = (note) => note.replace(/^Correct\.\s*/, "");
     card.innerHTML = `
       <div class="q-top">
