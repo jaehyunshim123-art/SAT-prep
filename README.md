@@ -119,6 +119,61 @@ The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
 - **Practice and sync:** answers count toward the daily goal (+5 XP each). Stats, Focus, owned gear and Bursts sync in `vocab_progress.derby`.
 - **Question checks:** `scripts/validate-content.js` builds 11,000 generated questions and checks each has 4 distinct choices and one defensible answer. Words close in meaning, or near-opposites, are never used as each other's distractors.
 
+## SAT Wizz: Clause Derby (`clause-derby/index.html`)
+
+A separate **grammar racing game** in one self-contained, dark-themed HTML file. Double-click it, or host the one file anywhere.
+
+**Flow:** intro (`=== 🐎 SAT WIZZ: VOCAB DERBY 🐎 ===` banner, rules, **Start Game**) → chapter select → chapter rules → bet → live race → results and the **Post-Race Vault** → shop.
+
+**Curriculum:** 7 chapters × 25 questions (175), in a pop-culture, research or narrative passage style. Every question has a rule line and a note for each choice.
+
+| Ch | Topic |
+|---|---|
+| 1 | Independent Clause Connectors & Sentence Boundaries |
+| 2 | Subject-Verb Agreement |
+| 3 | Verb vs. Non-Verb (appositive structure) |
+| 4 | Verb Tenses & Aspect |
+| 5 | Logical Transitions |
+| 6 | Semicolons, Dashes & Colons |
+| 7 | Appositives & Non-Essential Clauses |
+
+- **Unlocking:** chapters unlock in order. Get 15 of 25 right in a chapter to open the next.
+- **Naming rule:** people and character names are used freely, but franchise and brand titles are swapped for generic ones ("the league of heroes", "a digital power visor", a fictional conservatory and album).
+
+**Race:** the same live engine as the Vocab Derby.
+- Eight horses on a 5-step track. Seven CPU rivals read and answer on their own clocks: Verbal Velocity 1–3s at 60%, Grammar Galloper 5–8s at 85%, and five more profiles.
+- The rivals switch tactics to win and can cross the line while you think. Commentary is live.
+- Rival reading time is 20–26s for these longer passages, tuned by simulation:
+
+  | Your pace | Races won |
+  |---|---|
+  | 10s/question at 90% | ~99% |
+  | 15s at 85% | ~78% |
+  | 20s at 80% | ~33% |
+  | 25s at 75% | ~4% |
+
+  Break-even at ×1.5 is about 16s at 84%.
+
+**Focus (0–100%):**
+- **Losses:** a miss costs −25%, and a slow answer (over 25s) costs −10%.
+- **Restoring:** 2 right in a row give +25%, or a **Focus Elixir** (500 ⚡) refills Focus.
+- **Locks:** lost Focus locks each question for up to 9s, plus 4s after a miss, while the rivals keep running.
+- **Effects:** under 50% the question blurs; under 25% it blurs more and shakes on misses. Reduced-motion users get a tint instead. Feedback is never blurred.
+
+**Economy:**
+- 2,500 ⚡ to start. Bets of 50/100/250/500 pay ×1.5.
+- Jockey Skins cost 1,000, Custom Mounts 1,500, Focus Elixirs 500. Purchases need two taps.
+- A 250 ⚡ daily stipend is available if you go broke.
+
+**Saving:** balance, Focus, unlocked chapters, per-question results, gear and stats are kept in `localStorage` (`sat-wizz-clause-derby.v1`). With storage blocked, the game still plays; it just doesn't save.
+
+**Source and build:** the source lives in `clause-derby/src/` (bank core, `ch1.js`…`ch7.js`, `app.js`, `styles.css`). The shared engine and sounds come from `js/derby.js` and `js/sfx.js`.
+
+```sh
+node scripts/validate-clause-bank.js   # 7×25 questions, answer keys, notes, banned titles, your example answers
+node scripts/build-clause-derby.js     # → clause-derby/index.html
+```
+
 ## Single-file build (`dist/index.html`)
 
 The **whole SatWizz app** is also available as **one self-contained HTML file**: Practice with all 190 questions, the Vocab Vault (flashcards, sprints, Derby), the Leaderboard tab, the Shop and Profile, with every style, script and icon inline.
@@ -241,6 +296,9 @@ js/social-view.js           Leaderboard tab: leaderboards, friend streaks, reque
 js/app.js                   chapter feed, drawers, streaks, shop, profile, demo mode
 scripts/validate-content.js content checks for the curriculum and vocab
 scripts/build-single.js     builds the whole app as one file: dist/index.html
+scripts/build-clause-derby.js builds SAT Wizz: Clause Derby → clause-derby/index.html
+scripts/validate-clause-bank.js checks the Clause Derby question bank
+clause-derby/               SAT Wizz: Clause Derby (src/ + generated index.html)
 scripts/build-derby.js      builds the standalone derby/index.html
 dist/index.html             the whole app in a single file (generated)
 derby/index.html            standalone SAT Vocabulary Derby (generated, single file)
