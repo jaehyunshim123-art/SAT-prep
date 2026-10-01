@@ -17,8 +17,10 @@
 //   • Tiers only move in sprints. A sprint miss also flags the word for review,
 //     so flagged words lead both the deck and the next sprint.
 //
+//   • Vocab Derby (js/derby.js): a wager-based horse race on these words.
+//
 // Exposes SatWizz.vocab = { WORDS, TIERS, RULES, emptyProgress, drawSprint,
-// drawDeck, grade, reviewCard, finishSprint, summary, mergeProgress, mount }.
+// drawDeck, grade, reviewCard, flag, finishSprint, summary, mergeProgress, mount }.
 //
 // Word formats (both are real Digital SAT formats):
 //   format "blank":   passage with "______"; choices are words
@@ -539,7 +541,7 @@
   //              advancedDay, mastered, review, cards, cardDay } }, sprintDay, sprints }
   //   seen/correct/wrong/lastDay count sprint answers; cards/cardDay count flashcard
   //   reviews; lastAt is the last activity of either kind (used for merging).
-  const emptyProgress = () => ({ words: {}, sprintDay: null, sprints: 0 });
+  const emptyProgress = () => ({ words: {}, sprintDay: null, sprints: 0, derby: SW.derby.emptyStats() });
 
   function wordState(p, id) {
     return { tier: 1, seen: 0, correct: 0, wrong: 0, lastAt: 0, lastDay: null, advancedDay: null, mastered: false, review: false, cards: 0, cardDay: null, ...p.words[id] };
@@ -605,6 +607,15 @@
     }
     p.words[id] = s;
     return { sparks };
+  }
+
+  // Flags a word for review after a miss outside the sprint (e.g. the Derby).
+  function flag(p, id, now = Date.now()) {
+    if (!BY_ID[id]) return;
+    const s = wordState(p, id);
+    s.review = true;
+    s.lastAt = now;
+    p.words[id] = s;
   }
 
   // Records an answer. Returns what changed and the Sparks earned.
@@ -679,6 +690,7 @@
       words,
       sprintDay: [a.sprintDay, b.sprintDay].filter(Boolean).sort().pop() || null,
       sprints: Math.max(a.sprints || 0, b.sprints || 0),
+      derby: SW.derby.mergeStats(a.derby, b.derby),
     };
   }
 
@@ -691,6 +703,7 @@
     let deck = null; // { ids, i, flipped, got, later, earned, requeued: Set, busy }
     let drawer = null;
     const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const derby = SW.derby.mount({ ...ctx, onExit: () => render() });
 
     const P = () => {
       const S = ctx.getState();
@@ -705,6 +718,7 @@
     function render() {
       if (sprint) return renderCard();
       if (deck) return renderDeck();
+      if (derby.active()) return derby.render();
       const p = P();
       const sum = summary(p);
       const today = ctx.todayKey();
@@ -734,6 +748,10 @@
                 <small>${bonusLeft ? `+${RULES.sprintSparks} ⚡ bonus` : "today's bonus is done"}</small>
               </button>
             </div>
+            <button class="mode-btn derby-btn" type="button" id="derby-start">
+              <span class="mode-ico" aria-hidden="true">🏇</span>
+              <span><b>Vocab Derby</b><small>Bet Sparks, race 5 rivals to the finish. Wins pay 2×.</small></span>
+            </button>
             <p class="muted small">+${RULES.sparksPerCorrect} ⚡ per correct sprint word · +${RULES.masterySparks} ⚡ when a word reaches 👑 Master</p>
           </section>
           <section class="panel">
@@ -750,6 +768,7 @@
         </div>`;
       container.querySelector("#sprint-start").addEventListener("click", startSprint);
       container.querySelector("#deck-start").addEventListener("click", startDeck);
+      container.querySelector("#derby-start").addEventListener("click", () => { sprint = null; deck = null; derby.open(); });
     }
 
     // ---------- Flashcards ----------
@@ -1151,8 +1170,8 @@
     }
 
     // busy: a sprint or deck is in progress, so background re-renders should wait.
-    return { render, isOpen: () => Boolean(drawer), busy: () => Boolean(sprint || deck) };
+    return { render, isOpen: () => Boolean(drawer), busy: () => Boolean(sprint || deck || derby.racing()) };
   }
 
-  SW.vocab = { WORDS, TIERS, RULES, emptyProgress, drawSprint, drawDeck, grade, reviewCard, finishSprint, summary, mergeProgress, mount };
+  SW.vocab = { WORDS, TIERS, RULES, emptyProgress, drawSprint, drawDeck, grade, reviewCard, flag, finishSprint, summary, mergeProgress, mount };
 })();

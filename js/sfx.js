@@ -67,6 +67,15 @@
     combo: (ac) => {
       [659.3, 830.6, 987.8, 1318.5].forEach((f, i) => tone(ac, { freq: f, start: i * 0.06, dur: 0.18, type: "triangle", gain: 0.13 }));
     },
+    // Starting bell for the Vocab Derby.
+    bell: (ac) => {
+      tone(ac, { freq: 1568, dur: 0.5, type: "sine", gain: 0.14 });
+      tone(ac, { freq: 2093, start: 0.02, dur: 0.6, type: "sine", gain: 0.09 });
+    },
+    // Four quick hoofbeats.
+    gallop: (ac) => {
+      [0, 0.09, 0.2, 0.29].forEach((start, i) => tone(ac, { freq: i % 2 ? 110 : 140, start, dur: 0.07, type: "triangle", gain: 0.22 }));
+    },
     complete: (ac) => {
       [523.3, 659.3, 784, 1046.5].forEach((f, i) => tone(ac, { freq: f, start: i * 0.1, dur: 0.35, type: "triangle", gain: 0.14 }));
     },

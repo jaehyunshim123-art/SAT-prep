@@ -6,11 +6,15 @@
 // have the odd one out as the answer.
 // Vocab Vault: the same checks, plus a definition, root, context clue, synonyms/antonyms,
 // and the right target for each format (blank vs. underlined word).
+// Vocab Derby: every generated question (context / definition / synonym /
+// antonym) has 4 distinct choices, the right answer, and no distractor drawn
+// from a word too close in meaning.
 const repo = require("path").resolve(__dirname, "..");
 global.window = {};
 require(`${repo}/js/themes.js`);
 require(`${repo}/js/questions.js`);
 for (let i = 1; i <= 10; i++) require(`${repo}/js/curriculum/ch${i}.js`);
+require(`${repo}/js/derby.js`);
 require(`${repo}/js/vocab.js`);
 const SW = window.SatWizz;
 SW.curriculum.build();
@@ -82,6 +86,39 @@ for (const w of SW.vocab.WORDS) {
     if (!m) bad.push(`${tag}: meaning format needs [[word]]`);
     else if (!m[1].toLowerCase().startsWith(w.word.slice(0, Math.min(5, w.word.length)).toLowerCase())) bad.push(`${tag}: underlined "${m[1]}" isn't a form of "${w.word}"`);
   } else bad.push(`${tag}: format must be blank or meaning`);
+}
+
+// ---------- derby questions ----------
+{
+  let seed = 42;
+  const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const words = SW.vocab.WORDS;
+  const owner = (text, field) => words.filter((x) => (Array.isArray(x[field]) ? x[field].includes(text) : x[field] === text));
+  let made = 0;
+  for (const w of words) for (const kind of ["context", "definition", "synonym", "antonym"]) for (let i = 0; i < 50; i++) {
+    const q = SW.derby.makeQuestion(w, kind, rand);
+    const tag = `derby:${w.id}:${kind}`;
+    made++;
+    if (q.choices.length !== 4 || new Set(q.choices.map((c) => c.toLowerCase())).size !== 4) { bad.push(`${tag}: needs 4 distinct choices (${q.choices.join(" | ")})`); break; }
+    const right = q.choices[q.answer];
+    const wrong = q.choices.filter((_, k) => k !== q.answer);
+    if (kind === "context" && right !== w.choices[w.answer]) bad.push(`${tag}: wrong answer key`);
+    if (kind === "definition") {
+      if (right !== w.definition) bad.push(`${tag}: answer isn't the definition`);
+      for (const d of wrong) if (owner(d, "definition").some((x) => SW.derby.related(w, x))) bad.push(`${tag}: distractor from a related word: ${d}`);
+    }
+    if (kind === "synonym" || kind === "antonym") {
+      const list = kind === "synonym" ? w.synonyms : w.antonyms;
+      if (!list.includes(right)) bad.push(`${tag}: answer "${right}" isn't a listed ${kind}`);
+      for (const d of wrong) {
+        if (list.includes(d)) bad.push(`${tag}: two correct answers (${d})`);
+        if (kind === "antonym" && w.synonyms.includes(d)) continue; // the synonym trap
+        if (owner(d, "synonyms").some((x) => SW.derby.related(w, x))) bad.push(`${tag}: distractor "${d}" comes from a related word`);
+      }
+    }
+    if (bad.length > 20) break;
+  }
+  console.log("derby questions generated", made);
 }
 
 console.log("chapters", SW.chapters.map((c) => `${c.id}:${c.questions.length}`).join(" "), "| questions", SW.questions.length,

@@ -43,7 +43,7 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 
 ## Vocab Vault
 
-The **Vocab** tab (`js/vocab.js`) teaches 30 high-frequency SAT words in two modes.
+The **Vocab** tab (`js/vocab.js`) teaches 30 high-frequency SAT words in three modes.
 
 **🃏 Flashcards.** A deck of 10 cards that flip in 3D.
 - **Front:** the word, its part of speech and its context sentence, filled in with your cast and highlighted.
@@ -67,6 +67,19 @@ The **Vocab** tab (`js/vocab.js`) teaches 30 high-frequency SAT words in two mod
 
   Vocab answers also count toward your daily goal and give +5 XP each. They don't use Focus Shields or combos.
 - Progress syncs to `profiles.vocab_progress`. If both devices practiced a word, the newer answer wins.
+
+**🏇 Vocab Derby** (`js/derby.js`). A wager-based horse race on the same words.
+- **Bet:** place a bet from your ⚡ Sparks (10, 25 or 50) or choose a Fun run. The bet is taken at the gate, and a win pays it back **2×**.
+  - Up to **3 betting races a day**; Fun runs are unlimited.
+  - Leaving mid-race forfeits the bet, after a confirm tap.
+- **Field:** six horses: Galloping Lexicon (you), Verbal Velocity, Grammar Galloper, Syntax Sprinter, Thesaurus Rex and Diction Dash. The track is 5 steps.
+- **Turns:** each turn is one question: Words in Context, definition, synonym or antonym (the antonym's trap choice is a synonym).
+  - Right: you gallop +1.
+  - Wrong: you stay put, a random rival surges +1, and the word is flagged 🔁.
+  - Rivals also gallop on their own (35% chance each per turn), so every miss hurts. You move first, so a perfect race always wins.
+- **Results:** final standings, your payout and bankroll, and a recap of every word with its definition.
+- Answers count toward the daily goal (+5 XP each), like sprint answers. Stats (races, wins, best payout) sync in `vocab_progress`.
+- Questions are generated from the word data. `scripts/validate-content.js` builds 6,000 of them and checks each one has 4 distinct choices and one defensible answer: distractors never come from words close in meaning.
 
 ## Gamification
 
@@ -142,6 +155,7 @@ js/themes.js                casts and avatars
 js/questions.js             curriculum framework: chapter plan, official stems, addChapter/build API
 js/curriculum/ch1-ch10.js   one file per chapter: lesson + 20 questions with per-choice notes
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
+js/derby.js                 Vocab Derby: race logic, question generator, race view
 js/rewards.js               Sparks, shop, Focus, Aura Shields, wager, badges (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push
