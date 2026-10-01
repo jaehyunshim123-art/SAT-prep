@@ -1610,7 +1610,10 @@
     function drawerKeys(e) {
       if (!drawer) return;
       if (e.key === "Escape") { e.preventDefault(); closeDrawer(); }
-      else if (e.key === "Tab") {
+      else if ((e.key === " " || e.key === "Enter") && !e.target.closest("button")) {
+        e.preventDefault();
+        drawer.querySelector("[data-next]")?.click(); // Space/Enter continues
+      } else if (e.key === "Tab") {
         const items = [...drawer.querySelectorAll("button")];
         const first = items[0];
         const last = items[items.length - 1];

@@ -2096,3 +2096,187 @@ body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(
 @media (max-width: 400px) { .brand .b-pre { display: none; } }
 /* Tab labels may wrap ("Vocab / Vault" on phones) instead of being cut off. */
 .tab { white-space: normal; line-height: 1.15; text-align: center; align-content: start; overflow-wrap: normal; }
+
+/* ---------- Header: Help button ---------- */
+.help-btn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.help-btn:hover { border-color: var(--volt); color: var(--volt); }
+@media (max-width: 360px) { .help-btn { width: 26px; height: 26px; font-size: 0.85rem; } }
+
+/* ---------- Help overlay ---------- */
+.help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--scrim);
+}
+.help-modal {
+  width: min(640px, 100%);
+  max-height: min(88vh, 900px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.5);
+}
+.help-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; position: sticky; top: -18px; margin: -18px -18px 0; padding: 14px 18px 8px; background: var(--surface); z-index: 1; }
+.help-head h2 { margin: 0; font-family: var(--font-display); }
+.help-jump { display: flex; flex-wrap: wrap; gap: 6px; }
+.help-jump a { padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--ink); font-size: 0.8rem; font-weight: 700; text-decoration: none; }
+.help-jump a:hover { outline: 2px solid var(--volt); }
+.help-sec { display: grid; gap: 8px; scroll-margin-top: 56px; }
+.help-sec h3 { margin: 0; font-family: var(--font-display); font-size: 1.05rem; }
+.help-list { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 0.92rem; }
+.key-grid { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; font-size: 0.9rem; }
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--ink);
+}
+.rule-acc { display: grid; gap: 6px; }
+.rule-acc details { border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; background: var(--surface-2); }
+.rule-acc summary { cursor: pointer; font-weight: 700; display: flex; gap: 8px; align-items: center; }
+.rule-acc ul { margin: 6px 0 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 0.88rem; }
+.rule-acc p { margin: 6px 0 0; font-size: 0.88rem; }
+.feedback-form { display: grid; gap: 8px; }
+.feedback-form .seg label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer; font-size: 0.88rem; font-weight: 700; }
+.feedback-form textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+}
+.feedback-form textarea:focus { outline: none; border-color: var(--volt); }
+.fb-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 420px) { .key-grid { grid-template-columns: 1fr; gap: 2px 0; } .key-grid > div:nth-child(even) { margin-bottom: 8px; color: var(--muted); } }
+
+/* ---------- Trophy Case ---------- */
+.trophy-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.trophy-head h2 { margin: 0; }
+.trophy-total { height: 8px; }
+.trophy-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-btn {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.chip-btn small { color: var(--muted); font-weight: 700; }
+.chip-btn[aria-pressed="true"] { background: var(--volt); border-color: var(--volt); color: var(--volt-ink); }
+.chip-btn[aria-pressed="true"] small { color: var(--volt-ink); opacity: 0.85; }
+.trophy-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.trophy {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 4px 10px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  min-width: 0;
+}
+.trophy-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: var(--spark-bg); font-size: 1.5rem; }
+.trophy.locked { background: var(--surface-2); }
+.trophy.locked .trophy-icon { filter: grayscale(1); opacity: 0.45; background: var(--line); }
+.trophy-info { display: grid; gap: 3px; min-width: 0; }
+.trophy-info b { font-family: var(--font-display); font-size: 0.95rem; }
+.trophy-info > span { font-size: 0.82rem; color: var(--muted); }
+.trophy-info small { font-size: 0.75rem; color: var(--muted); }
+.trophy-info .bar { height: 6px; margin-top: 2px; }
+.trophy-actions { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+.new-tag { padding: 1px 6px; border-radius: 6px; background: var(--flame); color: #fff; font-size: 0.65rem; letter-spacing: 0.06em; vertical-align: middle; }
+.trophy.recent { border-color: var(--flame-2); animation: trophy-glow 2.4s ease-in-out infinite; }
+@keyframes trophy-glow {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--flame-2) 55%, transparent), 0 0 12px 0 color-mix(in srgb, var(--flame-2) 35%, transparent); }
+  50% { box-shadow: 0 0 0 3px var(--flame-2), 0 0 22px 4px color-mix(in srgb, var(--flame-2) 50%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trophy.recent { animation: none; box-shadow: 0 0 0 3px var(--flame-2); }
+}
+
+/* ---------- Desktop hotkey hints on answer choices ([A] … [D]) ---------- */
+.choices { counter-reset: hk; }
+.choices > li { counter-increment: hk; }
+@media (hover: hover) and (pointer: fine) and (min-width: 700px) {
+  .choice::after {
+    content: counter(hk, upper-alpha);
+    margin-left: auto;
+    flex: none;
+    padding: 0 6px;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--muted);
+    opacity: 0.75;
+  }
+  .choice:disabled::after { visibility: hidden; }
+}
+/* Phones: room for the ? button. Tighter header spacing and a smaller ?. */
+@media (max-width: 440px) {
+  .hud { gap: 4px; }
+  .help-btn { width: 26px; height: 26px; font-size: 0.85rem; border-width: 1.5px; }
+}
+@media (max-width: 380px) {
+  .hud { gap: 3px; }
+  .hud .pill { padding-inline: 6px; }
+  .pill.focus-pill { padding-inline: 6px; }
+}
+/* Phones: the wordmark becomes a compact "W" badge so the header fits
+   Streak, Sparks, ?, Focus, avatar and account. */
+@media (max-width: 440px) {
+  .brand .b-pre, .brand .b-izz { display: none; }
+  .brand .b-w {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: var(--volt);
+    color: var(--volt-ink);
+    font-size: 1rem;
+    letter-spacing: 0;
+  }
+}
+/* Smallest phones: the cloud/Save button gives way to the ? button. Sign-in
+   and sync status live in Profile (tap the avatar). */
+@media (max-width: 340px) { #hud-account { display: none; } }
+.rule-acc .ch-badge { flex: none; white-space: nowrap; }

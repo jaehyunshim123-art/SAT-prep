@@ -83,6 +83,10 @@
     tests: {},
     practiceSets: {},
     focusResetAt: 0, // ms of the last hourly Focus recharge
+    // Trophy Case (js/badges.js): 10/10 sets, unlock times, first-run seeding
+    flawless: 0,
+    badgeAt: {}, // badge id -> ms unlocked (recent ones glow)
+    trophySeeded: false,
     // settings
     muted: false,
     haptics: true,
@@ -134,6 +138,7 @@
     if (!s.chapterCorrect || typeof s.chapterCorrect !== "object") s.chapterCorrect = {};
     if (!s.tests || typeof s.tests !== "object") s.tests = {};
     if (!s.practiceSets || typeof s.practiceSets !== "object") s.practiceSets = {};
+    if (!s.badgeAt || typeof s.badgeAt !== "object") s.badgeAt = {};
     if (s.chapterId !== REVIEW_ID && !s.unlockedChapters.includes(s.chapterId)) s.chapterId = 1;
     // Packs that used to be free stay free for anyone who played before v2,
     // and anyone already using a cast that became paid keeps it.
@@ -161,6 +166,22 @@
     if (touch) S.updatedAt = Date.now();
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
     if (!S.demo) auth.schedulePush(() => S);
+    queueBadgeCheck();
+  }
+
+  // Accomplishments can come from anywhere (Vault, Derby, Shop, tests), so
+  // every save schedules one check of all 50 badges.
+  let badgeTimer = null;
+  function queueBadgeCheck() {
+    if (badgeTimer || !S.trophySeeded) return;
+    badgeTimer = setTimeout(() => {
+      badgeTimer = null;
+      const fresh = rewards.checkBadges(S, {});
+      if (!fresh.length) return;
+      save();
+      announceBadges(fresh);
+      if (currentView === "you" && youTab === "profile") renderStreak();
+    }, 0);
   }
 
   // ---------- Dates ----------
@@ -379,9 +400,10 @@
   const app = $("#app");
   app.innerHTML = `
     <header class="hud">
-      <div class="brand" id="brand" aria-label="SatWizz"><b class="b-pre">Sat</b><span>Wizz</span><em class="demo-badge" id="demo-badge" hidden>DEMO</em></div>
+      <div class="brand" id="brand" aria-label="SatWizz"><b class="b-pre">Sat</b><span class="b-w">W<span class="b-izz">izz</span></span><em class="demo-badge" id="demo-badge" hidden>DEMO</em></div>
       <button class="pill flame" id="hud-streak" type="button" title="Lock In Streak: days in a row you met your daily goal"></button>
       <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the Shop"></button>
+      <button class="help-btn" id="hud-help" type="button" aria-label="Help, keyboard shortcuts and feedback" aria-haspopup="dialog" title="Help (?)">?</button>
       <button class="pill focus-pill" id="hud-focus" type="button" title="Focus Meter"></button>
       <button class="avatar sm" id="hud-avatar" type="button" aria-label="Profile, leaderboard and friends"></button>
       <button class="acct" id="hud-account" type="button"><span class="acct-long">Save</span><span class="acct-short" aria-hidden="true">☁️</span></button>
@@ -444,6 +466,7 @@
       ? "🧠 Focus 100%. A miss costs 25%, rushing (under 3s) 10%."
       : `🧠 Focus ${S.focus}%. Get 2 right in a row for +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2), buy a Focus Elixir in the Shop, or wait: full recharge in ${FOCUS.nextRechargeMin(S)} min.`);
   });
+ $("#hud-help").addEventListener("click", () => openHelp());
   $("#back-dash").addEventListener("click", () => { sfx.play("tap"); show("dash"); });
 
   function show(view) {
@@ -1126,7 +1149,7 @@
       sfx.buzz(50);
       celebrate("⚡", `${S.combo} in a row!`, sparks.bonus ? `+${sparks.bonus} bonus Sparks` : "Keep the combo going");
     }
-    newBadges.forEach(celebrateBadge);
+    announceBadges(newBadges);
 
     if (card._review) {
       next.focus({ preventScroll: true });
@@ -1247,6 +1270,9 @@
     if (e.key === "Escape") {
       e.preventDefault();
       closeExplain();
+    } else if ((e.key === " " || e.key === "Enter") && !e.target.closest("button")) {
+      e.preventDefault();
+      explainSheet.querySelector("[data-next]")?.click();
     } else if (e.key === "Tab") {
       const items = [...explainSheet.querySelectorAll("button:not(:disabled)")];
       const first = items[0];
@@ -1280,7 +1306,12 @@
   }
 
   function celebrateBadge(b) {
-    celebrate(b.icon, `Title unlocked: ${b.title}`, "Wear it from Profile → Achievements");
+    celebrate(b.icon, `Accomplishment unlocked: ${b.title}`, "See it in Profile → Trophy Case");
+  }
+  // Several at once get one celebration instead of a queue of them.
+  function announceBadges(list) {
+    if (list.length > 2) celebrate("🏆", `${list.length} accomplishments unlocked!`, list.map((b) => b.icon).join(" "));
+    else list.forEach(celebrateBadge);
   }
 
   const PRAISE = ["Correct!", "Nailed it!", "Clean!", "Exactly right!", "Boom!", "Sharp!"];
@@ -1396,9 +1427,15 @@
 
   function focusKeys(e) {
     if (!focusSheet) return;
+    const pos = answerKey(e);
     if (e.key === "Escape") {
       e.preventDefault();
       closeFocusBreak();
+    } else if (pos !== -1 && !e.target.closest("input, textarea")) {
+      if (pickIn(focusSheet, pos)) e.preventDefault();
+    } else if ((e.key === " " || e.key === "Enter") && !e.target.closest("button")) {
+      const go = visibleBtn(focusSheet, ".next-row, .btn[data-close]"); // never the Elixir (it costs Sparks)
+      if (go) { e.preventDefault(); go.click(); }
     } else if (e.key === "Tab") {
       const items = [...focusSheet.querySelectorAll("button:not(:disabled)")];
       if (!items.length) return;
@@ -1767,6 +1804,7 @@
       }
       if (!prev?.passed) earned += rewards.earn(S, RULES.chapterSparks);
     }
+    if (score === n) S.flawless = (S.flawless || 0) + 1; // a flawless run (Trophy Case)
     const goal = checkGoal();
     const newBadges = rewards.checkBadges(S, {});
     save();
@@ -1781,7 +1819,7 @@
     renderDiag();
     if (unlocked) celebrate("🔓", `${unlocked.bonus ? "Bonus chapter" : `Chapter ${unlocked.id}`} unlocked!`, `${score}/${n} on the Review for Understanding`);
     if (goal) celebrateGoal(goal);
-    newBadges.forEach(celebrateBadge);
+    announceBadges(newBadges);
   }
 
   // ---------- Diagnostic Feedback screen ----------
@@ -1857,6 +1895,140 @@
     } else if (before !== S.focusResetAt) save(false);
   }
 
+
+  // ---------- Help overlay: how to play, keyboard, rules, feedback ----------
+  // Opened with the header's "?" button or the ? key. Esc closes it.
+  const FEEDBACK_KEY = "satwizz.feedback"; // localStorage: [{ id, at, kind, text, view }]
+  const readFeedback = () => {
+    try {
+      const list = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || "[]");
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  };
+  let helpSheet = null;
+  let helpReturn = null;
+
+  function openHelp(section) {
+    if (helpSheet) return;
+    closeExplain(false);
+    helpReturn = document.activeElement;
+    helpSheet = h("div", { class: "help-backdrop" });
+    const box = h("div", { class: "help-modal", role: "dialog", "aria-modal": "true", "aria-labelledby": "help-title" });
+    helpSheet.append(box);
+    document.body.append(helpSheet);
+    helpSheet.addEventListener("mousedown", (e) => { if (e.target === helpSheet) closeHelp(); });
+    document.addEventListener("keydown", helpKeys, true);
+    const cast = castOf();
+    const core = CHAPTERS.filter((c) => !c.bonus && c.pause);
+    const key = (k) => `<kbd>${k}</kbd>`;
+    const saved = readFeedback().length;
+    box.innerHTML = `
+      <div class="help-head">
+        <h2 id="help-title">❓ Help</h2>
+        <button class="linkbtn" type="button" data-close aria-label="Close help">✕ Close</button>
+      </div>
+      <nav class="help-jump" aria-label="Help sections">
+        <a href="#help-play">How to play</a><a href="#help-keys">Keyboard</a><a href="#help-rules">Rules cheat sheet</a><a href="#help-feedback">Suggest / report</a>
+      </nav>
+      <section class="help-sec" id="help-play">
+        <h3>How to Play SatWizz</h3>
+        <ul class="help-list">
+          <li><b>🏠 Chapters.</b> Learn each chapter's rules in <i>Learn &amp; practice</i>, try a <i>Practice set</i>, then take the 10-question <b>Review for Understanding</b>. Score <b>8/10</b> to unlock the next chapter. After every set, the Diagnostic screen explains each answer.</li>
+          <li><b>🧠 Focus (0–100%).</b> A miss costs ${FOCUS.RULES.miss}%, rushing (under 3s) costs ${FOCUS.RULES.rush}%. Two right in a row gives +${FOCUS.RULES.restore}%. It refills to 100% every hour, or right away with a 🧪 Focus Elixir. Low Focus outlines the question in orange or red, and in the Derby it locks your answers for a few seconds.</li>
+          <li><b>⚡ Sparks.</b> +${RULES.sparksPerCorrect} per right answer, bonuses for combos, your daily goal and chapter milestones. Spend them in the 🛍️ Shop or bet them in the 🐎 Derby.</li>
+          <li><b>🔥 Lock In Streak.</b> Meet your daily goal (${S.goal} questions) every day. Aura Shields 💠 cover a missed day.</li>
+          <li><b>📚 Vocab Vault.</b> Flashcards with 🔊 pronunciation, daily sprints and 🎣 Vocab Fishing.</li>
+          <li><b>🏆 Trophy Case.</b> ${rewards.BADGES.length} accomplishments in Profile. Wear one as your title or share it.</li>
+        </ul>
+      </section>
+      <section class="help-sec" id="help-keys">
+        <h3>Keyboard Controls</h3>
+        <div class="key-grid">
+          <div>${key("A")} ${key("B")} ${key("C")} ${key("D")} <span class="muted">or</span> ${key("1")}–${key("4")}</div><div>Answer (practice, tests, Derby, sprints)</div>
+          <div>${key("Space")} ${key("Enter")}</div><div>Continue / next question</div>
+          <div>${key("←")} ${key("→")}</div><div>Previous / next in a test; flashcard Needs Review / Mastered</div>
+          <div>${key("Esc")}</div><div>Close a panel or this help</div>
+          <div>${key("P")}</div><div>Pronounce the flashcard word</div>
+          <div>${key("?")}</div><div>Open this help</div>
+        </div>
+      </section>
+      <section class="help-sec" id="help-rules">
+        <h3>SAT Grammar Rules Cheat Sheet</h3>
+        <div class="rule-acc">
+          ${core.map((ch) => `
+            <details>
+              <summary><span class="ch-badge">Ch ${ch.id}</span> ${esc(ch.title)}</summary>
+              <p class="muted">${fill(ch.pause.summary, cast, false)}</p>
+              <ul>${ch.pause.rules.map((r) => `<li>${fill(r, cast, false)}</li>`).join("")}</ul>
+            </details>`).join("")}
+        </div>
+      </section>
+      <section class="help-sec" id="help-feedback">
+        <h3>Suggest a Feature / Report a Bug</h3>
+        <form class="feedback-form" id="feedback-form" novalidate>
+          <div class="seg" role="radiogroup" aria-label="Feedback type">
+            <label><input type="radio" name="fb-kind" value="feature" checked> 💡 Feature idea</label>
+            <label><input type="radio" name="fb-kind" value="bug"> 🐞 Bug report</label>
+          </div>
+          <label class="sr-only" for="fb-text">Your feedback</label>
+          <textarea id="fb-text" rows="4" maxlength="1000" placeholder="What would make SatWizz better? If something broke, what were you doing?"></textarea>
+          <div class="fb-row">
+            <small class="muted" id="fb-count">${saved ? `${saved} saved on this device` : "Saved on this device"}</small>
+            <button class="btn" type="submit" id="fb-submit">Submit Feedback</button>
+          </div>
+        </form>
+      </section>`;
+    box.querySelector("[data-close]").addEventListener("click", closeHelp);
+    box.querySelectorAll(".help-jump a").forEach((a) => a.addEventListener("click", (e) => {
+      e.preventDefault();
+      box.querySelector(a.getAttribute("href")).scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
+    }));
+    box.querySelector("#feedback-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ta = box.querySelector("#fb-text");
+      const text = ta.value.trim();
+      if (!text) {
+        ta.focus();
+        toast("Type your suggestion or bug first.");
+        return;
+      }
+      const list = readFeedback();
+      list.push({ id: `fb-${Date.now().toString(36)}`, at: new Date().toISOString(), kind: box.querySelector('[name="fb-kind"]:checked').value, text: text.slice(0, 1000), view: currentView });
+      try { localStorage.setItem(FEEDBACK_KEY, JSON.stringify(list)); } catch (err) { /* storage blocked: still thank them */ }
+      ta.value = "";
+      box.querySelector("#fb-count").textContent = `${list.length} saved on this device`;
+      sfx.play("correct");
+      toast("Thanks! Your suggestion has been saved locally.");
+    });
+    if (section) box.querySelector(`#help-${section}`)?.scrollIntoView({ block: "start" });
+    (section === "feedback" ? box.querySelector("#fb-text") : box.querySelector("[data-close]")).focus({ preventScroll: Boolean(section) });
+  }
+
+  function closeHelp() {
+    if (!helpSheet) return;
+    document.removeEventListener("keydown", helpKeys, true);
+    helpSheet.remove();
+    helpSheet = null;
+    helpReturn?.focus?.({ preventScroll: true });
+  }
+
+  function helpKeys(e) {
+    if (!helpSheet) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeHelp();
+    } else if (e.key === "Tab") {
+      const items = [...helpSheet.querySelectorAll("button, a, textarea, input, summary")].filter((x) => !x.disabled && x.offsetParent);
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    e.stopPropagation(); // the app's shortcuts stay out of the help
+  }
+
   // ---------- Celebration & toast ----------
   // Celebrations queue so a streak, a badge and a combo don't pile up at once.
   const burstQueue = [];
@@ -1906,7 +2078,7 @@
     const switcher = `
       <div class="seg subtabs" role="tablist" aria-label="Streak sections">
         <button type="button" role="tab" data-sub="streak" aria-selected="${streakTab === "streak"}">Streak</button>
-        <button type="button" role="tab" data-sub="achievements" aria-selected="${streakTab === "achievements"}">Achievements <span class="count">${S.badges.length}/${rewards.BADGES.length}</span></button>
+        <button type="button" role="tab" data-sub="achievements" aria-selected="${streakTab === "achievements"}">🏆 Trophy Case <span class="count">${earnedCount()}/${rewards.BADGES.length}</span></button>
       </div>`;
     v.innerHTML = `<div class="stack">${switcher}${streakTab === "streak" ? streakHtml() : achievementsHtml()}</div>`;
     v.querySelectorAll("[data-sub]").forEach((b) => b.addEventListener("click", () => { streakTab = b.dataset.sub; renderStreak(); }));
@@ -1915,6 +2087,12 @@
       save();
       renderStreak();
     }));
+    v.querySelectorAll("[data-cat]").forEach((b) => b.addEventListener("click", () => {
+      trophyCat = b.dataset.cat;
+      sfx.play("tap");
+      renderStreak();
+    }));
+    v.querySelectorAll("[data-share]").forEach((b) => b.addEventListener("click", () => shareBadge(rewards.badgeById(b.dataset.share))));
   }
 
   function streakHtml() {
@@ -1973,28 +2151,88 @@
       </section>`;
   }
 
+  // ---------- Trophy Case: 50 accomplishments (js/badges.js) ----------
+  // Filter by category, progress bars on locked badges, a glow on anything
+  // unlocked in the last 7 days, and a Share button that copies a snippet.
+  let trophyCat = "all";
+  const RECENT_MS = 7 * 864e5;
+  const earnedCount = () => rewards.BADGES.filter((b) => S.badges.includes(b.id)).length;
+  const isRecent = (id) => Date.now() - (S.badgeAt[id] || 0) < RECENT_MS;
+  const shortDate = (ms) => new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
   function achievementsHtml() {
-    const rows = rewards.BADGES.map((b) => {
-      const got = S.badges.includes(b.id);
+    const all = rewards.BADGES;
+    const got = (b) => S.badges.includes(b.id);
+    const cats = [["all", "All"], ...SW.BADGE_CATS];
+    const inCat = (c) => (c === "all" ? all : all.filter((b) => b.cat === c));
+    const shown = inCat(trophyCat).slice().sort((a, b) => {
+      // Unlocked first (most recent first), then locked by how close you are.
+      const ga = got(a), gb = got(b);
+      if (ga !== gb) return ga ? -1 : 1;
+      if (ga) return (S.badgeAt[b.id] || 0) - (S.badgeAt[a.id] || 0);
+      const pa = a.progress(S), pb = b.progress(S);
+      return pb.value / pb.of - pa.value / pa.of;
+    });
+    const total = earnedCount();
+    const recent = all.filter((b) => got(b) && isRecent(b.id));
+    const card = (b) => {
+      const have = got(b);
       const p = b.progress(S);
       const wearing = S.title === b.id;
+      const fresh = have && isRecent(b.id);
       return `
-        <article class="badge${got ? "" : " locked"}">
-          <span class="badge-icon" aria-hidden="true">${got ? b.icon : "🔒"}</span>
-          <div class="badge-info">
-            <b>${esc(b.title)}</b>
+        <article class="trophy${have ? " got" : " locked"}${fresh ? " recent" : ""}" data-badge="${b.id}">
+          <span class="trophy-icon" aria-hidden="true">${b.icon}</span>
+          <div class="trophy-info">
+            <b>${esc(b.title)}${fresh ? ' <span class="new-tag">NEW</span>' : ""}</b>
             <span>${esc(b.desc)}</span>
-            ${got ? "" : `<div class="bar" aria-hidden="true"><i style="width:${(p.value / p.of) * 100}%"></i></div><small>${esc(p.label)}</small>`}
+            ${have
+              ? `<small class="muted">${S.badgeAt[b.id] ? `Unlocked ${shortDate(S.badgeAt[b.id])}` : "Unlocked"}</small>`
+              : `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${p.of}" aria-valuenow="${p.value}" aria-label="${esc(b.title)} progress"><i style="width:${(p.value / p.of) * 100}%"></i></div><small>${esc(p.label)}</small>`}
           </div>
-          ${got ? `<button class="mini-btn${wearing ? " on" : ""}" type="button" data-wear="${b.id}" aria-pressed="${wearing}">${wearing ? "Wearing" : "Wear title"}</button>` : ""}
+          ${have ? `
+          <div class="trophy-actions">
+            <button class="mini-btn${wearing ? " on" : ""}" type="button" data-wear="${b.id}" aria-pressed="${wearing}">${wearing ? "Wearing" : "Wear title"}</button>
+            <button class="mini-btn" type="button" data-share="${b.id}" aria-label="Share ${esc(b.title)}">📋 Share</button>
+          </div>` : ""}
         </article>`;
-    }).join("");
+    };
     return `
-      <section class="panel">
-        <h2>Achievements</h2>
-        <p class="muted">Unlock titles by hitting milestones. Wear one to show it on your streak card.</p>
-        <div class="badge-list">${rows}</div>
+      <section class="panel trophy-case">
+        <div class="trophy-head">
+          <h2>🏆 Trophy Case</h2>
+          <span class="pill-sm">${total} / ${all.length}</span>
+        </div>
+        <div class="bar trophy-total" aria-hidden="true"><i style="width:${(total / all.length) * 100}%"></i></div>
+        <p class="muted">${total ? "Wear any unlocked accomplishment as your title, or share it." : "Every question, test, sprint, race and purchase counts toward an accomplishment."}${recent.length ? ` <b>${recent.length} new this week ✨</b>` : ""}</p>
+        <div class="trophy-filters" role="group" aria-label="Filter accomplishments">
+          ${cats.map(([id, label]) => {
+            const list = inCat(id);
+            return `<button type="button" class="chip-btn" data-cat="${id}" aria-pressed="${trophyCat === id}">${esc(label)} <small>${list.filter(got).length}/${list.length}</small></button>`;
+          }).join("")}
+        </div>
+        <div class="trophy-grid">${shown.map(card).join("")}</div>
       </section>`;
+  }
+
+  // Copies a short brag to the clipboard (with a fallback for older browsers).
+  async function shareBadge(b) {
+    if (!b) return;
+    const text = `🏆 I unlocked "${b.title}" ${b.icon} on SatWizz: ${b.desc} (${earnedCount()}/${rewards.BADGES.length} accomplishments) #SatWizz #DigitalSAT`;
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      ok = true;
+    } catch (e) {
+      const ta = h("textarea", { style: "position:fixed;opacity:0", "aria-hidden": "true" });
+      ta.value = text;
+      document.body.append(ta);
+      ta.select();
+      try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+      ta.remove();
+    }
+    sfx.play("tap");
+    toast(ok ? "📋 Copied! Paste it anywhere to share." : text);
   }
 
   // ---------- Shop ----------
@@ -2268,6 +2506,11 @@
             <div class="seg" id="goal-seg">${GOALS.map((g) => `<button type="button" data-g="${g}" aria-pressed="${g === S.goal}">${g} / day</button>`).join("")}</div>
           </section>
           <section class="panel">
+            <h2>Help &amp; feedback</h2>
+            <p class="muted">How to play, keyboard shortcuts and a grammar rules cheat sheet. Got an idea or found a bug? Tell us.</p>
+            <div class="row"><button class="btn ghost" type="button" id="open-help">❓ Help</button><button class="btn ghost" type="button" id="open-feedback">💡 Suggest a feature / report a bug</button></div>
+          </section>
+          <section class="panel">
             <h2>Start over</h2>
             <p class="muted">Clears your streak, XP, Sparks, purchases and stats on this device${auth.user() ? " and in your account" : ""}.</p>
             <div class="row" id="reset-row"><button class="btn ghost" type="button" id="reset-btn">Reset progress</button></div>
@@ -2284,8 +2527,10 @@
         $("#goal-seg", v).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
         renderHud(goal ? ["streak", "sparks"] : []);
         if (goal) celebrateGoal(goal);
-        newBadges.forEach(celebrateBadge);
+        announceBadges(newBadges);
       }));
+      $("#open-help", v).addEventListener("click", () => openHelp());
+      $("#open-feedback", v).addEventListener("click", () => openHelp("feedback"));
       $("#reset-btn", v).addEventListener("click", () => {
         const row = $("#reset-row", v);
         row.innerHTML = '<button class="btn danger" type="button" id="reset-yes">Yes, erase everything</button><button class="btn ghost" type="button" id="reset-no">Keep my progress</button>';
@@ -2708,33 +2953,72 @@
   });
 
   // ---------- Keyboard ----------
-  document.addEventListener("keydown", (e) => {
-    if (onboarding.isOpen() || focusSheet || chapterSheet || explainSheet || vocab.isOpen() || currentView !== "feed" || e.target.closest("input, select, textarea")) return;
-    const card = activeCard;
-    if (!card) return;
+  // One layer for the whole app: A–D (or 1–4) answers the question on screen,
+  // Space / Enter continues, ? opens Help. Open panels (explanation, Focus
+  // Break, chapters, Help, the Vault's word breakdown) handle their own keys
+  // and stop them reaching this. The Derby answers A–D itself; Fishing uses 1–4.
+  const answerKey = (e) => {
     const k = e.key.toLowerCase();
-    const pos = "abcd".indexOf(k) !== -1 ? "abcd".indexOf(k) : "1234".indexOf(k);
-    if (pos !== -1 && card._q && !card._answered) {
-      e.preventDefault();
-      answer(card, card._order[pos]);
-    } else if ((k === "arrowdown" || k === "enter" || k === "j") && (card._answered || !card._q)) {
-      if (k === "enter" && e.target.closest("button")) return;
-      e.preventDefault();
-      scrollToNext(card);
-    }
-  });
+    if (k.length !== 1) return -1;
+    return "abcd".includes(k) ? "abcd".indexOf(k) : "1234".indexOf(k);
+  };
+  const isGo = (e) => e.key === " " || e.key === "Enter";
+  // Space/Enter on a focused button presses that button, as usual.
+  const onButton = (e) => Boolean(e.target.closest && e.target.closest("button:not(:disabled), a, summary"));
+  // The visible primary "continue" button inside `root`.
+  const visibleBtn = (root, sel) => [...root.querySelectorAll(sel)].find((b) => !b.disabled && b.offsetParent !== null);
+  // A–D on the first open question (enabled .choices) inside `root`.
+  function pickIn(root, pos) {
+    const list = [...root.querySelectorAll(".choices")].find((ol) => ol.querySelector(".choice:not(:disabled)") && ol.offsetParent !== null);
+    const btn = list && list.querySelectorAll(":scope > li > .choice")[pos];
+    if (!btn || btn.disabled) return false;
+    btn.click();
+    return true;
+  }
 
-  // Test view: A–D (or 1–4) picks, Enter / → goes on, ← goes back.
   document.addEventListener("keydown", (e) => {
-    if (currentView !== "test" || !run || onboarding.isOpen() || e.target.closest("input, select, textarea")) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.target.closest("input, select, textarea")) return;
+    if (onboarding.isOpen() || helpSheet || focusSheet || chapterSheet || explainSheet || vocab.isOpen()) return;
+    if (e.key === "?") { e.preventDefault(); openHelp(); return; }
+    const pos = answerKey(e);
     const k = e.key.toLowerCase();
-    const pos = "abcd".indexOf(k) !== -1 ? "abcd".indexOf(k) : "1234".indexOf(k);
-    if (pos !== -1 && k.length === 1) { e.preventDefault(); pickChoice(run.items[run.i].order[pos]); }
-    else if (k === "arrowright" || (k === "enter" && !e.target.closest("button"))) {
+
+    if (currentView === "feed") {
+      const card = activeCard;
+      if (!card) return;
+      if (pos !== -1 && card._q && !card._answered) {
+        e.preventDefault();
+        answer(card, card._order[pos]);
+      } else if ((k === "arrowdown" || k === "j" || isGo(e)) && (card._answered || !card._q)) {
+        if (isGo(e) && onButton(e)) return;
+        e.preventDefault();
+        scrollToNext(card);
+      }
+    } else if (currentView === "test" && run) {
+      // Tests: A–D picks, Space/Enter or → goes on (Submit on the last), ← goes back.
+      if (pos !== -1) { e.preventDefault(); pickChoice(run.items[run.i].order[pos]); }
+      else if (k === "arrowright" || (isGo(e) && !onButton(e))) {
+        e.preventDefault();
+        if (run.i === run.items.length - 1 && run.items.every((x) => x.pick != null)) submitRun();
+        else nextInRun();
+      } else if (k === "arrowleft") { e.preventDefault(); goTo(run.i - 1); }
+    } else if (currentView === "vocab") {
+      const view = $("#view-vocab");
+      if (view.querySelector("#fc")) return; // flashcards: Space flips (js/vocab.js)
+      if (pos !== -1 && pickIn(view, pos)) e.preventDefault();
+      else if (isGo(e) && !onButton(e)) {
+        const go = visibleBtn(view, "#vocab-next, #fish-next, [data-next]");
+        if (go) { e.preventDefault(); go.click(); }
+      }
+    } else if (currentView === "derby") {
+      if (isGo(e) && !onButton(e)) {
+        const go = visibleBtn($("#view-derby"), "#derby-next");
+        if (go) { e.preventDefault(); go.click(); }
+      }
+    } else if (currentView === "diag" && isGo(e) && !onButton(e)) {
       e.preventDefault();
-      if (run.i === run.items.length - 1 && run.items.every((x) => x.pick != null)) submitRun();
-      else nextInRun();
-    } else if (k === "arrowleft") { e.preventDefault(); goTo(run.i - 1); }
+      $("#view-diag [data-dash]")?.click();
+    }
   });
 
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { focusTick(); renderHud(); } });
@@ -2746,6 +3030,14 @@
   auth.init();
   focusTick();
   setInterval(focusTick, 60 * 1000);
+  // First run of the Trophy Case: award what existing progress has already
+  // earned, quietly, with one toast instead of a celebration for each.
+  if (!S.trophySeeded) {
+    const earned = rewards.checkBadges(S, {});
+    S.trophySeeded = true;
+    save(false);
+    if (earned.length) setTimeout(() => toast(`🏆 Trophy Case: you've already earned ${earned.length} accomplishment${earned.length === 1 ? "" : "s"}. See Profile.`), 900);
+  }
   renderHud();
   startChapter(S.chapterId);
   // The Dashboard is home; index.html#practice opens straight into practice.

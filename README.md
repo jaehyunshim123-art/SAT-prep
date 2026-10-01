@@ -2,7 +2,7 @@
 
 A mobile-first, gamified Digital SAT grammar and vocabulary website. You work through a 7-chapter grammar curriculum from a Dashboard: learn each chapter in a snap-scrolling feed of Digital SAT-style questions, then pass its 10-question **Review for Understanding** (8/10) to unlock the next. The Vocab Vault has 3D flashcards, sprints and Vocab Fishing. You race your unit's grammar questions in the Derby and spend Sparks in the Shop. Daily and friend streaks and live leaderboards keep you coming back.
 
-- **Header (every screen):** ⚡ **Spark balance** (new players start with **2,500**), 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%).
+- **Header (every screen):** ⚡ **Spark balance** (new players start with **2,500**), a **❓ Help** button next to it, 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%). On phones the wordmark shrinks to a "W" badge so everything fits; at 340px and below the cloud/Save button moves to Profile (tap the avatar).
 - **Bottom nav, five tabs:**
   - 🏠 **Dashboard** ("Home" on phones): chapter select 1–7 plus the bonus chapters. Each chapter card opens **Learn & practice** (the lesson and question feed), a **Practice set** (10) or the **Review for Understanding** test (10). After every set the **Diagnostic** screen opens.
   - 📚 **Vocab Vault:** flashcards, sprints and 🎣 Vocab Fishing.
@@ -349,10 +349,23 @@ node scripts/build-derby.js
 
   Purchases need two taps. Anything you already own stays owned. Derby wins pay your bet back ×1.5.
 - **Starting balance.** New players start with 2,500 ⚡. Existing saves keep their balance. A fresh device that signs in to an account that has played takes the account's balance, so a new browser can't top up an account.
-- **Achievements.** Wearable titles: Spark Starter, Syntax Warlock and Lightning Fast.
+- **🏆 Trophy Case** (Profile → Trophy Case, `js/badges.js`). **50 accomplishments** in six categories: Curriculum (10), Volume (10), Streaks (7), Vocab (10), Derby (7) and Shop (6).
+  - **Filters:** All, Curriculum, Volume, Streaks, Vocab, Derby, Shop, each with an earned/total count.
+  - **Locked badges** show a progress bar and count ("7 / 10 flawless runs"); unlocked ones show the date.
+  - **Recently unlocked** badges (last 7 days) glow and carry a NEW tag.
+  - **Share** copies a short brag to the clipboard; **Wear title** shows it on your streak card.
+  - **How they unlock:** every save runs one check of all 50, so progress from tests, the Vocab Vault, the Derby and the Shop all counts. Players with existing progress get what they've already earned on first run, with one toast instead of a celebration per badge. A "flawless run" is 10/10 on a test or practice set.
+
 - **Settings** (Profile → Settings): sound, vibration, push alerts, daily goal and reset. At the bottom, the dedication "In memory of Terry".
 - **Sound & haptics.** Web Audio effects: a crisp tap, a correct chime, a wrong thud, a combo sparkle and a chapter fanfare. There's no audio file to load. `navigator.vibrate(50)` fires on correct answers and combo milestones. Both can be turned off under Profile → Settings.
 - **Demo Mode.** Tap the SatWizz logo 5 times to unlock every chapter and max out Sparks for testing or demos. Your real progress is saved first and restored when you tap 5 times again. Nothing syncs or reaches the leaderboards while Demo Mode is on.
+
+## Keyboard, Help and feedback
+
+- **Keyboard (everywhere):** <kbd>A</kbd>–<kbd>D</kbd> or <kbd>1</kbd>–<kbd>4</kbd> answer the question on screen in practice, tests, Vocab sprints, the Focus Break review and the Derby. <kbd>Space</kbd> or <kbd>Enter</kbd> continues (the explanation drawer, the next question, test Next/Submit, the Derby's Next). <kbd>←</kbd>/<kbd>→</kbd> move through a test. <kbd>Esc</kbd> closes panels. <kbd>?</kbd> opens Help. On a focused button, Space/Enter press that button as usual. Space/Enter never buys anything (the Focus Elixir needs a click).
+- **Hotkey hints:** on desktop (a mouse and a window at least 700px wide), each answer choice shows a small A–D keycap on its right. Phones don't show them.
+- **❓ Help overlay** (header button or <kbd>?</kbd>): How to Play (Focus, Sparks, chapter unlocks, streaks, Vault, Trophy Case), a Keyboard Controls cheat sheet, and an SAT Grammar Rules cheat sheet (an accordion with each chapter's rules, filled in with your cast). <kbd>Esc</kbd> or ✕ closes it.
+- **Suggest a Feature / Report a Bug:** a form in Help (also reachable from Profile → Settings → Help & feedback). Pick 💡 Feature idea or 🐞 Bug report, type, and Submit Feedback. Entries are saved to `localStorage` under `satwizz.feedback` as an array of `{ id, at, kind, text, view }`, and a toast says "Thanks! Your suggestion has been saved locally." Nothing is sent anywhere yet.
 
 ## Social
 
@@ -424,7 +437,8 @@ js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row rest
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI, 🔊 pronunciation (Web Speech)
 js/fishing.js               Vocab Fishing (Vault): casts, rods, spots, view
 js/derby.js                 Grammar Derby (Derby tab, pluggable question source): real-time CPU rival engine and tactics, Stable purchases, question generator, views
-js/rewards.js               Sparks, shop, Focus Elixir, Aura Shields, wager, badges (no DOM)
+js/badges.js                the 50 Trophy Case accomplishments: categories, progress, unlock checks
+js/rewards.js               Sparks, shop, Focus Elixir, Aura Shields, wager, badge checks (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push
 js/onboarding.js            sign-up / log-in modal

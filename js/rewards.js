@@ -191,32 +191,8 @@
     return times.length === RULES.fastRunLength && now - times[0] < RULES.fastRunMs;
   }
 
-  const BADGES = [
-    {
-      id: "spark-starter",
-      title: "Spark Starter",
-      icon: "✨",
-      desc: "Reach a 3-day streak.",
-      progress: (s) => ({ value: Math.min(s.bestStreak, 3), of: 3, label: `${Math.min(s.bestStreak, 3)} / 3 days` }),
-      check: (s) => s.bestStreak >= 3,
-    },
-    {
-      id: "syntax-warlock",
-      title: "Syntax Warlock",
-      icon: "🧙",
-      desc: "Answer 50 questions correctly.",
-      progress: (s) => ({ value: Math.min(s.totalCorrect, 50), of: 50, label: `${Math.min(s.totalCorrect, 50)} / 50 correct` }),
-      check: (s) => s.totalCorrect >= 50,
-    },
-    {
-      id: "lightning-fast",
-      title: "Lightning Fast",
-      icon: "🌩️",
-      desc: "Get 5 right in a row in under 60 seconds.",
-      progress: (s) => ({ value: s.badges.includes("lightning-fast") ? 1 : 0, of: 1, label: "5 in a row, under a minute" }),
-      check: (s, ctx) => Boolean(ctx.fastRun),
-    },
-  ];
+  // The 50 accomplishments live in js/badges.js (Profile → Trophy Case).
+  const BADGES = SW.BADGE_LIST || [];
 
   const badgeById = (id) => BADGES.find((b) => b.id === id);
 
@@ -226,6 +202,9 @@
     for (const b of BADGES) {
       if (!state.badges.includes(b.id) && b.check(state, ctx)) {
         state.badges.push(b.id);
+        // When it was unlocked: recent unlocks glow in the Trophy Case.
+        state.badgeAt = state.badgeAt && typeof state.badgeAt === "object" ? state.badgeAt : {};
+        state.badgeAt[b.id] = Date.now();
         fresh.push(b);
       }
     }
