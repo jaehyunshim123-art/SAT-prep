@@ -1,6 +1,6 @@
 // Chapter 4: Verb Tenses & Aspect
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   window.ClauseBank.add({
     id: 4,
     short: "Verb Tenses",
@@ -15,13 +15,14 @@
       "Keep tenses consistent with the rest of the passage unless a time clue says otherwise.",
     ],
     questions: [
-      Q("c4-01", "Present (general fact)", "In recent years, scientists across the anime universe have developed advanced devices that evaluate the power levels of supernatural fighters. Researchers in one martial-arts anime world, for example, use a digital power visor. This tool ______ a warrior's raw combat capability, speed, and energy output.",
+      // Benchmark (Review for Understanding).
+      B("Present Tense for General Facts", Q("c4-01", "Present (general fact)", "In recent years, scientists across the anime universe have developed advanced devices that evaluate the power levels of supernatural fighters. Researchers in one martial-arts anime world, for example, use a digital power visor. This tool ______ a warrior's raw combat capability, speed, and energy output.",
         ["measures", "had measured", "would have measured", "will have been measuring"], 0,
         "The passage describes what the tool does in general, in the present (\"use\"), so the present tense fits.",
         ["Correct. \"This tool measures…\": the present tense for what the tool does, matching \"use.\"",
           "Past perfect needs an earlier past event; the passage is in the present.",
           "\"Would have measured\" describes something hypothetical that didn't happen.",
-          "Future perfect progressive points to a future deadline that the passage never mentions."]),
+          "Future perfect progressive points to a future deadline that the passage never mentions."])),
       Q("c4-02", "Past", "Last summer, {{NAME_1}} ______ a new move that no gymnast had ever attempted in competition.",
         ["landed", "lands", "will land", "has landed"], 0,
         "\"Last summer\" marks a finished past time, so use the simple past.",

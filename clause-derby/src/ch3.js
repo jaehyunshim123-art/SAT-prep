@@ -1,6 +1,6 @@
 // Chapter 3: Verb vs. Non-Verb Identification
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const TWO_VERBS = "The sentence already has its main verb later on, so a second conjugated verb here creates two verbs with no conjunction.";
   const NO_VERB = "Without a conjugated verb, the sentence has no main verb, so it becomes a fragment.";
   window.ClauseBank.add({
@@ -16,6 +16,14 @@
       "Never put a single comma between a subject and its verb.",
     ],
     questions: [
+      // Benchmark (Review for Understanding): a title right before a name is restrictive.
+      B("Restrictive Title Rule", Q("c3-bm", "Title + name", "In 1937, screen actor {{NAME_1}}, who had portrayed numerous villains and secondary characters but never a heroine, finally got a starring role in a major studio's Harbor of Lanterns, a film that ______ “expanded the range of possibilities for Asian images on screen.”",
+        ["critic, {{NAME_2}}, claims", "critic, {{NAME_2}}, claims,", "critic {{NAME_2}} claims", "critic {{NAME_2}}, claims,"], 2,
+        "A title right before a name (\"critic {{NAME_2}}\") is restrictive, so no commas go between them. \"Critic {{NAME_2}}\" is the subject and \"claims\" is its verb, so nothing separates them either.",
+        ["Commas around the name make it non-essential, but \"critic\" alone doesn't say which critic.",
+          "Commas around the name are wrong, and the comma after \"claims\" splits the verb from the quotation it introduces.",
+          "Correct. \"A film that critic {{NAME_2}} claims expanded…\": no commas inside the title + name, and none between subject and verb.",
+          "A comma after the name separates the subject from its verb \"claims.\""])),
       Q("c3-01", "Appositive structure", "Professional basketball player ______ {{NAME_1_POSS}} shots to force defenders to guard {{NAME_1_OBJ}} far beyond the three-point arc, releases the ball with a lightning-fast motion that leaves opponents completely helpless.",
         ["{{NAME_1}} is intending", "{{NAME_1}}, intends", "{{NAME_1}}, intending", "{{NAME_1}} intends"], 2,
         "The main verb is \"releases.\" The blank opens a non-essential modifier: Name, -ing…, verb.",

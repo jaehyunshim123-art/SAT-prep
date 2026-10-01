@@ -12,7 +12,8 @@ const bad = [];
 // Franchise and brand titles stay out (people and character names are fine).
 const BANNED = /\b(Justice League|Avengers|Marvel|DC Comics|Dragon Ball|Scouter|Hogwarts|Quidditch|Harry Potter|Star Wars|Pok[eé]mon|Grammys?|Champions League|NBA|NFL|FIFA|Olympics?|Olympic|Super Bowl|USC|Thornton)\b/;
 
-// The user's five example questions, with the answer they stated.
+// The user's example questions, with the answer they stated (corrected for the
+// Celts list, A, and the restrictive title, C).
 const EXAMPLES = [
   ["c1-01", "posts. With"],
   ["c2-01", "is"],
@@ -20,13 +21,24 @@ const EXAMPLES = [
   ["c4-01", "measures"],
   ["c5-01", "However,"],
   ["c7-01", "Starlight Letters (Deluxe Edition),"],
+  ["c1-bm", "significance; depictions"],
+  ["c3-bm", "critic {{NAME_2}} claims"],
+  ["c5-bm", "Granted,"],
+  ["c6-bm", "Culture—"],
 ];
+// One benchmark per chapter, first in its Review for Understanding test.
+const BENCH = { 1: "c1-bm", 2: "c2-01", 3: "c3-bm", 4: "c4-01", 5: "c5-bm", 6: "c6-bm", 7: "c7-01" };
 
 if (B.chapters.length !== 7) bad.push(`expected 7 chapters, got ${B.chapters.length}`);
 const ids = new Set();
 for (const ch of B.chapters) {
   if (!ch.title || !ch.short || !ch.focus || !Array.isArray(ch.rules) || ch.rules.length < 3) bad.push(`ch${ch.id}: needs title, short, focus and rules`);
-  if (ch.questions.length !== 25) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want 25)`);
+  // 25 questions, plus the chapter's benchmark when it isn't one of them.
+  const extra = ch.questions.filter((q) => q.benchmark && /-bm$/.test(q.id)).length;
+  if (ch.questions.length !== 25 + extra) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want 25 + benchmark)`);
+  const bms = ch.questions.filter((q) => q.benchmark);
+  if (bms.length !== 1) bad.push(`ch${ch.id}: ${bms.length} benchmarks (want exactly 1)`);
+  else if (!bms[0].ruleName) bad.push(`ch${ch.id}: the benchmark needs a ruleName`);
   for (const q of ch.questions) {
     const tag = q.id;
     if (ids.has(q.id)) bad.push(`${tag}: duplicate id`);
@@ -52,6 +64,11 @@ for (const [id, text] of EXAMPLES) {
   const q = B.chapters.flatMap((c) => c.questions).find((x) => x.id === id);
   if (!q) bad.push(`example ${id} missing`);
   else if (q.choices[q.answer] !== text) bad.push(`example ${id}: answer is "${q.choices[q.answer]}", want "${text}"`);
+}
+
+for (const ch of B.chapters) {
+  const bm = ch.questions.find((q) => q.benchmark);
+  if (bm && bm.id !== BENCH[ch.id]) bad.push(`ch${ch.id}: benchmark is ${bm.id}, want ${BENCH[ch.id]}`);
 }
 
 console.log(`chapters ${B.chapters.map((c) => `${c.id}:${c.questions.length}`).join(" ")} | ${ids.size} questions`);

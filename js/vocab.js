@@ -18,6 +18,9 @@
 //     so flagged words lead both the deck and the next sprint.
 //
 //   • Vocab Fishing (js/fishing.js): hook the fish carrying the right definition.
+//   • 🔊 Pronunciation (Web Speech API) on the flashcards, the word list and in
+//     Fishing: SatWizz.speech = { supported, speak, button }. "P" speaks the
+//     current flashcard.
 //
 // Exposes SatWizz.vocab = { WORDS, TIERS, RULES, emptyProgress, drawSprint,
 // drawDeck, grade, reviewCard, flag, finishSprint, summary, mergeProgress, mount }.
@@ -938,6 +941,40 @@
 
   const BY_ID = Object.fromEntries(WORDS.map((w) => [w.id, w]));
 
+  // ---------- Pronunciation (Web Speech API) ----------
+  // The 🔊 button only shows where the browser can speak. Any [data-say]
+  // button speaks its word; it never flips a card or opens a word.
+  const speech = {
+    supported: () => typeof window !== "undefined" && "speechSynthesis" in window && typeof window.SpeechSynthesisUtterance === "function",
+    speak(text) {
+      if (!speech.supported() || !text) return false;
+      try {
+        window.speechSynthesis.cancel();
+        const u = new window.SpeechSynthesisUtterance(text);
+        u.lang = "en-US";
+        u.rate = 0.9;
+        window.speechSynthesis.speak(u);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    button: (word, esc, cls = "") => (speech.supported()
+      ? `<button type="button" class="say-btn${cls ? ` ${cls}` : ""}" data-say="${esc(word)}" aria-label="Pronounce ${esc(word)}" title="Hear it">🔊</button>`
+      : ""),
+    // One listener per container handles every [data-say] button inside it.
+    wire(container) {
+      container.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-say]");
+        if (!b || !container.contains(b)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        speech.speak(b.dataset.say);
+      }, true);
+    },
+  };
+  SW.speech = speech;
+
   // ---------- Progress (pure) ----------
   // progress = { words: { [id]: { tier, seen, correct, wrong, lastAt, lastDay,
   //              advancedDay, mastered, review, cards, cardDay } }, sprintDay, sprints }
@@ -1104,6 +1141,7 @@
   //        celebrate, earn(sparks), recordAnswer(correct), renderHud(bump) }
   function mount(ctx) {
     const { container, esc } = ctx;
+    speech.wire(container);
     let sprint = null; // { ids, i, results: [], earned, picked }
     let deck = null; // { ids, i, flipped, got, later, earned, requeued: Set, busy }
     let drawer = null;
@@ -1169,7 +1207,7 @@
             <h2>Your words</h2>
             ${seenWords.length ? `<ul class="word-list">${seenWords.map((w) => `
               <li><details>
-                <summary>${tierBadge(wordState(p, w.id).tier)} <b>${esc(w.word)}</b> <small>${esc(w.pos)}</small>${cardChip(wordState(p, w.id))}</summary>
+                <summary>${tierBadge(wordState(p, w.id).tier)} <b>${esc(w.word)}</b> <small>${esc(w.pos)}</small>${speech.button(w.word, esc, "sm")}${cardChip(wordState(p, w.id))}</summary>
                 <p>${esc(w.definition)}</p>
                 <p class="muted small">≈ ${w.synonyms.map(esc).join(", ")} · ≠ ${w.antonyms.map(esc).join(", ")}</p>
                 <p class="muted small">🌱 Root: ${esc(w.root)}</p>
@@ -1212,6 +1250,7 @@
             <button class="linkbtn" type="button" id="deck-quit">✕ End review</button>
             <span class="muted small" aria-live="polite">Card ${deck.i + 1} of ${deck.ids.length}</span>
           </div>
+          ${speech.supported() ? `<div class="fc-say">${speech.button(w.word, esc)}<span class="muted small">Hear “${esc(w.word)}”<span class="kbd-hint"> · P</span></span></div>` : ""}
           <div class="fc-stage">
             <div class="fc-drag">
               <span class="fc-stamp got" aria-hidden="true">Mastered ✓</span>
@@ -1376,6 +1415,7 @@
       if (e.key === "ArrowRight") { e.preventDefault(); decide(true); }
       else if (e.key === "ArrowLeft") { e.preventDefault(); decide(false); }
       else if (e.key === " " && !e.target.closest("button")) { e.preventDefault(); flip(); }
+      else if (e.key.toLowerCase() === "p") { e.preventDefault(); speech.speak(BY_ID[deck.ids[deck.i]]?.word); }
     });
 
     function startSprint() {

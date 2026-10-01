@@ -78,6 +78,11 @@
     derbyChapter: null, // unit the Derby races on (defaults to the current chapter)
     genSeed: 0, // per-player seed: question casts and the no-repeat order of generated questions
     genCursor: {}, // chapterId -> how many generated questions you've been served
+    // Review for Understanding tests (8/10 unlocks the next chapter) and
+    // practice sets: chapterId -> { best, last, n, passed, attempts, at }
+    tests: {},
+    practiceSets: {},
+    focusResetAt: 0, // ms of the last hourly Focus recharge
     // settings
     muted: false,
     haptics: true,
@@ -127,6 +132,8 @@
     s.unlockedChapters = [...new Set([1, ...(s.unlockedChapters || []).filter(validChapter)])];
     s.completedChapters = [...new Set((s.completedChapters || []).filter(validChapter))];
     if (!s.chapterCorrect || typeof s.chapterCorrect !== "object") s.chapterCorrect = {};
+    if (!s.tests || typeof s.tests !== "object") s.tests = {};
+    if (!s.practiceSets || typeof s.practiceSets !== "object") s.practiceSets = {};
     if (s.chapterId !== REVIEW_ID && !s.unlockedChapters.includes(s.chapterId)) s.chapterId = 1;
     // Packs that used to be free stay free for anyone who played before v2,
     // and anyone already using a cast that became paid keeps it.
@@ -386,15 +393,21 @@
     <div class="alert-slot" id="alert-slot" aria-live="assertive"></div>
     <div id="feed-tools">
       <div class="focusbar" id="focusbar"></div>
-      <button class="chapter-bar" id="chapter-bar" type="button" aria-haspopup="dialog"></button>
+      <div class="feed-nav">
+        <button class="back-dash" id="back-dash" type="button" aria-label="Back to the Dashboard"><span aria-hidden="true">←</span><span class="back-lbl">Dashboard</span></button>
+        <button class="chapter-bar" id="chapter-bar" type="button" aria-haspopup="dialog"></button>
+      </div>
     </div>
-    <main class="view feed" id="view-feed" aria-live="polite"></main>
+    <main class="view scrollview" id="view-dash"></main>
+    <main class="view feed" id="view-feed" aria-live="polite" hidden></main>
+    <main class="view scrollview" id="view-test" hidden></main>
+    <main class="view scrollview" id="view-diag" hidden></main>
     <main class="view scrollview" id="view-vocab" hidden></main>
     <main class="view scrollview" id="view-derby" hidden></main>
     <main class="view scrollview" id="view-shop" hidden></main>
     <main class="view scrollview" id="view-you" hidden></main>
     <nav class="tabs" role="tablist" aria-label="SatWizz">
-      <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">✏️</span>Practice</button>
+      <button class="tab" role="tab" data-view="dash" aria-selected="true" aria-label="Dashboard"><span class="ico" aria-hidden="true">🏠</span><span class="lbl-long">Dashboard</span><span class="lbl-short">Home</span></button>
       <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vault</button>
       <button class="tab" role="tab" data-view="derby" aria-selected="false"><span class="ico" aria-hidden="true">🐎</span>Derby</button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
@@ -403,13 +416,17 @@
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  // Five tabs: Practice, Vault, Derby, Shop, Profile. Profile has three
-  // sub-tabs: Edit Profile, Settings and Leaderboard (with friends).
-  const VIEWS = ["feed", "vocab", "derby", "shop", "you"];
+  // Five tabs: Dashboard, Vault, Derby, Shop, Profile. The Dashboard opens a
+  // chapter's practice feed, its practice sets and its Review for
+  // Understanding test (with the Diagnostic screen after), which have no tab
+  // of their own. Profile has three sub-tabs: Edit Profile, Settings and
+  // Leaderboard (with friends).
+  const VIEWS = ["dash", "feed", "test", "diag", "vocab", "derby", "shop", "you"];
+  const TAB_OF = { feed: "dash", test: "dash", diag: "dash" };
   let youTab = "profile"; // "profile" | "settings" | "leaderboard"
   // The leaderboard module keeps its own DOM; it moves into the Profile pane.
   const ranksMount = h("div", { id: "ranks-mount", class: "ranks-view" });
-  let currentView = "feed";
+  let currentView = "dash";
   let streakTab = "streak"; // Profile's streak section: "streak" or "achievements"
 
   app.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => { sfx.play("tap"); show(t.dataset.view); }));
@@ -425,13 +442,14 @@
   $("#hud-focus").addEventListener("click", () => {
     toast(S.focus >= FOCUS.RULES.max
       ? "🧠 Focus 100%. A miss costs 25%, rushing (under 3s) 10%."
-      : `🧠 Focus ${S.focus}%. Get 2 right in a row for +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2), or buy a Focus Elixir in the Shop.`);
+      : `🧠 Focus ${S.focus}%. Get 2 right in a row for +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2), buy a Focus Elixir in the Shop, or wait: full recharge in ${FOCUS.nextRechargeMin(S)} min.`);
   });
+  $("#back-dash").addEventListener("click", () => { sfx.play("tap"); show("dash"); });
 
   function show(view) {
     const changed = view !== currentView;
     currentView = view;
-    app.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.view === view)));
+    app.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.view === (TAB_OF[view] || view))));
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
     $("#feed-tools").hidden = view !== "feed";
     if (changed && !reducedMotion()) {
@@ -440,6 +458,7 @@
       void el.offsetWidth;
       el.classList.add("view-in");
     }
+    if (view === "dash") renderDash();
     if (view === "vocab") vocab.render();
     if (view === "derby") {
       if (!derby.active()) derby.open();
@@ -451,6 +470,7 @@
   }
 
   function rerenderCurrent() {
+    if (currentView === "dash") renderDash();
     if (currentView === "vocab" && !vocab.busy()) vocab.render();
     if (currentView === "derby" && !derby.racing()) derby.render();
     if (currentView === "you" && youTab === "leaderboard") ranks.render();
@@ -561,7 +581,6 @@
           if (!q.gen) {
             const got = correctIn(q.chapterId);
             if (!got.includes(q.id)) got.push(q.id);
-            unlockNextAt60(chapterById(q.chapterId));
           }
         } else if (!S.missed.includes(q.id)) S.missed.push(q.id);
         renderChapterBar();
@@ -680,6 +699,7 @@
     fp.innerHTML = FOCUS.meterHtml(S.focus);
     fp.className = `pill focus-pill ${FOCUS.level(S.focus)}`;
     fp.setAttribute("aria-label", `Focus ${S.focus}%`);
+    fp.title = S.focus < FOCUS.RULES.max ? `Focus Meter · full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus Meter · recharges to 100% every hour";
     FOCUS.paint(S.focus); // <body data-focus>: low-Focus blur
     $("#demo-badge").hidden = !S.demo;
     renderAccountButton();
@@ -786,40 +806,30 @@
     const pending = [...feed.querySelectorAll(".card[data-qid]")].filter((c) => !c._answered).length;
     if (pending < 2 && (queue.length || streaming)) appendCards(2 - pending);
     const ch = currentChapter();
-    if (ch) unlockNextAt60(ch);
     if (!ch || completeShown || queue.length || pending) return;
     completeShown = true;
     const firstTime = !isComplete(ch.id);
-    let unlocked = null;
+    // The next chapter opens by passing the Review for Understanding test.
     if (firstTime) {
       S.completedChapters.push(ch.id);
       rewards.earn(S, RULES.chapterSparks);
-      const next = chapterById(ch.id + 1);
-      if (next && !isUnlocked(next.id)) {
-        S.unlockedChapters.push(next.id);
-        unlocked = next;
-      }
       save();
       renderHud(["sparks"]);
       setTimeout(() => sfx.play("complete"), 400);
       sfx.buzz(50);
-      celebrate("⭐", `Chapter ${ch.id} complete!`, `+${RULES.chapterSparks} ⚡ Sparks${unlocked ? ` · Chapter ${unlocked.id} unlocked` : ""}`);
+      celebrate("⭐", `Chapter ${ch.id} complete!`, `+${RULES.chapterSparks} ⚡ Sparks`);
     }
     feed.querySelector(".sentinel")?.remove();
     feed.append(completeCard(ch, firstTime));
     renderChapterBar();
   }
 
-  // The next chapter opens once 60% of this one is answered correctly.
-  const unlockNeed = (ch) => Math.ceil(ch.questions.length * SW.UNLOCK_SHARE);
-  function unlockNextAt60(ch) {
-    const next = chapterById(ch.id + 1);
-    if (!next || isUnlocked(next.id) || correctIn(ch.id).length < unlockNeed(ch)) return;
-    S.unlockedChapters.push(next.id);
-    save();
-    sfx.play("combo");
-    toast(`🔓 ${next.bonus ? "Bonus chapter" : `Chapter ${next.id}`} unlocked: ${next.short}`);
-  }
+  // The next chapter opens when this one's Review for Understanding test is
+  // passed (8/10 or better; see the tests section below).
+  const lockNote = (ch) => {
+    const prev = chapterById(ch.id - 1);
+    return prev ? `Score ${passMark(TEST_LEN)}/${TEST_LEN} on ${prev.bonus ? "the bonus chapter's" : `Chapter ${prev.id}'s`} Review for Understanding to unlock` : "";
+  };
 
   // "Explanation Pause": the lesson card that opens each chapter.
   function pauseCard(ch) {
@@ -848,7 +858,11 @@
     let heading;
     let body;
     let actions = "";
-    if (next && !next.bonus) {
+    if (next && !isUnlocked(next.id)) {
+      heading = `${ch.bonus ? "Bonus chapter" : `Chapter ${ch.id}`} complete`;
+      body = `Score ${passMark(TEST_LEN)}/${TEST_LEN} on the Review for Understanding test to unlock <b>${esc(next.title)}</b>.`;
+      actions = `<button class="btn wide" type="button" data-test>Take the Review for Understanding →</button>`;
+    } else if (next && !next.bonus) {
       heading = `Chapter ${ch.id} complete`;
       body = `Next up: <b>${esc(next.title)}</b>.`;
       actions = `<button class="btn wide" type="button" data-go="${next.id}">Start Chapter ${next.id} →</button>`;
@@ -876,6 +890,7 @@
       startChapter(go);
     }));
     card.querySelector("[data-drawer]")?.addEventListener("click", openChapters);
+    card.querySelector("[data-test]")?.addEventListener("click", () => startRun("test", ch.id));
     card.querySelector("[data-stream]")?.addEventListener("click", () => {
       streaming = true;
       appendCards(3);
@@ -1417,7 +1432,7 @@
       const status = done ? "✓" : current ? "▶" : unlocked ? "•" : "🔒";
       const sub = unlocked
         ? `${done ? "Complete" : `${got} of ${ch.questions.length} correct`}${current ? " · current" : ""}`
-        : (() => { const prev = chapterById(ch.id - 1); return `Get ${unlockNeed(prev)} of ${prev.questions.length} right in ${prev.bonus ? "the bonus chapter" : `Chapter ${prev.id}`} to unlock`; })();
+        : lockNote(ch);
       return `
         <button type="button" class="chapter-row${done ? " done" : ""}${current ? " current" : ""}" data-ch="${ch.id}" ${unlocked ? "" : "disabled"}>
           <span class="ch-status" aria-hidden="true">${status}</span>
@@ -1481,6 +1496,366 @@
   }
 
   $("#chapter-bar").addEventListener("click", openChapters);
+
+  // ---------- Dashboard (chapter select) ----------
+  // One card per chapter: core progress, best test score, and three ways in:
+  // Learn & practice (the feed), a 10-question practice set, and the
+  // 10-question Review for Understanding test that unlocks the next chapter.
+  const dash = $("#view-dash");
+  function renderDash() {
+    const core = CHAPTERS.filter((c) => !c.bonus);
+    const passed = core.filter((c) => S.tests[c.id]?.passed).length;
+    const card = (ch) => {
+      const open = isUnlocked(ch.id);
+      const t = S.tests[ch.id];
+      const ps = S.practiceSets[ch.id];
+      const got = Math.min(correctIn(ch.id).length, ch.questions.length);
+      const state = !open ? "🔒 Locked"
+        : t?.passed ? `✓ Passed · best ${t.best}/${t.n}`
+        : t ? `Best ${t.best}/${t.n} · need ${passMark(t.n)}`
+        : S.chapterId === ch.id ? "▶ Current" : "Not tested yet";
+      return `
+        <article class="ch-card${open ? "" : " locked"}${t?.passed ? " passed" : ""}${S.chapterId === ch.id ? " current" : ""}" data-ch="${ch.id}">
+          <div class="ch-card-top">
+            <span class="ch-badge">${ch.bonus ? "Bonus" : `Ch ${ch.id}`}</span>
+            <span class="ch-state">${state}</span>
+          </div>
+          <h3>${esc(ch.title.replace(/^Bonus: /, ""))}</h3>
+          ${open ? `
+          <div class="ch-progress">
+            <span class="bar" aria-hidden="true"><i style="width:${(got / ch.questions.length) * 100}%"></i></span>
+            <small class="muted">${got}/${ch.questions.length} core questions right${ps ? ` · last practice set ${ps.last}/${ps.n}` : ""}</small>
+          </div>
+          <div class="ch-actions">
+            <button class="btn" type="button" data-learn="${ch.id}">📖 Learn & practice</button>
+            <button class="btn ghost" type="button" data-set="${ch.id}">✏️ Practice set (${TEST_LEN})</button>
+            <button class="btn ghost test-btn" type="button" data-test="${ch.id}">🎯 Review for Understanding (${TEST_LEN})</button>
+          </div>` : `<p class="lock-note">🔒 ${esc(lockNote(ch))}.</p>`}
+        </article>`;
+    };
+    dash.innerHTML = `
+      <div class="stack dash">
+        <section class="dash-hero">
+          <span class="label-sm">Digital SAT grammar · ${passed} of ${core.length} chapters passed</span>
+          <h2>${S.name ? `Welcome back, ${esc(S.name)}` : "Your chapters"}</h2>
+          <p class="muted">Learn each rule, practice, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> or better on the chapter's <b>Review for Understanding</b> to unlock the next one.</p>
+          <div class="dash-focus">${FOCUS.meterHtml(S.focus)}<small class="muted">${S.focus < FOCUS.RULES.max ? `Full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus recharges to 100% every hour"}</small></div>
+        </section>
+        <div class="dash-grid">${core.map(card).join("")}</div>
+        <span class="label-sm">Extras</span>
+        <div class="dash-grid">
+          ${CHAPTERS.filter((c) => c.bonus).map(card).join("")}
+          <article class="ch-card${reviewOpen() ? "" : " locked"}">
+            <div class="ch-card-top"><span class="ch-badge">Mix</span><span class="ch-state">${reviewOpen() ? `${S.missed.length} missed` : "🔒 Locked"}</span></div>
+            <h3>Mixed review</h3>
+            ${reviewOpen()
+              ? `<p class="muted small">Endless questions from finished chapters, missed ones first.</p><div class="ch-actions"><button class="btn" type="button" data-learn="${REVIEW_ID}">🔀 Start mixed review</button></div>`
+              : '<p class="lock-note">🔒 Finish every question in any chapter first.</p>'}
+          </article>
+        </div>
+      </div>`;
+    dash.querySelectorAll("[data-learn]").forEach((b) => b.addEventListener("click", () => {
+      sfx.play("tap");
+      openPractice(b.dataset.learn === REVIEW_ID ? REVIEW_ID : Number(b.dataset.learn));
+    }));
+    dash.querySelectorAll("[data-set]").forEach((b) => b.addEventListener("click", () => startRun("practice", Number(b.dataset.set))));
+    dash.querySelectorAll("[data-test]").forEach((b) => b.addEventListener("click", () => startRun("test", Number(b.dataset.test))));
+  }
+
+  // Learn & practice: the chapter's lesson card and question feed. Coming back
+  // to the chapter you were on keeps your place.
+  function openPractice(id) {
+    if (S.chapterId !== id || !feed.querySelector(".card")) startChapter(id);
+    show("feed");
+  }
+
+  // ---------- Review for Understanding tests & practice sets ----------
+  // Ten questions, one at a time, with no feedback until you submit. Then the
+  // Diagnostic screen: PASS/FAIL at 80%, the score, and every item with your
+  // answer, the right one, the rule's name and a short explanation.
+  const TEST_LEN = 10;
+  const PASS_SHARE = 0.8;
+  const passMark = (n) => Math.ceil(n * PASS_SHARE);
+  const testView = $("#view-test");
+  const diagView = $("#view-diag");
+  let run = null; // { mode: "test" | "practice", chId, items: [{ q, order, cast, pick, ms, seenAt }], i }
+  let lastResult = null;
+
+  // A test: the chapter's benchmark question, then core questions (missed and
+  // not-yet-right first), then fresh generated ones from the no-repeat stream,
+  // so every retake is different.
+  function pickTest(ch) {
+    const ids = [];
+    const add = (id) => { if (id && BY_ID[id] && !ids.includes(id) && ids.length < TEST_LEN) ids.push(id); };
+    const bm = ch.questions.find((q) => q.benchmark);
+    if (bm) add(bm.id);
+    const core = ch.questions.filter((q) => !q.benchmark);
+    const got = new Set(correctIn(ch.id));
+    const missed = core.filter((q) => S.missed.includes(q.id));
+    const fresh = core.filter((q) => !got.has(q.id) && !S.missed.includes(q.id));
+    const rest = core.filter((q) => got.has(q.id) && !S.missed.includes(q.id));
+    const coreUpTo = ch.pool.length ? TEST_LEN - 4 : TEST_LEN;
+    for (const q of [...shuffle(missed), ...shuffle(fresh), ...shuffle(rest)]) {
+      if (ids.length >= coreUpTo) break;
+      add(q.id);
+    }
+    for (let k = 0; ids.length < TEST_LEN && ch.pool.length && k < 40; k++) add(nextGenId(ch.id));
+    for (const q of shuffle(core)) add(q.id);
+    return [ids[0], ...shuffle(ids.slice(1))];
+  }
+  // A practice set: this chapter's missed questions first, then fresh ones.
+  function pickPractice(ch) {
+    const ids = [];
+    const add = (id) => { if (id && BY_ID[id] && !ids.includes(id) && ids.length < TEST_LEN) ids.push(id); };
+    shuffle(S.missed.filter((id) => BY_ID[id]?.chapterId === ch.id)).slice(0, TEST_LEN / 2).forEach(add);
+    for (let k = 0; ids.length < TEST_LEN && ch.pool.length && k < 40; k++) add(nextGenId(ch.id));
+    const got = new Set(correctIn(ch.id));
+    for (const q of [...shuffle(ch.questions.filter((x) => !got.has(x.id))), ...shuffle(ch.questions)]) add(q.id);
+    return shuffle(ids);
+  }
+
+  function startRun(mode, chId) {
+    const ch = chapterById(chId);
+    if (!ch || !isUnlocked(chId)) return;
+    sfx.play("tap");
+    const ids = mode === "test" ? pickTest(ch) : pickPractice(ch);
+    run = {
+      mode,
+      chId,
+      i: 0,
+      items: ids.map((id) => ({ q: BY_ID[id], order: shuffle([0, 1, 2, 3]), cast: castFor(id), pick: null, ms: 0, seenAt: 0 })),
+    };
+    save(); // the generated-question cursor moved
+    show("test");
+    renderTest();
+  }
+
+  const runTitle = (r) => {
+    const ch = chapterById(r.chId);
+    return `${r.mode === "test" ? "Review for Understanding" : "Practice set"} · ${ch.bonus ? "Bonus" : `Ch ${ch.id}`}`;
+  };
+
+  function renderTest() {
+    if (!run) { show("dash"); return; }
+    const it = run.items[run.i];
+    const q = it.q;
+    const ch = chapterById(q.chapterId);
+    const n = run.items.length;
+    const done = run.items.filter((x) => x.pick != null).length;
+    const last = run.i === n - 1;
+    if (!it.seenAt) it.seenAt = Date.now();
+    testView.innerHTML = `
+      <div class="stack test-view">
+        <div class="test-top">
+          <button class="linkbtn" type="button" data-quit>✕ Quit</button>
+          <span class="label-sm">${esc(runTitle(run))}</span>
+          <span class="pill-sm">${done}/${n} answered</span>
+        </div>
+        <ol class="test-dots" aria-label="Questions">
+          ${run.items.map((x, k) => `<li><button type="button" data-jump="${k}" class="${k === run.i ? "on " : ""}${x.pick != null ? "done" : ""}" aria-label="Question ${k + 1}${x.pick != null ? ", answered" : ""}"${k === run.i ? ' aria-current="step"' : ""}>${k + 1}</button></li>`).join("")}
+        </ol>
+        <section class="card test-card" data-qid="${esc(q.id)}">
+          <div class="card-inner bb">
+            <div class="bb-top">
+              <span class="bb-num" aria-label="Question ${run.i + 1} of ${n}">${run.i + 1}</span>
+              <span class="bb-meta">${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(q.skill)}</span>
+            </div>
+            <div class="bb-passage"><p class="passage">${renderPassage(q.text, it.cast)}</p></div>
+            <p class="bb-stem">${esc(SW.stemFor(q))}</p>
+            <ol class="choices">
+              ${it.order.map((ci, pos) => `
+                <li><button class="choice${it.pick === ci ? " picked" : ""}" type="button" data-ci="${ci}" aria-pressed="${it.pick === ci}" aria-label="(${"ABCD"[pos]}) ${esc(fill(q.choices[ci], it.cast, false).replace(/<[^>]+>/g, ""))}">
+                  <span class="letter" aria-hidden="true">${"ABCD"[pos]}</span><span class="txt">${fill(q.choices[ci], it.cast, false)}</span>
+                </button></li>`).join("")}
+            </ol>
+          </div>
+        </section>
+        <div class="test-nav">
+          <button class="btn ghost" type="button" data-prev ${run.i === 0 ? "disabled" : ""}>← Back</button>
+          ${last && done === n
+            ? '<button class="btn" type="button" data-submit>Submit ✓</button>'
+            : `<button class="btn" type="button" data-next>${last ? "Next unanswered →" : "Next →"}</button>`}
+        </div>
+        <p class="muted small center">No answers are revealed until you submit${run.mode === "test" ? ` · ${passMark(n)}/${n} passes` : ""}.${done === n && !last ? ' <button class="linkbtn" type="button" data-submit>Submit now</button>' : ""}</p>
+      </div>`;
+    testView.querySelectorAll(".choice").forEach((b) => b.addEventListener("click", () => pickChoice(Number(b.dataset.ci))));
+    testView.querySelectorAll("[data-jump]").forEach((b) => b.addEventListener("click", () => goTo(Number(b.dataset.jump))));
+    testView.querySelector("[data-prev]")?.addEventListener("click", () => goTo(run.i - 1));
+    testView.querySelector("[data-next]")?.addEventListener("click", nextInRun);
+    testView.querySelectorAll("[data-submit]").forEach((b) => b.addEventListener("click", submitRun));
+    testView.querySelector("[data-quit]").addEventListener("click", () => {
+      if (done && !confirm("Quit this set? Your answers won't be scored.")) return;
+      run = null;
+      show("dash");
+    });
+  }
+
+  function pickChoice(ci) {
+    const it = run.items[run.i];
+    if (it.pick == null) it.ms = Date.now() - (it.seenAt || Date.now()); // think time to the first pick
+    it.pick = ci;
+    sfx.play("tap");
+    renderTest();
+    testView.querySelector("[data-next], [data-submit]")?.focus({ preventScroll: true });
+  }
+  function goTo(k) {
+    if (!run || k < 0 || k >= run.items.length) return;
+    run.i = k;
+    renderTest();
+    testView.scrollTop = 0;
+  }
+  function nextInRun() {
+    const n = run.items.length;
+    if (run.i < n - 1) return goTo(run.i + 1);
+    const open = run.items.findIndex((x) => x.pick == null);
+    if (open !== -1) goTo(open);
+  }
+
+  // Scores the set and records every answer like Practice does: stats, the
+  // daily goal, missed questions, Sparks for right answers and Focus.
+  function submitRun() {
+    if (!run || run.items.some((x) => x.pick == null)) return;
+    const r = run;
+    run = null;
+    const ch = chapterById(r.chId);
+    rollover();
+    const d = today();
+    let score = 0;
+    let earned = 0;
+    for (const it of r.items) {
+      const q = it.q;
+      const correct = it.pick === q.answer;
+      it.correct = correct;
+      d.n++;
+      const sk = (S.skills[q.skill] ||= { seen: 0, right: 0 });
+      sk.chapterId = q.chapterId;
+      sk.seen++;
+      if (correct) {
+        score++;
+        d.c++;
+        sk.right++;
+        S.totalCorrect++;
+        S.missed = S.missed.filter((id) => id !== q.id);
+        earned += rewards.earn(S, RULES.sparksPerCorrect);
+        if (!q.gen) {
+          const got = correctIn(q.chapterId);
+          if (!got.includes(q.id)) got.push(q.id);
+        }
+      } else if (!S.missed.includes(q.id)) S.missed.push(q.id);
+      FOCUS.apply(S, { correct, ms: it.ms || Infinity, rushMs: FOCUS.RULES.practiceRushMs });
+    }
+    S.xp += score * 10;
+    const n = r.items.length;
+    const pass = score >= passMark(n);
+    const book = r.mode === "test" ? S.tests : S.practiceSets;
+    const prev = book[ch.id];
+    book[ch.id] = {
+      best: Math.max(prev?.best || 0, score),
+      last: score,
+      n,
+      passed: Boolean(prev?.passed) || pass,
+      attempts: (prev?.attempts || 0) + 1,
+      at: Date.now(),
+    };
+    // Passing the test unlocks the next chapter (Chapter 7 opens the bonus ones).
+    let unlocked = null;
+    if (r.mode === "test" && pass) {
+      const next = chapterById(ch.id + 1);
+      if (next && !isUnlocked(next.id)) {
+        S.unlockedChapters.push(next.id);
+        unlocked = next;
+      }
+      if (!prev?.passed) earned += rewards.earn(S, RULES.chapterSparks);
+    }
+    const goal = checkGoal();
+    const newBadges = rewards.checkBadges(S, {});
+    save();
+    renderHud(["sparks", ...(goal ? ["streak"] : [])]);
+    renderChapterBar();
+    pingPractice();
+    lastResult = { mode: r.mode, chId: ch.id, items: r.items, score, n, pass, unlocked, earned };
+    sfx.play(pass ? "complete" : "wrong");
+    if (pass) sfx.buzz(50);
+    if (r.mode === "test" && FOCUS.level(S.focus) === "critical") shake();
+    show("diag");
+    renderDiag();
+    if (unlocked) celebrate("🔓", `${unlocked.bonus ? "Bonus chapter" : `Chapter ${unlocked.id}`} unlocked!`, `${score}/${n} on the Review for Understanding`);
+    if (goal) celebrateGoal(goal);
+    newBadges.forEach(celebrateBadge);
+  }
+
+  // ---------- Diagnostic Feedback screen ----------
+  function renderDiag() {
+    const r = lastResult;
+    if (!r) { show("dash"); return; }
+    const ch = chapterById(r.chId);
+    const next = chapterById(r.chId + 1);
+    const pct = Math.round((r.score / r.n) * 100);
+    const isTest = r.mode === "test";
+    const status = r.pass ? "PASS" : "FAIL";
+    let note;
+    if (isTest && r.unlocked) note = `🔓 ${r.unlocked.bonus ? "Bonus chapter" : `Chapter ${r.unlocked.id}`} unlocked: <b>${esc(r.unlocked.title.replace(/^Bonus: /, ""))}</b>`;
+    else if (isTest && r.pass) note = next ? `${next.bonus ? "The bonus chapter" : `Chapter ${next.id}`} is open.` : "You've passed every chapter test.";
+    else if (isTest) note = `You need ${passMark(r.n)}/${r.n} (80%) to unlock ${next ? (next.bonus ? "the bonus chapter" : `Chapter ${next.id}`) : "the next chapter"}. Review the rules below, then retake: every retake has new questions.`;
+    else note = r.pass ? "Nice set. When you're ready, take the Review for Understanding." : "Practice sets don't unlock chapters. Review the misses below and keep going.";
+    const letter = (it, ci) => "ABCD"[it.order.indexOf(ci)];
+    const ans = (it, ci) => `<span class="ans-letter">${letter(it, ci)}</span> ${fill(it.q.choices[ci], it.cast, false)}`;
+    diagView.innerHTML = `
+      <div class="stack diag">
+        <section class="diag-banner ${r.pass ? "pass" : "fail"}" role="status">
+          <span class="diag-status">${status}</span>
+          <b class="diag-pct">${pct}%</b>
+          <span class="diag-sub">${r.score} of ${r.n} correct · ${esc(runTitle(r))}</span>
+          <p class="diag-note">${note}</p>
+          <small class="diag-earn">+${fmt(r.earned)} ⚡ · Focus ${S.focus}%</small>
+        </section>
+        <div class="diag-actions">
+          <button class="btn" type="button" data-retake>↻ ${isTest ? "Retake test" : "New practice set"}</button>
+          ${next && isUnlocked(next.id) ? `<button class="btn ghost" type="button" data-next-ch="${next.id}">${next.bonus ? "Bonus chapter" : `Chapter ${next.id}`} →</button>` : ""}
+          ${!isTest ? `<button class="btn ghost" type="button" data-test-now>🎯 Take the test</button>` : ""}
+          <button class="btn ghost" type="button" data-dash>🏠 Dashboard</button>
+        </div>
+        <h3 class="diag-head">Item-by-item review · ${esc(ch.title.replace(/^Bonus: /, ""))}</h3>
+        <ol class="diag-list">
+          ${r.items.map((it, k) => `
+            <li class="diag-item ${it.correct ? "ok" : "no"}">
+              <div class="diag-item-top">
+                <span class="diag-n">${k + 1}</span>
+                <span class="diag-verdict">${it.correct ? "✓ Correct" : "✗ Incorrect"}</span>
+                <span class="diag-rule">${esc(SW.ruleName(it.q))}</span>
+              </div>
+              <p class="passage">${renderPassage(it.q.text, it.cast, fill(it.q.choices[it.q.answer], it.cast, false))}</p>
+              <dl class="diag-ans">
+                <div class="${it.correct ? "ok" : "no"}"><dt>Your answer</dt><dd>${ans(it, it.pick)}</dd></div>
+                ${it.correct ? "" : `<div class="ok"><dt>Correct answer</dt><dd>${ans(it, it.q.answer)}</dd></div>`}
+              </dl>
+              <p class="diag-why"><b>Why:</b> ${fill(SW.ruleExplain(it.q), it.cast, false)}</p>
+              ${it.correct ? "" : `<p class="diag-why miss"><b>Your choice:</b> ${fill(it.q.notes[it.pick], it.cast, false)}</p>`}
+            </li>`).join("")}
+        </ol>
+        <button class="btn ghost wide" type="button" data-dash>🏠 Back to Dashboard</button>
+      </div>`;
+    diagView.scrollTop = 0;
+    diagView.querySelector("[data-retake]").addEventListener("click", () => startRun(r.mode, r.chId));
+    diagView.querySelector("[data-test-now]")?.addEventListener("click", () => startRun("test", r.chId));
+    diagView.querySelector("[data-next-ch]")?.addEventListener("click", (e) => openPractice(Number(e.currentTarget.dataset.nextCh)));
+    diagView.querySelectorAll("[data-dash]").forEach((b) => b.addEventListener("click", () => show("dash")));
+    diagView.querySelector(".diag-banner").focus?.();
+  }
+
+  // ---------- Hourly Focus recharge ----------
+  // Focus goes back to 100% once an hour (checked at start-up, every minute
+  // and when the tab comes back). It waits until a Derby race is over.
+  function focusTick() {
+    if (derby.racing()) return;
+    const before = S.focusResetAt;
+    if (FOCUS.hourly(S)) {
+      save();
+      renderHud();
+      toast("🧠 Focus recharged to 100%. It refills every hour.");
+      rerenderCurrent();
+    } else if (before !== S.focusResetAt) save(false);
+  }
 
   // ---------- Celebration & toast ----------
   // Celebrations queue so a streak, a badge and a combo don't pile up at once.
@@ -2349,13 +2724,30 @@
     }
   });
 
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) renderHud(); });
+  // Test view: A–D (or 1–4) picks, Enter / → goes on, ← goes back.
+  document.addEventListener("keydown", (e) => {
+    if (currentView !== "test" || !run || onboarding.isOpen() || e.target.closest("input, select, textarea")) return;
+    const k = e.key.toLowerCase();
+    const pos = "abcd".indexOf(k) !== -1 ? "abcd".indexOf(k) : "1234".indexOf(k);
+    if (pos !== -1 && k.length === 1) { e.preventDefault(); pickChoice(run.items[run.i].order[pos]); }
+    else if (k === "arrowright" || (k === "enter" && !e.target.closest("button"))) {
+      e.preventDefault();
+      if (run.i === run.items.length - 1 && run.items.every((x) => x.pick != null)) submitRun();
+      else nextInRun();
+    } else if (k === "arrowleft") { e.preventDefault(); goTo(run.i - 1); }
+  });
+
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { focusTick(); renderHud(); } });
 
   // ---------- Boot ----------
   sfx.setMuted(S.muted);
   sfx.setHaptics(S.haptics);
   captureInvite();
   auth.init();
+  focusTick();
+  setInterval(focusTick, 60 * 1000);
   renderHud();
   startChapter(S.chapterId);
+  // The Dashboard is home; index.html#practice opens straight into practice.
+  show(location.hash === "#practice" ? "feed" : "dash");
 })();

@@ -4,6 +4,7 @@
 //   • A wrong answer costs 25%. A rushed answer (faster than `rushMs`) costs 10%.
 //   • Only two right answers in a row (+25%) or a Focus Elixir (back to 100%)
 //     restore it.
+//   • Every hour Focus recharges to 100% on its own (hourly()).
 //   • Low Focus (under 50%) blurs the question; critical (under 25%) also
 //     shakes the screen on a miss. In the Derby, missing Focus locks each
 //     question for up to 9s while the rivals keep running, plus 4s after a miss.
@@ -27,6 +28,7 @@
     lockMax: 9, // seconds of Derby lock at 0% Focus
     stumble: 4, // extra lock after a wrong answer
     elixirPrice: 500,
+    rechargeMs: 60 * 60 * 1000, // full recharge every hour
   });
 
   const clamp = (n) => Math.max(0, Math.min(RULES.max, Math.round(Number(n) || 0)));
@@ -53,10 +55,31 @@
     return { before, after: st.focus, delta: st.focus - before, rushed, restored };
   }
 
-  function refill(st) {
+  function refill(st, now = Date.now()) {
     st.focus = RULES.max;
     st.focusStreak = 0;
+    st.focusResetAt = now; // an Elixir also restarts the hourly clock
   }
+
+  // The hourly recharge: once an hour has passed since the last one, Focus
+  // goes back to 100%. Returns true when it refilled a meter that wasn't full.
+  // A missing clock starts now.
+  function hourly(st, now = Date.now()) {
+    if (!st.focusResetAt || st.focusResetAt > now) {
+      st.focusResetAt = now;
+      return false;
+    }
+    if (now - st.focusResetAt < RULES.rechargeMs) return false;
+    const wasLow = clamp(st.focus) < RULES.max;
+    st.focus = RULES.max;
+    st.focusStreak = 0;
+    // Keep the hourly rhythm: the next recharge is a whole number of hours on.
+    st.focusResetAt += Math.floor((now - st.focusResetAt) / RULES.rechargeMs) * RULES.rechargeMs;
+    return wasLow;
+  }
+  // Minutes until the next hourly recharge.
+  const nextRechargeMin = (st, now = Date.now()) =>
+    Math.max(1, Math.ceil(((st.focusResetAt || now) + RULES.rechargeMs - now) / 60000));
 
   // Seconds the next Derby question stays locked.
   const lockFor = (focus, lastWrong) =>
@@ -85,5 +108,5 @@
     setTimeout(() => target.classList.remove("focus-shake"), 600);
   }
 
-  SW.focus = { RULES, apply, refill, lockFor, level, clamp, meterHtml, paint, shake };
+  SW.focus = { RULES, apply, refill, hourly, nextRechargeMin, lockFor, level, clamp, meterHtml, paint, shake };
 })();

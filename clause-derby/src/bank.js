@@ -20,6 +20,9 @@
     },
     // Q(id, skill, text, choices, answer, rule, notes)
     Q: (id, skill, text, choices, answer, rule, notes) => ({ id, skill, text, choices, answer, rule, notes }),
+    // B(ruleName, q): marks q as its chapter's benchmark for the
+    // Review for Understanding test, with the rule name the diagnostic shows.
+    B: (ruleName, q) => Object.assign(q, { benchmark: true, ruleName }),
     stemFor: (q) => STEMS[q.kind] || STEMS.conventions,
   };
 })();

@@ -1,6 +1,6 @@
 // Chapter 7: Appositives & Non-Essential Clauses
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const PAIR = "Non-essential information needs matching punctuation on BOTH sides (comma…comma or dash…dash).";
   window.ClauseBank.add({
     id: 7,
@@ -16,13 +16,14 @@
       "Use \"which\" with commas for non-essential clauses and \"that\" with no commas for essential ones. Match your pairs: comma–comma, dash–dash.",
     ],
     questions: [
-      Q("c7-01", "Non-essential title", "An industry report led by musicologist {{NAME_2}} at the Brightwater Conservatory of Music found that dedicated fans of {{NAME_1}} who purchase physical vinyl records before a stadium tour have increased streams of a specific re-recorded studio album, ______ due to the unreleased bonus tracks included on the special edition. Fans with these elevated streaming habits were also found to attend multiple concert dates on average.",
+      // Benchmark (Review for Understanding).
+      B("Non-Essential Appositive (a/an cue)", Q("c7-01", "Non-essential title", "An industry report led by musicologist {{NAME_2}} at the Brightwater Conservatory of Music found that dedicated fans of {{NAME_1}} who purchase physical vinyl records before a stadium tour have increased streams of a specific re-recorded studio album, ______ due to the unreleased bonus tracks included on the special edition. Fans with these elevated streaming habits were also found to attend multiple concert dates on average.",
         ["Starlight Letters, (Deluxe Edition)", "Starlight Letters (Deluxe Edition)", "Starlight Letters, (Deluxe Edition),", "Starlight Letters (Deluxe Edition),"], 3,
         "\"A specific re-recorded studio album\" (a/an cue) is followed by the album's name as non-essential info, set off by commas on both sides.",
         ["The comma inside the title splits \"(Deluxe Edition)\" from the name, and there's no closing comma.",
           "The opening comma after \"album\" has no matching closing comma.",
           "The comma inside the title wrongly splits the album's name.",
-          "Correct. \"…album, Starlight Letters (Deluxe Edition), due to…\": the title is one unit, closed by a comma that matches the one before it."]),
+          "Correct. \"…album, Starlight Letters (Deluxe Edition), due to…\": the title is one unit, closed by a comma that matches the one before it."])),
       Q("c7-02", "Essential name", "The physicist ______ discovered a new element with {{NAME_1_POSS}} partner, {{NAME_2}}.",
         ["{{NAME_1}}", "{{NAME_1}},", ", {{NAME_1}},", "—{{NAME_1}},"], 0,
         "\"The physicist\" alone doesn't say which physicist, so the name is essential: no commas.",

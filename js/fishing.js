@@ -250,7 +250,7 @@
           </div>
           <section class="card-inner bb fish-word">
             <div class="bb-top"><span class="bb-num">${round.i + 1}</span><span class="bb-meta">Hook the definition of</span><span class="q-timer" aria-hidden="true">🎣 <span id="line-secs">${Math.ceil(round.left)}s</span></span></div>
-            <p class="fish-target"><b>${esc(w.word)}</b> <small class="muted">${esc(w.pos)}</small></p>
+            <p class="fish-target"><b>${esc(w.word)}</b> <small class="muted">${esc(w.pos)}</small>${SW.speech ? SW.speech.button(w.word, esc, "sm") : ""}</p>
             <p class="fish-context">${ctx.fill(w.text).replace("______", `<b class="fc-hl">${esc(w.word)}</b>`).replace(SW.UNDERLINE_RE, '<b class="fc-hl">$1</b>')}</p>
             <div class="line-bar" aria-hidden="true"><i id="line-left" style="width:${(round.left / RULES.lineSeconds) * 100}%"></i></div>
           </section>

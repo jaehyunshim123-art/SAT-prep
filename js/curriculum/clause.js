@@ -22,6 +22,8 @@
         answer: q.answer,
         notes: q.notes,
         rule: q.rule,
+        benchmark: q.benchmark || undefined,
+        ruleName: q.ruleName,
       })),
     });
   }

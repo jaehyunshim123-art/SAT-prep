@@ -20,6 +20,7 @@ require(`${repo}/js/curriculum/clause.js`);
 for (let i = 1; i <= 9; i++) require(`${repo}/js/curriculum/ch${i}.js`);
 require(`${repo}/js/curriculum/gen/core.js`);
 for (let i = 1; i <= 7; i++) require(`${repo}/js/curriculum/gen/ch${i}.js`);
+require(`${repo}/js/curriculum/rules.js`);
 require(`${repo}/js/focus.js`);
 require(`${repo}/js/derby.js`);
 require(`${repo}/js/fishing.js`);
@@ -59,7 +60,10 @@ for (const ch of SW.chapters) {
   const pauseText = [ch.pause.summary, ch.pause.example, ...ch.pause.rules, ...ch.pause.patterns.map((p) => p.f)].join(" ");
   if (pauseText.replace(TOKEN, "").includes("{{")) bad.push(`ch${ch.id} pause: unknown placeholder`);
   // Core chapters: 25 pop-culture questions (with a rule line) + 20 extra practice.
-  if (!ch.bonus && ch.questions.length !== 45) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want 45)`);
+  // 45 = 25 pop-culture + 20 extra, plus a benchmark question in some chapters.
+  const bmExtra = ch.questions.filter((q) => q.benchmark && /-bm$/.test(q.id)).length;
+  if (!ch.bonus && ch.questions.length !== 45 + bmExtra) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want 45 + benchmark)`);
+  if (!ch.bonus && ch.questions.filter((q) => q.benchmark).length !== 1) bad.push(`ch${ch.id}: needs exactly one benchmark`);
   if (!ch.bonus && ch.questions.slice(0, 25).some((q) => !q.rule)) bad.push(`ch${ch.id}: pop-culture set should lead`);
   if (!ch.pause.patterns.length || !ch.pause.example) bad.push(`ch${ch.id}: lesson needs patterns and an example`);
   for (const q of ch.questions) {
@@ -167,6 +171,17 @@ for (const w of SW.vocab.WORDS) {
 }
 for (const spot of SW.fishing.SPOTS) if (SW.fishing.poolFor(spot.id, { words: {} }).length < SW.fishing.RULES.casts) bad.push(`fishing spot ${spot.id}: fewer words than casts`);
 console.log("fishing casts generated", casts);
+
+// ---------- Rule names (js/curriculum/rules.js, the Diagnostic screen) ----------
+const fallback = {};
+for (const q of SW.questions) {
+  const ch = SW.chapterById(q.chapterId);
+  const name = SW.ruleName(q);
+  if (!name) bad.push(`${q.id}: no rule name`);
+  else if (!ch.bonus && name === ch.title) fallback[q.skill] = (fallback[q.skill] || 0) + 1;
+  if (!SW.ruleExplain(q) || SW.ruleExplain(q).length < 20) bad.push(`${q.id}: no explanation`);
+}
+for (const [skill, n] of Object.entries(fallback)) bad.push(`skill "${skill}" (${n}×) has no rule name in js/curriculum/rules.js`);
 
 console.log("chapters", SW.chapters.map((c) => `${c.id}:${c.questions.length}`).join(" "), "| questions", SW.questions.length,
   "| vocab words", SW.vocab.WORDS.length, `(${SW.vocab.WORDS.filter((w) => w.format === "blank").length} blank, ${SW.vocab.WORDS.filter((w) => w.format === "meaning").length} meaning)`);

@@ -1,10 +1,10 @@
 # SatWizz
 
-A mobile-first, gamified Digital SAT grammar and vocabulary website. You work through a 7-chapter grammar curriculum in a snap-scrolling feed of Digital SAT-style questions. The Vocab Vault has 3D flashcards, sprints and Vocab Fishing. You race your unit's grammar questions in the Derby and spend Sparks in the Shop. Daily and friend streaks and live leaderboards keep you coming back.
+A mobile-first, gamified Digital SAT grammar and vocabulary website. You work through a 7-chapter grammar curriculum from a Dashboard: learn each chapter in a snap-scrolling feed of Digital SAT-style questions, then pass its 10-question **Review for Understanding** (8/10) to unlock the next. The Vocab Vault has 3D flashcards, sprints and Vocab Fishing. You race your unit's grammar questions in the Derby and spend Sparks in the Shop. Daily and friend streaks and live leaderboards keep you coming back.
 
 - **Header (every screen):** ⚡ **Spark balance** (new players start with **2,500**), 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%).
 - **Bottom nav, five tabs:**
-  - ✏️ **Practice:** chapter lessons and questions.
+  - 🏠 **Dashboard** ("Home" on phones): chapter select 1–7 plus the bonus chapters. Each chapter card opens **Learn & practice** (the lesson and question feed), a **Practice set** (10) or the **Review for Understanding** test (10). After every set the **Diagnostic** screen opens.
   - 📚 **Vault:** flashcards, sprints and 🎣 Vocab Fishing.
   - 🐎 **Derby:** a grammar horse race on your unit.
   - 🛍️ **Shop.**
@@ -38,7 +38,7 @@ Facts tied to real historical people (radium, penicillin) were reworded to stay 
 
 Each chapter opens with an **Explanation Pause** lesson card: the chapter's explicit rules, ✓/✗ pattern chips and a worked example. After each answer a **slide-up drawer** shows the rule being tested, why the right answer works and why every other choice fails. A wrong answer comes back two cards later marked "↺ Try again".
 
-- **Unlocking:** getting **60%** of a chapter right (27 of 45) unlocks the next one.
+- **Unlocking:** score **8/10 (80%)** or better on the chapter's **Review for Understanding** test to unlock the next one (Chapter 7 opens the bonus chapters). Practice alone no longer unlocks chapters; chapters you had already unlocked stay open.
 - **Complete:** a chapter is complete once every question has been answered correctly. The first completion earns **+50 ⚡**.
 
 | # | Chapter | What it covers |
@@ -50,7 +50,7 @@ Each chapter opens with an **Explanation Pause** lesson card: the chapter's expl
 | 5 | Logical Transitions | Contrast (However), addition, cause/effect, example, sequence. Includes the Batman example |
 | 6 | Punctuation Fundamentals (Semicolon, Dash, Colon) | Paired dashes around non-essential appositives; semicolons between ICs; a colon after an IC for a list, noun or explanation |
 | 7 | Appositives & Non-Essential Clauses | "a/an" cues → non-essential (paired commas or dashes); essential vs. non-essential names |
-| Bonus | Modifiers & Parallelism | 20 questions; unlocks at 60% of Chapter 7 |
+| Bonus | Modifiers & Parallelism | 20 questions; unlocks when you pass Chapter 7's test |
 | Bonus | Pronouns & Possessives | 10 questions |
 
 **Saves from the old 9-chapter course** migrate automatically: chapters 2–10 become 1–9, and the old "Complete Sentences" chapter was retired. Accounts that synced the old chapter numbers may see one extra chapter unlocked.
@@ -61,7 +61,29 @@ Each chapter opens with an **Explanation Pause** lesson card: the chapter's expl
 
 Every question where a shortcut applies is tagged, and `scripts/validate-content.js` checks the shortcut really leads to the right answer. The drawer shows a shortcut chip on those questions.
 
-**Chapter drawer.** Tap the chapter bar above the feed to see every chapter's status (✓ done, ▶ current, 🔒 locked with how many you need to unlock it) and progress. You can jump to any unlocked chapter. Mixed review (missed questions first) opens once you finish a chapter.
+**Chapter drawer.** Tap the chapter bar above the feed to see every chapter's status (✓ done, ▶ current, 🔒 locked until the previous test is passed) and progress. "← Dashboard" next to it goes back. You can jump to any unlocked chapter. Mixed review (missed questions first) opens once you finish a chapter.
+
+## Dashboard, tests and the Diagnostic screen
+
+- **Review for Understanding (10 questions):** the chapter's **benchmark** question first, then 5 core questions (missed and not-yet-right first), then 4 fresh generated ones from the no-repeat stream, so every retake is different. One question at a time (A–D, or keys A–D / 1–4, → and ←), number dots to jump around, and **no answers shown until you submit**. **8/10 passes** and unlocks the next chapter (+50 ⚡ the first time).
+- **Practice set (10 questions):** this chapter's missed questions first, then fresh ones. Same screens; it never unlocks anything.
+- **Answers count:** each answer counts toward the daily goal, stats, the missed list, Sparks (+10 per right answer) and Focus (misses, rushing under 3s, 2 in a row).
+- **Diagnostic Feedback screen:** opens automatically on submit. A **PASS / FAIL** banner with the score %, then an item-by-item review: the passage with the right answer filled in, **your answer vs. the correct one**, the **rule's name** (e.g. "Terminal Boundary Rule", "Restrictive Title Rule", "Dash Pair Rule") and a short explanation (the rule line, then why the right answer works; on a miss, why your choice fails). Buttons: Retake (new questions), the next chapter, Dashboard.
+- **Saved** in `localStorage` (`satwizz.v1`): `tests[ch]` and `practiceSets[ch]` = `{ best, last, n, passed, attempts, at }`.
+- **Rule names** come from `js/curriculum/rules.js` (`SatWizz.ruleName`, a skill → rule table per chapter; a question's own `ruleName` wins). `validate-content.js` checks every question gets a named rule.
+- **Benchmarks** (one per chapter, `ClauseBank.B(ruleName, q)` in `clause-derby/src`; names are cast slots and titles are invented):
+
+  | Ch | Benchmark | Answer |
+  |---|---|---|
+  | 1 | Celtic art: patterns…; depictions of birds, horses, and other animals; and enamel | `significance; depictions` (a list whose items contain commas takes semicolons) |
+  | 2 | The Dark Lord's name ___ pronounced | `is` |
+  | 3 | Screen actor {{NAME_1}}'s starring role in *Harbor of Lanterns*, a film that ___ "expanded the range…" | `critic {{NAME_2}} claims` (a title right before a name takes no commas) |
+  | 4 | A digital power visor ___ a warrior's combat capability | `measures` |
+  | 5 | Sign-language iconicity study | `Granted,` |
+  | 6 | FESTAC '77 | `Culture—` (pairs with the closing dash) |
+  | 7 | A specific re-recorded album, ___ due to the bonus tracks | `Starlight Letters (Deluxe Edition),` |
+
+- **`index.html#practice`** opens straight into the practice feed instead of the Dashboard.
 
 ## Question generator (`js/curriculum/gen/`)
 
@@ -81,7 +103,7 @@ Each of the 7 chapters has a generator that builds hundreds of questions in the 
   - Practice serves the core set first. After that, or whenever you reopen a finished chapter, the feed keeps going with generated questions ("Keep practicing: N fresh questions").
   - The Derby races on missed questions, then core ones you haven't gotten right, then generated ones.
   - Both step through the chapter's pool in your own shuffled order (`S.genCursor`), so nothing repeats until you've seen the whole pool.
-- **Progress:** chapter progress and the 60% unlock count the core set only.
+- **Progress:** chapter progress counts the core set only.
 - **Stable ids:** each id is a hash of the question's content, so missed-question lists survive updates.
 - **Checks:** `node scripts/validate-content.js` runs the full checks on every generated question: one blank, 4 distinct choices, notes, the rule line, known placeholders, no duplicates and no template leftovers.
 
@@ -91,7 +113,7 @@ One meter, shown in the header and shared by Practice and the Derby (`js/focus.j
 - **Losing Focus:**
   - a wrong answer costs **25%**;
   - **rushing** costs **10%**: answering in under 3s in Practice, or under 1.5s in the Derby.
-- **Restoring Focus:** only **2 right answers in a row** (+25%) or a **🧪 Focus Elixir** (500 ⚡, back to 100%).
+- **Restoring Focus:** **2 right answers in a row** (+25%), a **🧪 Focus Elixir** (500 ⚡, back to 100%), or the clock: **Focus recharges to 100% every hour** on its own (checked at start-up, every minute and when you come back to the tab; a toast says "🧠 Focus recharged"). An Elixir restarts the hour. The header's Focus tooltip shows "full recharge in N min". The standalone Derby has the same hourly recharge.
 - **Effects:**
   - under 50%, open questions blur slightly;
   - under 25%, they blur more and the screen **shakes** on each miss.
@@ -113,6 +135,7 @@ The **Vault** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
 - **Needs Review** brings the card back once at the end of the deck and flags the word.
 - Flagged words lead the next deck and the next sprint. A sprint miss also flags a word, and a correct sprint answer or Mastered clears the flag.
 - Flashcards don't change tiers: only sprints do.
+- **🔊 Pronunciation:** the 🔊 button above the card (front or back) speaks the word with the browser's Web Speech API (en-US, a little slower than normal). It never flips the card; **P** speaks too. Words in your word list and the word on each Fishing cast have the button as well. It's hidden in browsers that can't speak.
 
 **🎣 Vocab Fishing** (`js/fishing.js`). Hook the fish that carries the right definition.
 - **A round is 8 casts.** Each cast shows a word (part of speech and context sentence), and 4 fish swim across the water, each carrying a definition. Tap the right fish, or press 1–4, before the 20s line runs out.
@@ -162,7 +185,7 @@ The **Vault** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
 The **Derby** tab (`js/derby.js`) is a wager-based horse race on **grammar questions from the unit you're on**.
 - **Your unit:** the race uses your current Practice chapter. A "Racing on" picker switches to any unlocked chapter.
 - **Question order:** questions you missed come first, then ones you haven't got right yet, then the rest.
-- **Counts as practice:** a right answer counts toward the chapter, including its 60% unlock. A miss goes on your missed list.
+- **Counts as practice:** a right answer counts toward the chapter's progress. A miss goes on your missed list.
 - **Flow:** an intro screen (the `=== 🐎 SATWIZZ GRAMMAR DERBY 🐎 ===` banner, rules, your unit, the field, your Focus) → **Start Derby** → place a bet → race → results with a grammar review (the sentence filled in, plus the rule).
 - **The engine is generic:** a question source plugs in (`ctx.source`), and the standalone `derby/index.html` still races on vocabulary.
 - **Betting:** bet real ⚡ Sparks (50, 100, 250 or 500) or take a Fun run.
@@ -395,8 +418,9 @@ js/questions.js             curriculum framework: 7+2 chapter plan, official ste
 js/curriculum/clause.js     registers the pop-culture sets (clause-derby/src/ch1-7.js) as chapters 1-7
 js/curriculum/ch1-ch9.js    extra practice per chapter: lesson patterns + questions with per-choice notes
 js/curriculum/gen/          question generator: core.js + one builder per chapter (~3,600 questions)
-js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row restore, Elixir, locks, blur/shake
-js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
+js/curriculum/rules.js      rule names and short explanations for the Diagnostic screen
+js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row restore, Elixir, hourly recharge, locks, blur/shake
+js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI, 🔊 pronunciation (Web Speech)
 js/fishing.js               Vocab Fishing (Vault): casts, rods, spots, view
 js/derby.js                 Grammar Derby (Derby tab, pluggable question source): real-time CPU rival engine and tactics, Stable purchases, question generator, views
 js/rewards.js               Sparks, shop, Focus Elixir, Aura Shields, wager, badges (no DOM)
@@ -404,7 +428,7 @@ js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push
 js/onboarding.js            sign-up / log-in modal
 js/social-view.js           Leaderboard & Friends: leaderboards, friend streaks, requests, invites
-js/app.js                   header, 4-tab shell, chapter feed, drawers, Focus Break, streaks, shop, profile, demo mode
+js/app.js                   header, 5-tab shell, Dashboard, tests + Diagnostic, chapter feed, drawers, Focus Break, streaks, shop, profile, demo mode
 scripts/validate-content.js content checks for the curriculum and vocab
 scripts/build-single.js     builds the whole app as one file: dist/index.html
 scripts/build-clause-derby.js builds SAT Wizz: Clause Derby → clause-derby/index.html

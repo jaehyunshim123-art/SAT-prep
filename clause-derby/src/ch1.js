@@ -1,6 +1,6 @@
 // Chapter 1: Independent Clause Connectors & Sentence Boundaries
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const SPLICE = "Comma splice: a comma alone can't join two independent clauses.";
   const RUNON = "Run-on: two independent clauses are fused with no punctuation at all.";
   window.ClauseBank.add({
@@ -17,6 +17,14 @@
       "One subject with two verbs (a compound predicate) needs no comma before \"and\".",
     ],
     questions: [
+      // Benchmark (Review for Understanding): a list whose items contain commas takes semicolons.
+      B("Semicolons in a Complex List", Q("c1-bm", "Semicolons in a list", "While the ancient Celts—Iron Age peoples who inhabited parts of western and central Europe—weren’t a single unified group, their art often featured common elements. These included intricate patterns of interlocking spiral lines, which often held symbolic ______ of birds, horses, and other animals; and inlaid enamel accents.",
+        ["significance; depictions", "significance, depictions", "significance: depictions", "significance. Depictions"], 0,
+        "When the items in a list already contain commas, semicolons separate the items. The list here is patterns…; depictions…; and inlaid enamel accents.",
+        ["Correct. The semicolon matches the one before \"and inlaid enamel accents\" and separates the second item, \"depictions of birds, horses, and other animals.\"",
+          "A comma would blur the items together, because the items themselves contain commas; the list already uses a semicolon before \"and inlaid.\"",
+          "A colon would introduce \"depictions\" as an explanation of \"significance,\" but it is the next item in the list.",
+          "A period would leave \"Depictions of birds…; and inlaid enamel accents\" as a fragment with no verb."])),
       Q("c1-01", "IC. IC", "In 2010, {{NAME_1}} was scoring many goals in China when {{NAME_1}} noticed markings of red paint on the goal ______ the help of {{NAME_2}}, {{NAME_1}} discovered that it was a piece of a jersey.",
         ["posts, with", "posts with", "posts so with", "posts. With"], 3,
         "Two independent clauses need a period, a semicolon, or a comma + FANBOYS between them.",

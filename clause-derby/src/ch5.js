@@ -1,6 +1,6 @@
 // Chapter 5: Logical Transitions
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const C = "Contrast words (However, Nevertheless, In contrast) need the second idea to oppose or surprise you after the first.";
   const A = "Addition words (Additionally, Moreover, In addition) need a second point in the same direction.";
   const E = "Example words (For example, For instance) need the second sentence to be a specific case of the first.";
@@ -21,6 +21,14 @@
       "Similarity: Similarly, Likewise.",
     ],
     questions: [
+      // Benchmark (Review for Understanding): a concession admits a limit on the earlier finding.
+      B("Concession Transition", Object.assign(Q("c5-bm", "Concession", "A 2017 study of sign language learners tested the role of iconicity—the similarity of a sign to the thing it represents—in language acquisition. The study found that the greater the iconicity of a sign, the more likely it was to have been learned. ______ the correlation between acquisition and iconicity was lower than that between acquisition and another factor studied: sign frequency.",
+        ["Granted,", "In fact,", "In other words,", "As a result,"], 0,
+        "\"Granted\" concedes a point that limits the main claim. Iconicity mattered, but frequency mattered more: a concession.",
+        ["Correct. \"Granted\" admits a limit on the finding: iconicity helped, but its link to learning was weaker than frequency's.",
+          "\"In fact\" strengthens or intensifies the previous point; this sentence limits it.",
+          "\"In other words\" restates the previous point; this sentence adds a new, limiting fact.",
+          "\"As a result\" needs the weaker correlation to be caused by the finding, and it isn't."]), { kind: "transition" })),
       Q("c5-01", "Contrast", "During a villain's citywide siege, {{NAME_1}} was instrumental in saving hundreds of hostages, earning {{NAME_1_OBJ}} the moniker “The Guardian of the City.” ______ despite the fame of {{NAME_1_POSS}} heroic actions during {{NAME_1_POSS}} prime, {{NAME_1}} is discussed far less today by the younger generation of heroes than other prominent members of the league of heroes, such as {{NAME_2}} and {{NAME_3}}.",
         ["For example,", "However,", "Specifically,", "Similarly,"], 1,
         "Famous heroics vs. being discussed less today is a contrast.",

@@ -1,6 +1,6 @@
 // Chapter 2: Subject-Verb Agreement
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   window.ClauseBank.add({
     id: 2,
     short: "Subject-Verb Agreement",
@@ -15,13 +15,14 @@
       "3:1 shortcut: if three choices are singular and one is plural (or the reverse), the odd one out is usually the answer.",
     ],
     questions: [
-      Q("c2-01", "Possessive subject", "What is the correct pronunciation of the villain's name in {{NAME_1_POSS}} favorite fantasy series? In the French-inspired nomenclature favored by the series' author, the final letter -t is meant to be silent; as a result, the Dark Lord's name ______ pronounced “Voldemore.”",
+      // Benchmark (Review for Understanding).
+      B("Singular Subject–Verb Agreement", Q("c2-01", "Possessive subject", "What is the correct pronunciation of the villain's name in {{NAME_1_POSS}} favorite fantasy series? In the French-inspired nomenclature favored by the series' author, the final letter -t is meant to be silent; as a result, the Dark Lord's name ______ pronounced “Voldemore.”",
         ["are", "have been", "are being", "is"], 3,
         "The subject is \"name\" (singular), so the verb must be singular.",
         ["\"Are\" is plural, but the subject \"name\" is singular.",
           "\"Have been\" is plural and adds an unneeded perfect tense.",
           "\"Are being\" is plural and awkward for a general fact.",
-          "Correct. \"The Dark Lord's name is pronounced\": a singular subject with a singular verb, in the present tense for a general fact."]),
+          "Correct. \"The Dark Lord's name is pronounced\": a singular subject with a singular verb, in the present tense for a general fact."])),
       Q("c2-02", "Prepositional phrase", "The collection of rare comic books in {{NAME_1}}'s attic ______ worth more than {{NAME_1_POSS}} entire house.",
         ["is", "are", "were", "have been"], 0,
         "Cross out \"of rare comic books in {{NAME_1}}'s attic\": the subject is \"collection\" (singular).",

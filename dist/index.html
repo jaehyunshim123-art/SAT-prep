@@ -1715,7 +1715,7 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
   .feed { scroll-behavior: auto; }
 }
 @media (max-width: 420px) {
-  .hud { gap: 6px; }
+  .hud { gap: 5px; }
   .combo-word { display: none; }
 }
 @media (max-width: 420px) {
@@ -1942,6 +1942,194 @@ body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px)
 .shop-tier h2 { font-size: 1.3rem; }
 /* Settings: dedication at the bottom */
 .memorial { margin: 12px 0 4px; text-align: center; font-family: var(--font-display); font-style: italic; font-size: 0.95rem; color: var(--muted); }
+
+/* ---------- Dashboard: chapter select ---------- */
+.feed-nav { display: flex; gap: 8px; align-items: stretch; min-width: 0; }
+.feed-nav .chapter-bar { flex: 1; }
+.back-dash {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-block: 0 10px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.back-dash:hover { border-color: var(--volt); }
+@media (max-width: 400px) { .back-dash .back-lbl { display: none; } }
+.dash-hero {
+  display: grid;
+  gap: 6px;
+  padding: 18px;
+  border-radius: var(--r);
+  background: linear-gradient(135deg, var(--volt), #6a3df0);
+  color: #fff;
+}
+.dash-hero h2 { margin: 0; font-family: var(--font-display); font-size: 1.4rem; }
+.dash-hero .label-sm, .dash-hero .muted { color: rgba(255, 255, 255, 0.85); }
+.dash-hero p { margin: 0; }
+.dash-focus { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dash-focus .fmeter { background: rgba(255, 255, 255, 0.92); border-radius: 999px; padding: 2px 8px; color: var(--ink); }
+.dash-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.ch-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 16px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+.ch-card.current { border: 2px solid var(--volt); }
+.ch-card.passed { border-color: var(--good); }
+.ch-card.locked { opacity: 0.72; box-shadow: none; background: var(--surface-2); }
+.ch-card h3 { margin: 0; font-family: var(--font-display); font-size: 1.05rem; line-height: 1.3; }
+.ch-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ch-badge {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--volt);
+  color: var(--volt-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+.ch-card.locked .ch-badge { background: var(--muted); }
+.ch-card.passed .ch-badge { background: var(--good); }
+.ch-state { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-align: right; }
+.ch-card.passed .ch-state { color: var(--good); }
+.ch-progress { display: grid; gap: 4px; }
+.ch-progress .bar { display: block; height: 6px; }
+.ch-actions { display: grid; gap: 8px; }
+.ch-actions .btn { width: 100%; font-size: 0.95rem; padding: 10px 12px; }
+.ch-actions .test-btn { border-color: var(--volt); color: var(--volt); }
+.lock-note { margin: 0; font-size: 0.85rem; color: var(--muted); }
+
+/* ---------- Test view: one question at a time ---------- */
+.test-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.test-dots { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.test-dots button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+.test-dots button.done { background: var(--volt); border-color: var(--volt); color: var(--volt-ink); }
+.test-dots button.on { outline: 3px solid var(--flame-2); outline-offset: 1px; }
+.test-card { min-height: 0; padding-block: 0; }
+.choice.picked { border-color: var(--volt); background: color-mix(in srgb, var(--volt) 12%, var(--surface)); }
+.choice.picked .letter { border-color: var(--volt); background: var(--volt); color: var(--volt-ink); }
+.test-nav { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+.center { text-align: center; }
+
+/* ---------- Diagnostic Feedback screen ---------- */
+.diag-banner {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 20px 16px;
+  border-radius: var(--r);
+  text-align: center;
+  color: #fff;
+}
+.diag-banner.pass { background: linear-gradient(135deg, #12a35a, #0e7a44); }
+.diag-banner.fail { background: linear-gradient(135deg, #d8394a, #a52232); }
+.diag-status {
+  padding: 3px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.diag-pct { font-family: var(--font-display); font-size: 3rem; line-height: 1; }
+.diag-sub { font-weight: 700; }
+.diag-note { margin: 4px 0 0; max-width: 46ch; }
+.diag-earn { opacity: 0.9; }
+.diag-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.diag-actions .btn { flex: 1 1 140px; font-size: 0.95rem; padding: 10px 12px; }
+.diag-head { margin: 6px 0 0; font-family: var(--font-display); font-size: 1.05rem; }
+.diag-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.diag-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--good);
+  background: var(--surface);
+  min-width: 0;
+}
+.diag-item.no { border-left-color: var(--bad); }
+.diag-item-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.diag-n {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+.diag-verdict { font-weight: 800; font-size: 0.85rem; }
+.diag-item.ok .diag-verdict { color: var(--good); }
+.diag-item.no .diag-verdict { color: var(--bad); }
+.diag-rule {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.diag-item .passage { margin: 0; font-size: 0.95rem; line-height: 1.6; overflow-wrap: anywhere; }
+.diag-ans { margin: 0; display: grid; gap: 6px; }
+.diag-ans div { display: grid; grid-template-columns: 7.5em 1fr; gap: 8px; align-items: baseline; padding: 6px 10px; border-radius: 10px; }
+.diag-ans div.ok { background: var(--good-bg); }
+.diag-ans div.no { background: var(--bad-bg); }
+.diag-ans dt { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.diag-ans dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.ans-letter { font-weight: 800; }
+.diag-why { margin: 0; font-size: 0.9rem; color: var(--ink); }
+.diag-why.miss { color: var(--muted); }
+@media (max-width: 360px) { .diag-ans div { grid-template-columns: 1fr; gap: 2px; } }
+
+/* Vault: 🔊 pronunciation */
+.say-btn {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  font-size: 1.1rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+.say-btn:hover { border-color: var(--volt); }
+.say-btn.sm { width: 30px; height: 30px; font-size: 0.9rem; margin-inline: 6px; }
+.fc-say { display: flex; align-items: center; justify-content: center; gap: 8px; }
+/* Phones: the streak-at-risk ⌛ already shows under the header ("Streak ends at
+   midnight"), so the pill drops it; below 400px the brand drops "Sat" too. */
+@media (max-width: 440px) { .hud .risk { display: none; } }
+@media (max-width: 400px) { .brand .b-pre { display: none; } }
 
 </style>
 </head>
@@ -2357,6 +2545,9 @@ window.SatWizz.avatars = [
     },
     // Q(id, skill, text, choices, answer, rule, notes)
     Q: (id, skill, text, choices, answer, rule, notes) => ({ id, skill, text, choices, answer, rule, notes }),
+    // B(ruleName, q): marks q as its chapter's benchmark for the
+    // Review for Understanding test, with the rule name the diagnostic shows.
+    B: (ruleName, q) => Object.assign(q, { benchmark: true, ruleName }),
     stemFor: (q) => STEMS[q.kind] || STEMS.conventions,
   };
 })();
@@ -2366,7 +2557,7 @@ window.SatWizz.avatars = [
 /* ===== clause-derby/src/ch1.js ===== */
 // Chapter 1: Independent Clause Connectors & Sentence Boundaries
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const SPLICE = "Comma splice: a comma alone can't join two independent clauses.";
   const RUNON = "Run-on: two independent clauses are fused with no punctuation at all.";
   window.ClauseBank.add({
@@ -2383,6 +2574,14 @@ window.SatWizz.avatars = [
       "One subject with two verbs (a compound predicate) needs no comma before \"and\".",
     ],
     questions: [
+      // Benchmark (Review for Understanding): a list whose items contain commas takes semicolons.
+      B("Semicolons in a Complex List", Q("c1-bm", "Semicolons in a list", "While the ancient Celts—Iron Age peoples who inhabited parts of western and central Europe—weren’t a single unified group, their art often featured common elements. These included intricate patterns of interlocking spiral lines, which often held symbolic ______ of birds, horses, and other animals; and inlaid enamel accents.",
+        ["significance; depictions", "significance, depictions", "significance: depictions", "significance. Depictions"], 0,
+        "When the items in a list already contain commas, semicolons separate the items. The list here is patterns…; depictions…; and inlaid enamel accents.",
+        ["Correct. The semicolon matches the one before \"and inlaid enamel accents\" and separates the second item, \"depictions of birds, horses, and other animals.\"",
+          "A comma would blur the items together, because the items themselves contain commas; the list already uses a semicolon before \"and inlaid.\"",
+          "A colon would introduce \"depictions\" as an explanation of \"significance,\" but it is the next item in the list.",
+          "A period would leave \"Depictions of birds…; and inlaid enamel accents\" as a fragment with no verb."])),
       Q("c1-01", "IC. IC", "In 2010, {{NAME_1}} was scoring many goals in China when {{NAME_1}} noticed markings of red paint on the goal ______ the help of {{NAME_2}}, {{NAME_1}} discovered that it was a piece of a jersey.",
         ["posts, with", "posts with", "posts so with", "posts. With"], 3,
         "Two independent clauses need a period, a semicolon, or a comma + FANBOYS between them.",
@@ -2567,7 +2766,7 @@ window.SatWizz.avatars = [
 /* ===== clause-derby/src/ch2.js ===== */
 // Chapter 2: Subject-Verb Agreement
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   window.ClauseBank.add({
     id: 2,
     short: "Subject-Verb Agreement",
@@ -2582,13 +2781,14 @@ window.SatWizz.avatars = [
       "3:1 shortcut: if three choices are singular and one is plural (or the reverse), the odd one out is usually the answer.",
     ],
     questions: [
-      Q("c2-01", "Possessive subject", "What is the correct pronunciation of the villain's name in {{NAME_1_POSS}} favorite fantasy series? In the French-inspired nomenclature favored by the series' author, the final letter -t is meant to be silent; as a result, the Dark Lord's name ______ pronounced “Voldemore.”",
+      // Benchmark (Review for Understanding).
+      B("Singular Subject–Verb Agreement", Q("c2-01", "Possessive subject", "What is the correct pronunciation of the villain's name in {{NAME_1_POSS}} favorite fantasy series? In the French-inspired nomenclature favored by the series' author, the final letter -t is meant to be silent; as a result, the Dark Lord's name ______ pronounced “Voldemore.”",
         ["are", "have been", "are being", "is"], 3,
         "The subject is \"name\" (singular), so the verb must be singular.",
         ["\"Are\" is plural, but the subject \"name\" is singular.",
           "\"Have been\" is plural and adds an unneeded perfect tense.",
           "\"Are being\" is plural and awkward for a general fact.",
-          "Correct. \"The Dark Lord's name is pronounced\": a singular subject with a singular verb, in the present tense for a general fact."]),
+          "Correct. \"The Dark Lord's name is pronounced\": a singular subject with a singular verb, in the present tense for a general fact."])),
       Q("c2-02", "Prepositional phrase", "The collection of rare comic books in {{NAME_1}}'s attic ______ worth more than {{NAME_1_POSS}} entire house.",
         ["is", "are", "were", "have been"], 0,
         "Cross out \"of rare comic books in {{NAME_1}}'s attic\": the subject is \"collection\" (singular).",
@@ -2766,7 +2966,7 @@ window.SatWizz.avatars = [
 /* ===== clause-derby/src/ch3.js ===== */
 // Chapter 3: Verb vs. Non-Verb Identification
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const TWO_VERBS = "The sentence already has its main verb later on, so a second conjugated verb here creates two verbs with no conjunction.";
   const NO_VERB = "Without a conjugated verb, the sentence has no main verb, so it becomes a fragment.";
   window.ClauseBank.add({
@@ -2782,6 +2982,14 @@ window.SatWizz.avatars = [
       "Never put a single comma between a subject and its verb.",
     ],
     questions: [
+      // Benchmark (Review for Understanding): a title right before a name is restrictive.
+      B("Restrictive Title Rule", Q("c3-bm", "Title + name", "In 1937, screen actor {{NAME_1}}, who had portrayed numerous villains and secondary characters but never a heroine, finally got a starring role in a major studio's Harbor of Lanterns, a film that ______ “expanded the range of possibilities for Asian images on screen.”",
+        ["critic, {{NAME_2}}, claims", "critic, {{NAME_2}}, claims,", "critic {{NAME_2}} claims", "critic {{NAME_2}}, claims,"], 2,
+        "A title right before a name (\"critic {{NAME_2}}\") is restrictive, so no commas go between them. \"Critic {{NAME_2}}\" is the subject and \"claims\" is its verb, so nothing separates them either.",
+        ["Commas around the name make it non-essential, but \"critic\" alone doesn't say which critic.",
+          "Commas around the name are wrong, and the comma after \"claims\" splits the verb from the quotation it introduces.",
+          "Correct. \"A film that critic {{NAME_2}} claims expanded…\": no commas inside the title + name, and none between subject and verb.",
+          "A comma after the name separates the subject from its verb \"claims.\""])),
       Q("c3-01", "Appositive structure", "Professional basketball player ______ {{NAME_1_POSS}} shots to force defenders to guard {{NAME_1_OBJ}} far beyond the three-point arc, releases the ball with a lightning-fast motion that leaves opponents completely helpless.",
         ["{{NAME_1}} is intending", "{{NAME_1}}, intends", "{{NAME_1}}, intending", "{{NAME_1}} intends"], 2,
         "The main verb is \"releases.\" The blank opens a non-essential modifier: Name, -ing…, verb.",
@@ -2966,7 +3174,7 @@ window.SatWizz.avatars = [
 /* ===== clause-derby/src/ch4.js ===== */
 // Chapter 4: Verb Tenses & Aspect
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   window.ClauseBank.add({
     id: 4,
     short: "Verb Tenses",
@@ -2981,13 +3189,14 @@ window.SatWizz.avatars = [
       "Keep tenses consistent with the rest of the passage unless a time clue says otherwise.",
     ],
     questions: [
-      Q("c4-01", "Present (general fact)", "In recent years, scientists across the anime universe have developed advanced devices that evaluate the power levels of supernatural fighters. Researchers in one martial-arts anime world, for example, use a digital power visor. This tool ______ a warrior's raw combat capability, speed, and energy output.",
+      // Benchmark (Review for Understanding).
+      B("Present Tense for General Facts", Q("c4-01", "Present (general fact)", "In recent years, scientists across the anime universe have developed advanced devices that evaluate the power levels of supernatural fighters. Researchers in one martial-arts anime world, for example, use a digital power visor. This tool ______ a warrior's raw combat capability, speed, and energy output.",
         ["measures", "had measured", "would have measured", "will have been measuring"], 0,
         "The passage describes what the tool does in general, in the present (\"use\"), so the present tense fits.",
         ["Correct. \"This tool measures…\": the present tense for what the tool does, matching \"use.\"",
           "Past perfect needs an earlier past event; the passage is in the present.",
           "\"Would have measured\" describes something hypothetical that didn't happen.",
-          "Future perfect progressive points to a future deadline that the passage never mentions."]),
+          "Future perfect progressive points to a future deadline that the passage never mentions."])),
       Q("c4-02", "Past", "Last summer, {{NAME_1}} ______ a new move that no gymnast had ever attempted in competition.",
         ["landed", "lands", "will land", "has landed"], 0,
         "\"Last summer\" marks a finished past time, so use the simple past.",
@@ -3165,7 +3374,7 @@ window.SatWizz.avatars = [
 /* ===== clause-derby/src/ch5.js ===== */
 // Chapter 5: Logical Transitions
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const C = "Contrast words (However, Nevertheless, In contrast) need the second idea to oppose or surprise you after the first.";
   const A = "Addition words (Additionally, Moreover, In addition) need a second point in the same direction.";
   const E = "Example words (For example, For instance) need the second sentence to be a specific case of the first.";
@@ -3186,6 +3395,14 @@ window.SatWizz.avatars = [
       "Similarity: Similarly, Likewise.",
     ],
     questions: [
+      // Benchmark (Review for Understanding): a concession admits a limit on the earlier finding.
+      B("Concession Transition", Object.assign(Q("c5-bm", "Concession", "A 2017 study of sign language learners tested the role of iconicity—the similarity of a sign to the thing it represents—in language acquisition. The study found that the greater the iconicity of a sign, the more likely it was to have been learned. ______ the correlation between acquisition and iconicity was lower than that between acquisition and another factor studied: sign frequency.",
+        ["Granted,", "In fact,", "In other words,", "As a result,"], 0,
+        "\"Granted\" concedes a point that limits the main claim. Iconicity mattered, but frequency mattered more: a concession.",
+        ["Correct. \"Granted\" admits a limit on the finding: iconicity helped, but its link to learning was weaker than frequency's.",
+          "\"In fact\" strengthens or intensifies the previous point; this sentence limits it.",
+          "\"In other words\" restates the previous point; this sentence adds a new, limiting fact.",
+          "\"As a result\" needs the weaker correlation to be caused by the finding, and it isn't."]), { kind: "transition" })),
       Q("c5-01", "Contrast", "During a villain's citywide siege, {{NAME_1}} was instrumental in saving hundreds of hostages, earning {{NAME_1_OBJ}} the moniker “The Guardian of the City.” ______ despite the fame of {{NAME_1_POSS}} heroic actions during {{NAME_1_POSS}} prime, {{NAME_1}} is discussed far less today by the younger generation of heroes than other prominent members of the league of heroes, such as {{NAME_2}} and {{NAME_3}}.",
         ["For example,", "However,", "Specifically,", "Similarly,"], 1,
         "Famous heroics vs. being discussed less today is a contrast.",
@@ -3298,7 +3515,7 @@ window.SatWizz.avatars = [
 /* ===== clause-derby/src/ch6.js ===== */
 // Chapter 6: Punctuation Fundamentals (Semicolon, Dash, Colon)
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const DASH_PAIR = "Dashes come in pairs around non-essential information: if one dash opens it, another must close it.";
   const SEMI_IC = "A semicolon needs a complete independent clause on BOTH sides.";
   const COLON_IC = "A colon needs a complete independent clause BEFORE it.";
@@ -3316,6 +3533,14 @@ window.SatWizz.avatars = [
       "No punctuation between a verb and its object (\"concluded that…\").",
     ],
     questions: [
+      // Benchmark (Review for Understanding): the closing dash needs an opening dash.
+      B("Dash Pair Rule", Q("c6-bm", "Dash pair", "With some 16,000 in attendance, the Second World Black and African Festival of Arts and ______ or FESTAC '77, as the event was more commonly known—became the largest pan-African event on record.",
+        ["Culture—", "Culture:", "Culture,", "Culture"], 0,
+        "The phrase \"or FESTAC '77, as the event was more commonly known\" ends with a dash, so it must open with a dash. Dashes come in pairs around non-essential information.",
+        ["Correct. \"Culture—or FESTAC '77, as the event was more commonly known—became\": the dashes match.",
+          "A colon would split the subject from its verb \"became,\" and it can't pair with the closing dash.",
+          "A comma can't pair with the closing dash.",
+          "With no opening mark, the closing dash has no partner."])),
       Q("c6-01", "Dash pair", "The museum's most famous ______ a portrait of a woman with a mysterious smile—hangs behind thick bulletproof glass.",
         ["painting—", "painting,", "painting;", "painting:"], 0,
         "The closing dash after \"smile\" needs an opening dash: paired dashes around the appositive.",
@@ -3425,7 +3650,7 @@ window.SatWizz.avatars = [
 /* ===== clause-derby/src/ch7.js ===== */
 // Chapter 7: Appositives & Non-Essential Clauses
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const PAIR = "Non-essential information needs matching punctuation on BOTH sides (comma…comma or dash…dash).";
   window.ClauseBank.add({
     id: 7,
@@ -3441,13 +3666,14 @@ window.SatWizz.avatars = [
       "Use \"which\" with commas for non-essential clauses and \"that\" with no commas for essential ones. Match your pairs: comma–comma, dash–dash.",
     ],
     questions: [
-      Q("c7-01", "Non-essential title", "An industry report led by musicologist {{NAME_2}} at the Brightwater Conservatory of Music found that dedicated fans of {{NAME_1}} who purchase physical vinyl records before a stadium tour have increased streams of a specific re-recorded studio album, ______ due to the unreleased bonus tracks included on the special edition. Fans with these elevated streaming habits were also found to attend multiple concert dates on average.",
+      // Benchmark (Review for Understanding).
+      B("Non-Essential Appositive (a/an cue)", Q("c7-01", "Non-essential title", "An industry report led by musicologist {{NAME_2}} at the Brightwater Conservatory of Music found that dedicated fans of {{NAME_1}} who purchase physical vinyl records before a stadium tour have increased streams of a specific re-recorded studio album, ______ due to the unreleased bonus tracks included on the special edition. Fans with these elevated streaming habits were also found to attend multiple concert dates on average.",
         ["Starlight Letters, (Deluxe Edition)", "Starlight Letters (Deluxe Edition)", "Starlight Letters, (Deluxe Edition),", "Starlight Letters (Deluxe Edition),"], 3,
         "\"A specific re-recorded studio album\" (a/an cue) is followed by the album's name as non-essential info, set off by commas on both sides.",
         ["The comma inside the title splits \"(Deluxe Edition)\" from the name, and there's no closing comma.",
           "The opening comma after \"album\" has no matching closing comma.",
           "The comma inside the title wrongly splits the album's name.",
-          "Correct. \"…album, Starlight Letters (Deluxe Edition), due to…\": the title is one unit, closed by a comma that matches the one before it."]),
+          "Correct. \"…album, Starlight Letters (Deluxe Edition), due to…\": the title is one unit, closed by a comma that matches the one before it."])),
       Q("c7-02", "Essential name", "The physicist ______ discovered a new element with {{NAME_1_POSS}} partner, {{NAME_2}}.",
         ["{{NAME_1}}", "{{NAME_1}},", ", {{NAME_1}},", "—{{NAME_1}},"], 0,
         "\"The physicist\" alone doesn't say which physicist, so the name is essential: no commas.",
@@ -3575,6 +3801,8 @@ window.SatWizz.avatars = [
         answer: q.answer,
         notes: q.notes,
         rule: q.rule,
+        benchmark: q.benchmark || undefined,
+        ruleName: q.ruleName,
       })),
     });
   }
@@ -7052,6 +7280,118 @@ window.SatWizz.curriculum.addChapter({
 
 </script>
 <script>
+/* ===== js/curriculum/rules.js ===== */
+// Rule names for the Diagnostic screen: SatWizz.ruleName(q) turns a
+// question's skill into the named rule it tests ("Terminal Boundary Rule",
+// "Restrictive Title Rule"…). A question's own `ruleName` wins; a skill with
+// no match falls back to the chapter title. SatWizz.ruleExplain(q) is the
+// short explanation: the rule line plus the note on the correct answer.
+(function () {
+  "use strict";
+  const SW = window.SatWizz;
+
+  // [skill pattern, rule name], first match wins, per chapter.
+  const TABLE = {
+    1: [
+      [/^IC\. /, "Terminal Boundary Rule"],
+      [/^IC; (however|nevertheless|then)|; LW/, "Semicolon + Conjunctive Adverb"],
+      [/^IC; /, "Semicolon Boundary Rule"],
+      [/FANBOYS|^IC, (and|conj)/, "FANBOYS Connector Rule"],
+      [/^DC, |^IC DC|DC$/, "Dependent Clause Comma Rule"],
+      [/splice/i, "Comma Splice"],
+      [/Compound predicate|no split/i, "Compound Predicate (No Comma)"],
+      [/list/i, "Semicolons in a Complex List"],
+      [/Flexpos|LW/, "Linking Word Placement"],
+      [/noun phrase/i, "Descriptive Phrase After a Clause"],
+    ],
+    2: [
+      [/Preposition|Long interrupter|Interrupted/i, "Prepositional Trap"],
+      [/Parenthetical|Along with|As well as|Including/i, "Parenthetical Phrase Rule"],
+      [/Either|Neither/i, "Proximity Rule (either/or)"],
+      [/Compound/i, "Compound Subject Rule"],
+      [/Each|Every|One of/i, "Each / One-of Singular Rule"],
+      [/There|Inverted|Flipped/i, "Inverted Sentence Rule"],
+      [/Collective/i, "Collective Noun Rule"],
+      [/number of/i, "\"A Number\" vs. \"The Number\""],
+      [/3:1/, "3:1 Shortcut"],
+      [/.*/, "Subject–Verb Agreement"],
+    ],
+    3: [
+      [/Title/i, "Restrictive Title Rule"],
+      [/Appositive/i, "Appositive + Modifier Rule"],
+      [/Participle|Non-verb|Reduced/i, "Participle Modifier (Non-Verb)"],
+      [/main verb|Main verb/i, "Main Verb Rule"],
+    ],
+    4: [
+      [/Past perfect/i, "Past Perfect Sequence"],
+      [/Present perfect/i, "Present Perfect (Until Now)"],
+      [/Future perfect/i, "Future Perfect Deadline"],
+      [/Future/i, "Future Time Clue"],
+      [/^Past$|Time clue/i, "Finished-Past Time Clue"],
+      [/Present/i, "Present Tense for General Facts"],
+      [/Consistency/i, "Tense Consistency"],
+      [/Conditional/i, "Conditional Rule"],
+      [/participle/i, "Past Participle Form"],
+    ],
+    5: [
+      [/Concession|Though/i, "Concession Transition"],
+      [/Contrast/i, "Contrast Transition"],
+      [/Cause|Result/i, "Cause–Effect Transition"],
+      [/Example/i, "Example Transition"],
+      [/Addition|Elaboration|Emphasis/i, "Addition Transition"],
+      [/Similar|Comparison/i, "Similarity Transition"],
+      [/Sequence|Summary/i, "Sequence Transition"],
+      [/punctuation|Flexpos/i, "Transition Punctuation"],
+    ],
+    6: [
+      [/Dash pair/i, "Dash Pair Rule"],
+      [/Single dash/i, "Single Dash Rule"],
+      [/Semicolons? (in a )?list/i, "Semicolons in a Complex List"],
+      [/Semicolon/i, "Semicolon Boundary Rule"],
+      [/such as|after a verb|preposition|before object/i, "No Colon Mid-Clause"],
+      [/Colon/i, "Colon After a Complete Clause"],
+      [/Matching|Comma/i, "Matching Punctuation Pairs"],
+      [/FANBOYS/i, "FANBOYS Connector Rule"],
+      [/which/i, "Non-Essential \"which\""],
+      [/DC/, "Dependent Clause Comma Rule"],
+    ],
+    7: [
+      [/a\/an/i, "Non-Essential Appositive (a/an cue)"],
+      [/Essential (title|name)/i, "Restrictive Title Rule"],
+      [/Essential/i, "Essential Clause Rule"],
+      [/Non-essential|who clause|which after/i, "Non-Essential Clause Rule"],
+      [/one of (a|its) kind|Only one/i, "One-of-a-Kind Rule"],
+      [/which vs that/i, "\"Which\" vs. \"That\""],
+      [/Dash|Comma pair|Matching/i, "Matching Punctuation Pairs"],
+    ],
+  };
+
+  SW.ruleName = function (q) {
+    if (q.ruleName) return q.ruleName;
+    const chId = q.chapterId || q.chapter;
+    const hit = (TABLE[chId] || []).find(([re]) => re.test(q.skill || ""));
+    if (hit) return hit[1];
+    if (q.skill && chId > 7) return q.skill;
+    const ch = SW.chapterById && SW.chapterById(chId);
+    return ch ? ch.title.replace(/^Bonus: /, "") : q.skill || "Grammar rule";
+  };
+
+  // Two short sentences: the principle, then why the right answer works.
+  // Older questions have no rule line, so the chapter's focus stands in.
+  SW.ruleExplain = function (q) {
+    const note = (q.notes && q.notes[q.answer]) || "";
+    const why = note.replace(/^Correct\.?\s*/, "");
+    let rule = q.rule;
+    if (!rule) {
+      const ch = SW.chapterById && SW.chapterById(q.chapterId || q.chapter);
+      rule = ch && ch.pause && ch.pause.summary;
+    }
+    return [rule, why].filter(Boolean).join(" ");
+  };
+})();
+
+</script>
+<script>
 /* ===== js/focus.js ===== */
 // SatWizz Focus Meter (0–100%), shared by Practice, the Vocab Derby and
 // the standalone Derby. State logic is pure; paint()/shake() touch the page.
@@ -7059,6 +7399,7 @@ window.SatWizz.curriculum.addChapter({
 //   • A wrong answer costs 25%. A rushed answer (faster than `rushMs`) costs 10%.
 //   • Only two right answers in a row (+25%) or a Focus Elixir (back to 100%)
 //     restore it.
+//   • Every hour Focus recharges to 100% on its own (hourly()).
 //   • Low Focus (under 50%) blurs the question; critical (under 25%) also
 //     shakes the screen on a miss. In the Derby, missing Focus locks each
 //     question for up to 9s while the rivals keep running, plus 4s after a miss.
@@ -7082,6 +7423,7 @@ window.SatWizz.curriculum.addChapter({
     lockMax: 9, // seconds of Derby lock at 0% Focus
     stumble: 4, // extra lock after a wrong answer
     elixirPrice: 500,
+    rechargeMs: 60 * 60 * 1000, // full recharge every hour
   });
 
   const clamp = (n) => Math.max(0, Math.min(RULES.max, Math.round(Number(n) || 0)));
@@ -7108,10 +7450,31 @@ window.SatWizz.curriculum.addChapter({
     return { before, after: st.focus, delta: st.focus - before, rushed, restored };
   }
 
-  function refill(st) {
+  function refill(st, now = Date.now()) {
     st.focus = RULES.max;
     st.focusStreak = 0;
+    st.focusResetAt = now; // an Elixir also restarts the hourly clock
   }
+
+  // The hourly recharge: once an hour has passed since the last one, Focus
+  // goes back to 100%. Returns true when it refilled a meter that wasn't full.
+  // A missing clock starts now.
+  function hourly(st, now = Date.now()) {
+    if (!st.focusResetAt || st.focusResetAt > now) {
+      st.focusResetAt = now;
+      return false;
+    }
+    if (now - st.focusResetAt < RULES.rechargeMs) return false;
+    const wasLow = clamp(st.focus) < RULES.max;
+    st.focus = RULES.max;
+    st.focusStreak = 0;
+    // Keep the hourly rhythm: the next recharge is a whole number of hours on.
+    st.focusResetAt += Math.floor((now - st.focusResetAt) / RULES.rechargeMs) * RULES.rechargeMs;
+    return wasLow;
+  }
+  // Minutes until the next hourly recharge.
+  const nextRechargeMin = (st, now = Date.now()) =>
+    Math.max(1, Math.ceil(((st.focusResetAt || now) + RULES.rechargeMs - now) / 60000));
 
   // Seconds the next Derby question stays locked.
   const lockFor = (focus, lastWrong) =>
@@ -7140,7 +7503,7 @@ window.SatWizz.curriculum.addChapter({
     setTimeout(() => target.classList.remove("focus-shake"), 600);
   }
 
-  SW.focus = { RULES, apply, refill, lockFor, level, clamp, meterHtml, paint, shake };
+  SW.focus = { RULES, apply, refill, hourly, nextRechargeMin, lockFor, level, clamp, meterHtml, paint, shake };
 })();
 
 </script>
@@ -7625,6 +7988,8 @@ window.SatWizz.curriculum.addChapter({
     const openStable = () => { back = screen && screen !== "stable" ? screen : "intro"; if (back === "race") back = "intro"; go("stable"); };
 
     function render() {
+      // Standalone: Focus recharges to 100% every hour (the app does this itself).
+      if (solo && screen !== "race" && FOCUS().hourly(fst())) { touch(); ctx.save(); }
       if (screen === "intro") return renderIntro();
       if (screen === "setup") return renderSetup();
       if (screen === "race") return renderRace();
@@ -7673,7 +8038,7 @@ window.SatWizz.curriculum.addChapter({
               <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. Bet on as many races as you like.</li>
               <li><b>The race never pauses ⏱.</b> ${esc(src.intro)} Right → you gallop +1. Wrong → you're held back.</li>
               <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${(src.read || CPU.read)[0]}–${(src.read || CPU.read)[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
-              <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running, and blurs the screen. Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
+              <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running, and blurs the screen. Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it, and it recharges to 100% every hour on its own. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
               <li><b>After the race:</b> your balance, a review of every question, and the 🛍️ Stable.</li>
             </ol>
             <div class="intro-focus">Your Focus: ${focusBar(fst().focus)}${focusNote(fst().focus)}</div>
@@ -8531,7 +8896,7 @@ window.SatWizz.curriculum.addChapter({
           </div>
           <section class="card-inner bb fish-word">
             <div class="bb-top"><span class="bb-num">${round.i + 1}</span><span class="bb-meta">Hook the definition of</span><span class="q-timer" aria-hidden="true">🎣 <span id="line-secs">${Math.ceil(round.left)}s</span></span></div>
-            <p class="fish-target"><b>${esc(w.word)}</b> <small class="muted">${esc(w.pos)}</small></p>
+            <p class="fish-target"><b>${esc(w.word)}</b> <small class="muted">${esc(w.pos)}</small>${SW.speech ? SW.speech.button(w.word, esc, "sm") : ""}</p>
             <p class="fish-context">${ctx.fill(w.text).replace("______", `<b class="fc-hl">${esc(w.word)}</b>`).replace(SW.UNDERLINE_RE, '<b class="fc-hl">$1</b>')}</p>
             <div class="line-bar" aria-hidden="true"><i id="line-left" style="width:${(round.left / RULES.lineSeconds) * 100}%"></i></div>
           </section>
@@ -8732,6 +9097,9 @@ window.SatWizz.curriculum.addChapter({
 //     so flagged words lead both the deck and the next sprint.
 //
 //   • Vocab Fishing (js/fishing.js): hook the fish carrying the right definition.
+//   • 🔊 Pronunciation (Web Speech API) on the flashcards, the word list and in
+//     Fishing: SatWizz.speech = { supported, speak, button }. "P" speaks the
+//     current flashcard.
 //
 // Exposes SatWizz.vocab = { WORDS, TIERS, RULES, emptyProgress, drawSprint,
 // drawDeck, grade, reviewCard, flag, finishSprint, summary, mergeProgress, mount }.
@@ -9652,6 +10020,40 @@ window.SatWizz.curriculum.addChapter({
 
   const BY_ID = Object.fromEntries(WORDS.map((w) => [w.id, w]));
 
+  // ---------- Pronunciation (Web Speech API) ----------
+  // The 🔊 button only shows where the browser can speak. Any [data-say]
+  // button speaks its word; it never flips a card or opens a word.
+  const speech = {
+    supported: () => typeof window !== "undefined" && "speechSynthesis" in window && typeof window.SpeechSynthesisUtterance === "function",
+    speak(text) {
+      if (!speech.supported() || !text) return false;
+      try {
+        window.speechSynthesis.cancel();
+        const u = new window.SpeechSynthesisUtterance(text);
+        u.lang = "en-US";
+        u.rate = 0.9;
+        window.speechSynthesis.speak(u);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    button: (word, esc, cls = "") => (speech.supported()
+      ? `<button type="button" class="say-btn${cls ? ` ${cls}` : ""}" data-say="${esc(word)}" aria-label="Pronounce ${esc(word)}" title="Hear it">🔊</button>`
+      : ""),
+    // One listener per container handles every [data-say] button inside it.
+    wire(container) {
+      container.addEventListener("click", (e) => {
+        const b = e.target.closest("[data-say]");
+        if (!b || !container.contains(b)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        speech.speak(b.dataset.say);
+      }, true);
+    },
+  };
+  SW.speech = speech;
+
   // ---------- Progress (pure) ----------
   // progress = { words: { [id]: { tier, seen, correct, wrong, lastAt, lastDay,
   //              advancedDay, mastered, review, cards, cardDay } }, sprintDay, sprints }
@@ -9818,6 +10220,7 @@ window.SatWizz.curriculum.addChapter({
   //        celebrate, earn(sparks), recordAnswer(correct), renderHud(bump) }
   function mount(ctx) {
     const { container, esc } = ctx;
+    speech.wire(container);
     let sprint = null; // { ids, i, results: [], earned, picked }
     let deck = null; // { ids, i, flipped, got, later, earned, requeued: Set, busy }
     let drawer = null;
@@ -9883,7 +10286,7 @@ window.SatWizz.curriculum.addChapter({
             <h2>Your words</h2>
             ${seenWords.length ? `<ul class="word-list">${seenWords.map((w) => `
               <li><details>
-                <summary>${tierBadge(wordState(p, w.id).tier)} <b>${esc(w.word)}</b> <small>${esc(w.pos)}</small>${cardChip(wordState(p, w.id))}</summary>
+                <summary>${tierBadge(wordState(p, w.id).tier)} <b>${esc(w.word)}</b> <small>${esc(w.pos)}</small>${speech.button(w.word, esc, "sm")}${cardChip(wordState(p, w.id))}</summary>
                 <p>${esc(w.definition)}</p>
                 <p class="muted small">≈ ${w.synonyms.map(esc).join(", ")} · ≠ ${w.antonyms.map(esc).join(", ")}</p>
                 <p class="muted small">🌱 Root: ${esc(w.root)}</p>
@@ -9926,6 +10329,7 @@ window.SatWizz.curriculum.addChapter({
             <button class="linkbtn" type="button" id="deck-quit">✕ End review</button>
             <span class="muted small" aria-live="polite">Card ${deck.i + 1} of ${deck.ids.length}</span>
           </div>
+          ${speech.supported() ? `<div class="fc-say">${speech.button(w.word, esc)}<span class="muted small">Hear “${esc(w.word)}”<span class="kbd-hint"> · P</span></span></div>` : ""}
           <div class="fc-stage">
             <div class="fc-drag">
               <span class="fc-stamp got" aria-hidden="true">Mastered ✓</span>
@@ -10090,6 +10494,7 @@ window.SatWizz.curriculum.addChapter({
       if (e.key === "ArrowRight") { e.preventDefault(); decide(true); }
       else if (e.key === "ArrowLeft") { e.preventDefault(); decide(false); }
       else if (e.key === " " && !e.target.closest("button")) { e.preventDefault(); flip(); }
+      else if (e.key.toLowerCase() === "p") { e.preventDefault(); speech.speak(BY_ID[deck.ids[deck.i]]?.word); }
     });
 
     function startSprint() {
@@ -11934,6 +12339,11 @@ window.SatWizz.curriculum.addChapter({
     derbyChapter: null, // unit the Derby races on (defaults to the current chapter)
     genSeed: 0, // per-player seed: question casts and the no-repeat order of generated questions
     genCursor: {}, // chapterId -> how many generated questions you've been served
+    // Review for Understanding tests (8/10 unlocks the next chapter) and
+    // practice sets: chapterId -> { best, last, n, passed, attempts, at }
+    tests: {},
+    practiceSets: {},
+    focusResetAt: 0, // ms of the last hourly Focus recharge
     // settings
     muted: false,
     haptics: true,
@@ -11983,6 +12393,8 @@ window.SatWizz.curriculum.addChapter({
     s.unlockedChapters = [...new Set([1, ...(s.unlockedChapters || []).filter(validChapter)])];
     s.completedChapters = [...new Set((s.completedChapters || []).filter(validChapter))];
     if (!s.chapterCorrect || typeof s.chapterCorrect !== "object") s.chapterCorrect = {};
+    if (!s.tests || typeof s.tests !== "object") s.tests = {};
+    if (!s.practiceSets || typeof s.practiceSets !== "object") s.practiceSets = {};
     if (s.chapterId !== REVIEW_ID && !s.unlockedChapters.includes(s.chapterId)) s.chapterId = 1;
     // Packs that used to be free stay free for anyone who played before v2,
     // and anyone already using a cast that became paid keeps it.
@@ -12242,15 +12654,21 @@ window.SatWizz.curriculum.addChapter({
     <div class="alert-slot" id="alert-slot" aria-live="assertive"></div>
     <div id="feed-tools">
       <div class="focusbar" id="focusbar"></div>
-      <button class="chapter-bar" id="chapter-bar" type="button" aria-haspopup="dialog"></button>
+      <div class="feed-nav">
+        <button class="back-dash" id="back-dash" type="button" aria-label="Back to the Dashboard"><span aria-hidden="true">←</span><span class="back-lbl">Dashboard</span></button>
+        <button class="chapter-bar" id="chapter-bar" type="button" aria-haspopup="dialog"></button>
+      </div>
     </div>
-    <main class="view feed" id="view-feed" aria-live="polite"></main>
+    <main class="view scrollview" id="view-dash"></main>
+    <main class="view feed" id="view-feed" aria-live="polite" hidden></main>
+    <main class="view scrollview" id="view-test" hidden></main>
+    <main class="view scrollview" id="view-diag" hidden></main>
     <main class="view scrollview" id="view-vocab" hidden></main>
     <main class="view scrollview" id="view-derby" hidden></main>
     <main class="view scrollview" id="view-shop" hidden></main>
     <main class="view scrollview" id="view-you" hidden></main>
     <nav class="tabs" role="tablist" aria-label="SatWizz">
-      <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">✏️</span>Practice</button>
+      <button class="tab" role="tab" data-view="dash" aria-selected="true" aria-label="Dashboard"><span class="ico" aria-hidden="true">🏠</span><span class="lbl-long">Dashboard</span><span class="lbl-short">Home</span></button>
       <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vault</button>
       <button class="tab" role="tab" data-view="derby" aria-selected="false"><span class="ico" aria-hidden="true">🐎</span>Derby</button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
@@ -12259,13 +12677,17 @@ window.SatWizz.curriculum.addChapter({
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  // Five tabs: Practice, Vault, Derby, Shop, Profile. Profile has three
-  // sub-tabs: Edit Profile, Settings and Leaderboard (with friends).
-  const VIEWS = ["feed", "vocab", "derby", "shop", "you"];
+  // Five tabs: Dashboard, Vault, Derby, Shop, Profile. The Dashboard opens a
+  // chapter's practice feed, its practice sets and its Review for
+  // Understanding test (with the Diagnostic screen after), which have no tab
+  // of their own. Profile has three sub-tabs: Edit Profile, Settings and
+  // Leaderboard (with friends).
+  const VIEWS = ["dash", "feed", "test", "diag", "vocab", "derby", "shop", "you"];
+  const TAB_OF = { feed: "dash", test: "dash", diag: "dash" };
   let youTab = "profile"; // "profile" | "settings" | "leaderboard"
   // The leaderboard module keeps its own DOM; it moves into the Profile pane.
   const ranksMount = h("div", { id: "ranks-mount", class: "ranks-view" });
-  let currentView = "feed";
+  let currentView = "dash";
   let streakTab = "streak"; // Profile's streak section: "streak" or "achievements"
 
   app.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => { sfx.play("tap"); show(t.dataset.view); }));
@@ -12281,13 +12703,14 @@ window.SatWizz.curriculum.addChapter({
   $("#hud-focus").addEventListener("click", () => {
     toast(S.focus >= FOCUS.RULES.max
       ? "🧠 Focus 100%. A miss costs 25%, rushing (under 3s) 10%."
-      : `🧠 Focus ${S.focus}%. Get 2 right in a row for +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2), or buy a Focus Elixir in the Shop.`);
+      : `🧠 Focus ${S.focus}%. Get 2 right in a row for +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2), buy a Focus Elixir in the Shop, or wait: full recharge in ${FOCUS.nextRechargeMin(S)} min.`);
   });
+  $("#back-dash").addEventListener("click", () => { sfx.play("tap"); show("dash"); });
 
   function show(view) {
     const changed = view !== currentView;
     currentView = view;
-    app.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.view === view)));
+    app.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.view === (TAB_OF[view] || view))));
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
     $("#feed-tools").hidden = view !== "feed";
     if (changed && !reducedMotion()) {
@@ -12296,6 +12719,7 @@ window.SatWizz.curriculum.addChapter({
       void el.offsetWidth;
       el.classList.add("view-in");
     }
+    if (view === "dash") renderDash();
     if (view === "vocab") vocab.render();
     if (view === "derby") {
       if (!derby.active()) derby.open();
@@ -12307,6 +12731,7 @@ window.SatWizz.curriculum.addChapter({
   }
 
   function rerenderCurrent() {
+    if (currentView === "dash") renderDash();
     if (currentView === "vocab" && !vocab.busy()) vocab.render();
     if (currentView === "derby" && !derby.racing()) derby.render();
     if (currentView === "you" && youTab === "leaderboard") ranks.render();
@@ -12417,7 +12842,6 @@ window.SatWizz.curriculum.addChapter({
           if (!q.gen) {
             const got = correctIn(q.chapterId);
             if (!got.includes(q.id)) got.push(q.id);
-            unlockNextAt60(chapterById(q.chapterId));
           }
         } else if (!S.missed.includes(q.id)) S.missed.push(q.id);
         renderChapterBar();
@@ -12536,6 +12960,7 @@ window.SatWizz.curriculum.addChapter({
     fp.innerHTML = FOCUS.meterHtml(S.focus);
     fp.className = `pill focus-pill ${FOCUS.level(S.focus)}`;
     fp.setAttribute("aria-label", `Focus ${S.focus}%`);
+    fp.title = S.focus < FOCUS.RULES.max ? `Focus Meter · full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus Meter · recharges to 100% every hour";
     FOCUS.paint(S.focus); // <body data-focus>: low-Focus blur
     $("#demo-badge").hidden = !S.demo;
     renderAccountButton();
@@ -12642,40 +13067,30 @@ window.SatWizz.curriculum.addChapter({
     const pending = [...feed.querySelectorAll(".card[data-qid]")].filter((c) => !c._answered).length;
     if (pending < 2 && (queue.length || streaming)) appendCards(2 - pending);
     const ch = currentChapter();
-    if (ch) unlockNextAt60(ch);
     if (!ch || completeShown || queue.length || pending) return;
     completeShown = true;
     const firstTime = !isComplete(ch.id);
-    let unlocked = null;
+    // The next chapter opens by passing the Review for Understanding test.
     if (firstTime) {
       S.completedChapters.push(ch.id);
       rewards.earn(S, RULES.chapterSparks);
-      const next = chapterById(ch.id + 1);
-      if (next && !isUnlocked(next.id)) {
-        S.unlockedChapters.push(next.id);
-        unlocked = next;
-      }
       save();
       renderHud(["sparks"]);
       setTimeout(() => sfx.play("complete"), 400);
       sfx.buzz(50);
-      celebrate("⭐", `Chapter ${ch.id} complete!`, `+${RULES.chapterSparks} ⚡ Sparks${unlocked ? ` · Chapter ${unlocked.id} unlocked` : ""}`);
+      celebrate("⭐", `Chapter ${ch.id} complete!`, `+${RULES.chapterSparks} ⚡ Sparks`);
     }
     feed.querySelector(".sentinel")?.remove();
     feed.append(completeCard(ch, firstTime));
     renderChapterBar();
   }
 
-  // The next chapter opens once 60% of this one is answered correctly.
-  const unlockNeed = (ch) => Math.ceil(ch.questions.length * SW.UNLOCK_SHARE);
-  function unlockNextAt60(ch) {
-    const next = chapterById(ch.id + 1);
-    if (!next || isUnlocked(next.id) || correctIn(ch.id).length < unlockNeed(ch)) return;
-    S.unlockedChapters.push(next.id);
-    save();
-    sfx.play("combo");
-    toast(`🔓 ${next.bonus ? "Bonus chapter" : `Chapter ${next.id}`} unlocked: ${next.short}`);
-  }
+  // The next chapter opens when this one's Review for Understanding test is
+  // passed (8/10 or better; see the tests section below).
+  const lockNote = (ch) => {
+    const prev = chapterById(ch.id - 1);
+    return prev ? `Score ${passMark(TEST_LEN)}/${TEST_LEN} on ${prev.bonus ? "the bonus chapter's" : `Chapter ${prev.id}'s`} Review for Understanding to unlock` : "";
+  };
 
   // "Explanation Pause": the lesson card that opens each chapter.
   function pauseCard(ch) {
@@ -12704,7 +13119,11 @@ window.SatWizz.curriculum.addChapter({
     let heading;
     let body;
     let actions = "";
-    if (next && !next.bonus) {
+    if (next && !isUnlocked(next.id)) {
+      heading = `${ch.bonus ? "Bonus chapter" : `Chapter ${ch.id}`} complete`;
+      body = `Score ${passMark(TEST_LEN)}/${TEST_LEN} on the Review for Understanding test to unlock <b>${esc(next.title)}</b>.`;
+      actions = `<button class="btn wide" type="button" data-test>Take the Review for Understanding →</button>`;
+    } else if (next && !next.bonus) {
       heading = `Chapter ${ch.id} complete`;
       body = `Next up: <b>${esc(next.title)}</b>.`;
       actions = `<button class="btn wide" type="button" data-go="${next.id}">Start Chapter ${next.id} →</button>`;
@@ -12732,6 +13151,7 @@ window.SatWizz.curriculum.addChapter({
       startChapter(go);
     }));
     card.querySelector("[data-drawer]")?.addEventListener("click", openChapters);
+    card.querySelector("[data-test]")?.addEventListener("click", () => startRun("test", ch.id));
     card.querySelector("[data-stream]")?.addEventListener("click", () => {
       streaming = true;
       appendCards(3);
@@ -13273,7 +13693,7 @@ window.SatWizz.curriculum.addChapter({
       const status = done ? "✓" : current ? "▶" : unlocked ? "•" : "🔒";
       const sub = unlocked
         ? `${done ? "Complete" : `${got} of ${ch.questions.length} correct`}${current ? " · current" : ""}`
-        : (() => { const prev = chapterById(ch.id - 1); return `Get ${unlockNeed(prev)} of ${prev.questions.length} right in ${prev.bonus ? "the bonus chapter" : `Chapter ${prev.id}`} to unlock`; })();
+        : lockNote(ch);
       return `
         <button type="button" class="chapter-row${done ? " done" : ""}${current ? " current" : ""}" data-ch="${ch.id}" ${unlocked ? "" : "disabled"}>
           <span class="ch-status" aria-hidden="true">${status}</span>
@@ -13337,6 +13757,366 @@ window.SatWizz.curriculum.addChapter({
   }
 
   $("#chapter-bar").addEventListener("click", openChapters);
+
+  // ---------- Dashboard (chapter select) ----------
+  // One card per chapter: core progress, best test score, and three ways in:
+  // Learn & practice (the feed), a 10-question practice set, and the
+  // 10-question Review for Understanding test that unlocks the next chapter.
+  const dash = $("#view-dash");
+  function renderDash() {
+    const core = CHAPTERS.filter((c) => !c.bonus);
+    const passed = core.filter((c) => S.tests[c.id]?.passed).length;
+    const card = (ch) => {
+      const open = isUnlocked(ch.id);
+      const t = S.tests[ch.id];
+      const ps = S.practiceSets[ch.id];
+      const got = Math.min(correctIn(ch.id).length, ch.questions.length);
+      const state = !open ? "🔒 Locked"
+        : t?.passed ? `✓ Passed · best ${t.best}/${t.n}`
+        : t ? `Best ${t.best}/${t.n} · need ${passMark(t.n)}`
+        : S.chapterId === ch.id ? "▶ Current" : "Not tested yet";
+      return `
+        <article class="ch-card${open ? "" : " locked"}${t?.passed ? " passed" : ""}${S.chapterId === ch.id ? " current" : ""}" data-ch="${ch.id}">
+          <div class="ch-card-top">
+            <span class="ch-badge">${ch.bonus ? "Bonus" : `Ch ${ch.id}`}</span>
+            <span class="ch-state">${state}</span>
+          </div>
+          <h3>${esc(ch.title.replace(/^Bonus: /, ""))}</h3>
+          ${open ? `
+          <div class="ch-progress">
+            <span class="bar" aria-hidden="true"><i style="width:${(got / ch.questions.length) * 100}%"></i></span>
+            <small class="muted">${got}/${ch.questions.length} core questions right${ps ? ` · last practice set ${ps.last}/${ps.n}` : ""}</small>
+          </div>
+          <div class="ch-actions">
+            <button class="btn" type="button" data-learn="${ch.id}">📖 Learn & practice</button>
+            <button class="btn ghost" type="button" data-set="${ch.id}">✏️ Practice set (${TEST_LEN})</button>
+            <button class="btn ghost test-btn" type="button" data-test="${ch.id}">🎯 Review for Understanding (${TEST_LEN})</button>
+          </div>` : `<p class="lock-note">🔒 ${esc(lockNote(ch))}.</p>`}
+        </article>`;
+    };
+    dash.innerHTML = `
+      <div class="stack dash">
+        <section class="dash-hero">
+          <span class="label-sm">Digital SAT grammar · ${passed} of ${core.length} chapters passed</span>
+          <h2>${S.name ? `Welcome back, ${esc(S.name)}` : "Your chapters"}</h2>
+          <p class="muted">Learn each rule, practice, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> or better on the chapter's <b>Review for Understanding</b> to unlock the next one.</p>
+          <div class="dash-focus">${FOCUS.meterHtml(S.focus)}<small class="muted">${S.focus < FOCUS.RULES.max ? `Full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus recharges to 100% every hour"}</small></div>
+        </section>
+        <div class="dash-grid">${core.map(card).join("")}</div>
+        <span class="label-sm">Extras</span>
+        <div class="dash-grid">
+          ${CHAPTERS.filter((c) => c.bonus).map(card).join("")}
+          <article class="ch-card${reviewOpen() ? "" : " locked"}">
+            <div class="ch-card-top"><span class="ch-badge">Mix</span><span class="ch-state">${reviewOpen() ? `${S.missed.length} missed` : "🔒 Locked"}</span></div>
+            <h3>Mixed review</h3>
+            ${reviewOpen()
+              ? `<p class="muted small">Endless questions from finished chapters, missed ones first.</p><div class="ch-actions"><button class="btn" type="button" data-learn="${REVIEW_ID}">🔀 Start mixed review</button></div>`
+              : '<p class="lock-note">🔒 Finish every question in any chapter first.</p>'}
+          </article>
+        </div>
+      </div>`;
+    dash.querySelectorAll("[data-learn]").forEach((b) => b.addEventListener("click", () => {
+      sfx.play("tap");
+      openPractice(b.dataset.learn === REVIEW_ID ? REVIEW_ID : Number(b.dataset.learn));
+    }));
+    dash.querySelectorAll("[data-set]").forEach((b) => b.addEventListener("click", () => startRun("practice", Number(b.dataset.set))));
+    dash.querySelectorAll("[data-test]").forEach((b) => b.addEventListener("click", () => startRun("test", Number(b.dataset.test))));
+  }
+
+  // Learn & practice: the chapter's lesson card and question feed. Coming back
+  // to the chapter you were on keeps your place.
+  function openPractice(id) {
+    if (S.chapterId !== id || !feed.querySelector(".card")) startChapter(id);
+    show("feed");
+  }
+
+  // ---------- Review for Understanding tests & practice sets ----------
+  // Ten questions, one at a time, with no feedback until you submit. Then the
+  // Diagnostic screen: PASS/FAIL at 80%, the score, and every item with your
+  // answer, the right one, the rule's name and a short explanation.
+  const TEST_LEN = 10;
+  const PASS_SHARE = 0.8;
+  const passMark = (n) => Math.ceil(n * PASS_SHARE);
+  const testView = $("#view-test");
+  const diagView = $("#view-diag");
+  let run = null; // { mode: "test" | "practice", chId, items: [{ q, order, cast, pick, ms, seenAt }], i }
+  let lastResult = null;
+
+  // A test: the chapter's benchmark question, then core questions (missed and
+  // not-yet-right first), then fresh generated ones from the no-repeat stream,
+  // so every retake is different.
+  function pickTest(ch) {
+    const ids = [];
+    const add = (id) => { if (id && BY_ID[id] && !ids.includes(id) && ids.length < TEST_LEN) ids.push(id); };
+    const bm = ch.questions.find((q) => q.benchmark);
+    if (bm) add(bm.id);
+    const core = ch.questions.filter((q) => !q.benchmark);
+    const got = new Set(correctIn(ch.id));
+    const missed = core.filter((q) => S.missed.includes(q.id));
+    const fresh = core.filter((q) => !got.has(q.id) && !S.missed.includes(q.id));
+    const rest = core.filter((q) => got.has(q.id) && !S.missed.includes(q.id));
+    const coreUpTo = ch.pool.length ? TEST_LEN - 4 : TEST_LEN;
+    for (const q of [...shuffle(missed), ...shuffle(fresh), ...shuffle(rest)]) {
+      if (ids.length >= coreUpTo) break;
+      add(q.id);
+    }
+    for (let k = 0; ids.length < TEST_LEN && ch.pool.length && k < 40; k++) add(nextGenId(ch.id));
+    for (const q of shuffle(core)) add(q.id);
+    return [ids[0], ...shuffle(ids.slice(1))];
+  }
+  // A practice set: this chapter's missed questions first, then fresh ones.
+  function pickPractice(ch) {
+    const ids = [];
+    const add = (id) => { if (id && BY_ID[id] && !ids.includes(id) && ids.length < TEST_LEN) ids.push(id); };
+    shuffle(S.missed.filter((id) => BY_ID[id]?.chapterId === ch.id)).slice(0, TEST_LEN / 2).forEach(add);
+    for (let k = 0; ids.length < TEST_LEN && ch.pool.length && k < 40; k++) add(nextGenId(ch.id));
+    const got = new Set(correctIn(ch.id));
+    for (const q of [...shuffle(ch.questions.filter((x) => !got.has(x.id))), ...shuffle(ch.questions)]) add(q.id);
+    return shuffle(ids);
+  }
+
+  function startRun(mode, chId) {
+    const ch = chapterById(chId);
+    if (!ch || !isUnlocked(chId)) return;
+    sfx.play("tap");
+    const ids = mode === "test" ? pickTest(ch) : pickPractice(ch);
+    run = {
+      mode,
+      chId,
+      i: 0,
+      items: ids.map((id) => ({ q: BY_ID[id], order: shuffle([0, 1, 2, 3]), cast: castFor(id), pick: null, ms: 0, seenAt: 0 })),
+    };
+    save(); // the generated-question cursor moved
+    show("test");
+    renderTest();
+  }
+
+  const runTitle = (r) => {
+    const ch = chapterById(r.chId);
+    return `${r.mode === "test" ? "Review for Understanding" : "Practice set"} · ${ch.bonus ? "Bonus" : `Ch ${ch.id}`}`;
+  };
+
+  function renderTest() {
+    if (!run) { show("dash"); return; }
+    const it = run.items[run.i];
+    const q = it.q;
+    const ch = chapterById(q.chapterId);
+    const n = run.items.length;
+    const done = run.items.filter((x) => x.pick != null).length;
+    const last = run.i === n - 1;
+    if (!it.seenAt) it.seenAt = Date.now();
+    testView.innerHTML = `
+      <div class="stack test-view">
+        <div class="test-top">
+          <button class="linkbtn" type="button" data-quit>✕ Quit</button>
+          <span class="label-sm">${esc(runTitle(run))}</span>
+          <span class="pill-sm">${done}/${n} answered</span>
+        </div>
+        <ol class="test-dots" aria-label="Questions">
+          ${run.items.map((x, k) => `<li><button type="button" data-jump="${k}" class="${k === run.i ? "on " : ""}${x.pick != null ? "done" : ""}" aria-label="Question ${k + 1}${x.pick != null ? ", answered" : ""}"${k === run.i ? ' aria-current="step"' : ""}>${k + 1}</button></li>`).join("")}
+        </ol>
+        <section class="card test-card" data-qid="${esc(q.id)}">
+          <div class="card-inner bb">
+            <div class="bb-top">
+              <span class="bb-num" aria-label="Question ${run.i + 1} of ${n}">${run.i + 1}</span>
+              <span class="bb-meta">${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(q.skill)}</span>
+            </div>
+            <div class="bb-passage"><p class="passage">${renderPassage(q.text, it.cast)}</p></div>
+            <p class="bb-stem">${esc(SW.stemFor(q))}</p>
+            <ol class="choices">
+              ${it.order.map((ci, pos) => `
+                <li><button class="choice${it.pick === ci ? " picked" : ""}" type="button" data-ci="${ci}" aria-pressed="${it.pick === ci}" aria-label="(${"ABCD"[pos]}) ${esc(fill(q.choices[ci], it.cast, false).replace(/<[^>]+>/g, ""))}">
+                  <span class="letter" aria-hidden="true">${"ABCD"[pos]}</span><span class="txt">${fill(q.choices[ci], it.cast, false)}</span>
+                </button></li>`).join("")}
+            </ol>
+          </div>
+        </section>
+        <div class="test-nav">
+          <button class="btn ghost" type="button" data-prev ${run.i === 0 ? "disabled" : ""}>← Back</button>
+          ${last && done === n
+            ? '<button class="btn" type="button" data-submit>Submit ✓</button>'
+            : `<button class="btn" type="button" data-next>${last ? "Next unanswered →" : "Next →"}</button>`}
+        </div>
+        <p class="muted small center">No answers are revealed until you submit${run.mode === "test" ? ` · ${passMark(n)}/${n} passes` : ""}.${done === n && !last ? ' <button class="linkbtn" type="button" data-submit>Submit now</button>' : ""}</p>
+      </div>`;
+    testView.querySelectorAll(".choice").forEach((b) => b.addEventListener("click", () => pickChoice(Number(b.dataset.ci))));
+    testView.querySelectorAll("[data-jump]").forEach((b) => b.addEventListener("click", () => goTo(Number(b.dataset.jump))));
+    testView.querySelector("[data-prev]")?.addEventListener("click", () => goTo(run.i - 1));
+    testView.querySelector("[data-next]")?.addEventListener("click", nextInRun);
+    testView.querySelectorAll("[data-submit]").forEach((b) => b.addEventListener("click", submitRun));
+    testView.querySelector("[data-quit]").addEventListener("click", () => {
+      if (done && !confirm("Quit this set? Your answers won't be scored.")) return;
+      run = null;
+      show("dash");
+    });
+  }
+
+  function pickChoice(ci) {
+    const it = run.items[run.i];
+    if (it.pick == null) it.ms = Date.now() - (it.seenAt || Date.now()); // think time to the first pick
+    it.pick = ci;
+    sfx.play("tap");
+    renderTest();
+    testView.querySelector("[data-next], [data-submit]")?.focus({ preventScroll: true });
+  }
+  function goTo(k) {
+    if (!run || k < 0 || k >= run.items.length) return;
+    run.i = k;
+    renderTest();
+    testView.scrollTop = 0;
+  }
+  function nextInRun() {
+    const n = run.items.length;
+    if (run.i < n - 1) return goTo(run.i + 1);
+    const open = run.items.findIndex((x) => x.pick == null);
+    if (open !== -1) goTo(open);
+  }
+
+  // Scores the set and records every answer like Practice does: stats, the
+  // daily goal, missed questions, Sparks for right answers and Focus.
+  function submitRun() {
+    if (!run || run.items.some((x) => x.pick == null)) return;
+    const r = run;
+    run = null;
+    const ch = chapterById(r.chId);
+    rollover();
+    const d = today();
+    let score = 0;
+    let earned = 0;
+    for (const it of r.items) {
+      const q = it.q;
+      const correct = it.pick === q.answer;
+      it.correct = correct;
+      d.n++;
+      const sk = (S.skills[q.skill] ||= { seen: 0, right: 0 });
+      sk.chapterId = q.chapterId;
+      sk.seen++;
+      if (correct) {
+        score++;
+        d.c++;
+        sk.right++;
+        S.totalCorrect++;
+        S.missed = S.missed.filter((id) => id !== q.id);
+        earned += rewards.earn(S, RULES.sparksPerCorrect);
+        if (!q.gen) {
+          const got = correctIn(q.chapterId);
+          if (!got.includes(q.id)) got.push(q.id);
+        }
+      } else if (!S.missed.includes(q.id)) S.missed.push(q.id);
+      FOCUS.apply(S, { correct, ms: it.ms || Infinity, rushMs: FOCUS.RULES.practiceRushMs });
+    }
+    S.xp += score * 10;
+    const n = r.items.length;
+    const pass = score >= passMark(n);
+    const book = r.mode === "test" ? S.tests : S.practiceSets;
+    const prev = book[ch.id];
+    book[ch.id] = {
+      best: Math.max(prev?.best || 0, score),
+      last: score,
+      n,
+      passed: Boolean(prev?.passed) || pass,
+      attempts: (prev?.attempts || 0) + 1,
+      at: Date.now(),
+    };
+    // Passing the test unlocks the next chapter (Chapter 7 opens the bonus ones).
+    let unlocked = null;
+    if (r.mode === "test" && pass) {
+      const next = chapterById(ch.id + 1);
+      if (next && !isUnlocked(next.id)) {
+        S.unlockedChapters.push(next.id);
+        unlocked = next;
+      }
+      if (!prev?.passed) earned += rewards.earn(S, RULES.chapterSparks);
+    }
+    const goal = checkGoal();
+    const newBadges = rewards.checkBadges(S, {});
+    save();
+    renderHud(["sparks", ...(goal ? ["streak"] : [])]);
+    renderChapterBar();
+    pingPractice();
+    lastResult = { mode: r.mode, chId: ch.id, items: r.items, score, n, pass, unlocked, earned };
+    sfx.play(pass ? "complete" : "wrong");
+    if (pass) sfx.buzz(50);
+    if (r.mode === "test" && FOCUS.level(S.focus) === "critical") shake();
+    show("diag");
+    renderDiag();
+    if (unlocked) celebrate("🔓", `${unlocked.bonus ? "Bonus chapter" : `Chapter ${unlocked.id}`} unlocked!`, `${score}/${n} on the Review for Understanding`);
+    if (goal) celebrateGoal(goal);
+    newBadges.forEach(celebrateBadge);
+  }
+
+  // ---------- Diagnostic Feedback screen ----------
+  function renderDiag() {
+    const r = lastResult;
+    if (!r) { show("dash"); return; }
+    const ch = chapterById(r.chId);
+    const next = chapterById(r.chId + 1);
+    const pct = Math.round((r.score / r.n) * 100);
+    const isTest = r.mode === "test";
+    const status = r.pass ? "PASS" : "FAIL";
+    let note;
+    if (isTest && r.unlocked) note = `🔓 ${r.unlocked.bonus ? "Bonus chapter" : `Chapter ${r.unlocked.id}`} unlocked: <b>${esc(r.unlocked.title.replace(/^Bonus: /, ""))}</b>`;
+    else if (isTest && r.pass) note = next ? `${next.bonus ? "The bonus chapter" : `Chapter ${next.id}`} is open.` : "You've passed every chapter test.";
+    else if (isTest) note = `You need ${passMark(r.n)}/${r.n} (80%) to unlock ${next ? (next.bonus ? "the bonus chapter" : `Chapter ${next.id}`) : "the next chapter"}. Review the rules below, then retake: every retake has new questions.`;
+    else note = r.pass ? "Nice set. When you're ready, take the Review for Understanding." : "Practice sets don't unlock chapters. Review the misses below and keep going.";
+    const letter = (it, ci) => "ABCD"[it.order.indexOf(ci)];
+    const ans = (it, ci) => `<span class="ans-letter">${letter(it, ci)}</span> ${fill(it.q.choices[ci], it.cast, false)}`;
+    diagView.innerHTML = `
+      <div class="stack diag">
+        <section class="diag-banner ${r.pass ? "pass" : "fail"}" role="status">
+          <span class="diag-status">${status}</span>
+          <b class="diag-pct">${pct}%</b>
+          <span class="diag-sub">${r.score} of ${r.n} correct · ${esc(runTitle(r))}</span>
+          <p class="diag-note">${note}</p>
+          <small class="diag-earn">+${fmt(r.earned)} ⚡ · Focus ${S.focus}%</small>
+        </section>
+        <div class="diag-actions">
+          <button class="btn" type="button" data-retake>↻ ${isTest ? "Retake test" : "New practice set"}</button>
+          ${next && isUnlocked(next.id) ? `<button class="btn ghost" type="button" data-next-ch="${next.id}">${next.bonus ? "Bonus chapter" : `Chapter ${next.id}`} →</button>` : ""}
+          ${!isTest ? `<button class="btn ghost" type="button" data-test-now>🎯 Take the test</button>` : ""}
+          <button class="btn ghost" type="button" data-dash>🏠 Dashboard</button>
+        </div>
+        <h3 class="diag-head">Item-by-item review · ${esc(ch.title.replace(/^Bonus: /, ""))}</h3>
+        <ol class="diag-list">
+          ${r.items.map((it, k) => `
+            <li class="diag-item ${it.correct ? "ok" : "no"}">
+              <div class="diag-item-top">
+                <span class="diag-n">${k + 1}</span>
+                <span class="diag-verdict">${it.correct ? "✓ Correct" : "✗ Incorrect"}</span>
+                <span class="diag-rule">${esc(SW.ruleName(it.q))}</span>
+              </div>
+              <p class="passage">${renderPassage(it.q.text, it.cast, fill(it.q.choices[it.q.answer], it.cast, false))}</p>
+              <dl class="diag-ans">
+                <div class="${it.correct ? "ok" : "no"}"><dt>Your answer</dt><dd>${ans(it, it.pick)}</dd></div>
+                ${it.correct ? "" : `<div class="ok"><dt>Correct answer</dt><dd>${ans(it, it.q.answer)}</dd></div>`}
+              </dl>
+              <p class="diag-why"><b>Why:</b> ${fill(SW.ruleExplain(it.q), it.cast, false)}</p>
+              ${it.correct ? "" : `<p class="diag-why miss"><b>Your choice:</b> ${fill(it.q.notes[it.pick], it.cast, false)}</p>`}
+            </li>`).join("")}
+        </ol>
+        <button class="btn ghost wide" type="button" data-dash>🏠 Back to Dashboard</button>
+      </div>`;
+    diagView.scrollTop = 0;
+    diagView.querySelector("[data-retake]").addEventListener("click", () => startRun(r.mode, r.chId));
+    diagView.querySelector("[data-test-now]")?.addEventListener("click", () => startRun("test", r.chId));
+    diagView.querySelector("[data-next-ch]")?.addEventListener("click", (e) => openPractice(Number(e.currentTarget.dataset.nextCh)));
+    diagView.querySelectorAll("[data-dash]").forEach((b) => b.addEventListener("click", () => show("dash")));
+    diagView.querySelector(".diag-banner").focus?.();
+  }
+
+  // ---------- Hourly Focus recharge ----------
+  // Focus goes back to 100% once an hour (checked at start-up, every minute
+  // and when the tab comes back). It waits until a Derby race is over.
+  function focusTick() {
+    if (derby.racing()) return;
+    const before = S.focusResetAt;
+    if (FOCUS.hourly(S)) {
+      save();
+      renderHud();
+      toast("🧠 Focus recharged to 100%. It refills every hour.");
+      rerenderCurrent();
+    } else if (before !== S.focusResetAt) save(false);
+  }
 
   // ---------- Celebration & toast ----------
   // Celebrations queue so a streak, a badge and a combo don't pile up at once.
@@ -14205,15 +14985,32 @@ window.SatWizz.curriculum.addChapter({
     }
   });
 
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) renderHud(); });
+  // Test view: A–D (or 1–4) picks, Enter / → goes on, ← goes back.
+  document.addEventListener("keydown", (e) => {
+    if (currentView !== "test" || !run || onboarding.isOpen() || e.target.closest("input, select, textarea")) return;
+    const k = e.key.toLowerCase();
+    const pos = "abcd".indexOf(k) !== -1 ? "abcd".indexOf(k) : "1234".indexOf(k);
+    if (pos !== -1 && k.length === 1) { e.preventDefault(); pickChoice(run.items[run.i].order[pos]); }
+    else if (k === "arrowright" || (k === "enter" && !e.target.closest("button"))) {
+      e.preventDefault();
+      if (run.i === run.items.length - 1 && run.items.every((x) => x.pick != null)) submitRun();
+      else nextInRun();
+    } else if (k === "arrowleft") { e.preventDefault(); goTo(run.i - 1); }
+  });
+
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { focusTick(); renderHud(); } });
 
   // ---------- Boot ----------
   sfx.setMuted(S.muted);
   sfx.setHaptics(S.haptics);
   captureInvite();
   auth.init();
+  focusTick();
+  setInterval(focusTick, 60 * 1000);
   renderHud();
   startChapter(S.chapterId);
+  // The Dashboard is home; index.html#practice opens straight into practice.
+  show(location.hash === "#practice" ? "feed" : "dash");
 })();
 
 </script>

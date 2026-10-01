@@ -1,6 +1,6 @@
 // Chapter 6: Punctuation Fundamentals (Semicolon, Dash, Colon)
 (function () {
-  const { Q } = window.ClauseBank;
+  const { Q, B } = window.ClauseBank;
   const DASH_PAIR = "Dashes come in pairs around non-essential information: if one dash opens it, another must close it.";
   const SEMI_IC = "A semicolon needs a complete independent clause on BOTH sides.";
   const COLON_IC = "A colon needs a complete independent clause BEFORE it.";
@@ -18,6 +18,14 @@
       "No punctuation between a verb and its object (\"concluded that…\").",
     ],
     questions: [
+      // Benchmark (Review for Understanding): the closing dash needs an opening dash.
+      B("Dash Pair Rule", Q("c6-bm", "Dash pair", "With some 16,000 in attendance, the Second World Black and African Festival of Arts and ______ or FESTAC '77, as the event was more commonly known—became the largest pan-African event on record.",
+        ["Culture—", "Culture:", "Culture,", "Culture"], 0,
+        "The phrase \"or FESTAC '77, as the event was more commonly known\" ends with a dash, so it must open with a dash. Dashes come in pairs around non-essential information.",
+        ["Correct. \"Culture—or FESTAC '77, as the event was more commonly known—became\": the dashes match.",
+          "A colon would split the subject from its verb \"became,\" and it can't pair with the closing dash.",
+          "A comma can't pair with the closing dash.",
+          "With no opening mark, the closing dash has no partner."])),
       Q("c6-01", "Dash pair", "The museum's most famous ______ a portrait of a woman with a mysterious smile—hangs behind thick bulletproof glass.",
         ["painting—", "painting,", "painting;", "painting:"], 0,
         "The closing dash after \"smile\" needs an opening dash: paired dashes around the appositive.",
