@@ -43,7 +43,7 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 
 ## Vocab Vault
 
-The **Vocab** tab (`js/vocab.js`) teaches 30 high-frequency SAT words in three modes.
+The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core high-frequency words and 25 advanced ones (*equanimity, fastidious, obdurate, recalcitrant, surreptitious, …*). New users see core words first; the Derby leads with advanced ones.
 
 **🃏 Flashcards.** A deck of 10 cards that flip in 3D.
 - **Front:** the word, its part of speech and its context sentence, filled in with your cast and highlighted.
@@ -55,8 +55,8 @@ The **Vocab** tab (`js/vocab.js`) teaches 30 high-frequency SAT words in three m
 - Flashcards don't change tiers: only sprints do.
 
 **⚡ Daily 5-Word Sprint.** Words-in-Context questions in two formats:
-- 20 words are "fill the blank" (the most logical and precise word);
-- 10 are "As used in the text, what does *X* most nearly mean?", with the word underlined.
+- 35 words are "fill the blank" (the most logical and precise word);
+- 20 are "As used in the text, what does *X* most nearly mean?", with the word underlined.
 
 - **Daily Sprint:** 5 cards. It serves flagged words first, then words due for review (lowest tier first), then new words, then mastered ones for review.
 - **Spaced repetition:** 3 tiers, **Novice 🌱 → Practitioner ⚡ → Master 👑**. A correct answer moves a word up one tier, at most once per day, so reaching Master takes practice on separate days. A wrong answer drops the word back to Novice and slides up a breakdown with the definition, root word, context clue and a note on every choice.
@@ -68,18 +68,49 @@ The **Vocab** tab (`js/vocab.js`) teaches 30 high-frequency SAT words in three m
   Vocab answers also count toward your daily goal and give +5 XP each. They don't use Focus Shields or combos.
 - Progress syncs to `profiles.vocab_progress`. If both devices practiced a word, the newer answer wins.
 
-**🏇 Vocab Derby** (`js/derby.js`). A wager-based horse race on the same words.
-- **Bet:** place a bet from your ⚡ Sparks (10, 25 or 50) or choose a Fun run. The bet is taken at the gate, and a win pays it back **2×**.
+**🏇 SAT Vocabulary Derby** (`js/derby.js`). A wager-based horse race on the Vault's advanced words.
+- **Flow:** an intro screen (ASCII title banner, rules, the field, your Focus) → **START** → place a bet → race → results.
+- **Betting:** bet real ⚡ Sparks (50, 100, 250 or 500) or take a Fun run.
+  - The bet is taken at the gate, and a win pays it back **×1.5**.
   - Up to **3 betting races a day**; Fun runs are unlimited.
   - Leaving mid-race forfeits the bet, after a confirm tap.
-- **Field:** six horses: Galloping Lexicon (you), Verbal Velocity, Grammar Galloper, Syntax Sprinter, Thesaurus Rex and Diction Dash. The track is 5 steps.
-- **Turns:** each turn is one question: Words in Context, definition, synonym or antonym (the antonym's trap choice is a synonym).
-  - Right: you gallop +1.
-  - Wrong: you stay put, a random rival surges +1, and the word is flagged 🔁.
-  - Rivals also gallop on their own (35% chance each per turn), so every miss hurts. You move first, so a perfect race always wins.
-- **Results:** final standings, your payout and bankroll, and a recap of every word with its definition.
-- Answers count toward the daily goal (+5 XP each), like sprint answers. Stats (races, wins, best payout) sync in `vocab_progress`.
-- Questions are generated from the word data. `scripts/validate-content.js` builds 6,000 of them and checks each one has 4 distinct choices and one defensible answer: distractors never come from words close in meaning.
+- **Field:** eight horses on a 5-step track. You are Galloping Lexicon. Seven rivals each have a racing style:
+
+  | Rival | Style |
+  |---|---|
+  | Verbal Velocity | fast starter |
+  | Grammar Galloper | steady |
+  | Syntax Sprinter | closer |
+  | Thesaurus Rex | streaky |
+  | Diction Dash | front-runner |
+  | Rhetoric Rocket | pounces on your misses |
+  | Prose Pony | underdog |
+
+- **Turns:** each turn is one advanced question: Words in Context, definition, synonym or antonym (the antonym's trap is a synonym).
+  - **Right:** you gallop +1.
+  - **Wrong:** you're held back, lose 1 Focus, and the word is flagged 🔁.
+  - **Rivals** roll their own chance to move +1 every turn, whatever you answer. Each moves at most one step per turn and you move first, so a perfect run always wins.
+- **🧠 Focus** (max 3) carries between races.
+  - At 0 you're **Spooked**: right answers don't move you.
+  - Two right answers in a row restore 1 Focus. A spooked horse spends that turn recovering.
+  - A **Focus Elixir** (500 ⚡) refills Focus instantly, in the race or in the Stable.
+- **Balance:** rival speed is tuned by simulation (`PACE.scale` in `js/derby.js`):
+
+  | Your accuracy | Races won | Average return per bet |
+  |---|---|---|
+  | 90% | ~85% | +27% |
+  | 80% | ~67% | break-even |
+  | 70% | ~47% | −30% |
+
+- **Results:** winner, payout, balance, Focus, final standings, and a **vocabulary review table** (word, meaning, synonyms, ✓/✗).
+- **🛍️ The Stable:** reached from the intro, the results, or the Shop tab. Prices are in real Sparks, using a higher baseline than the main Shop:
+  - Jockey silks: **1,000 ⚡** (Scholar's Gold, Midnight Ink, Crimson Cadence, Emerald Essay);
+  - Mounts: **1,500 ⚡** (🦄 🦓 🐉 🦌, which race in your lane);
+  - Focus Elixir and Starting Burst (start 1 step ahead): **500 ⚡** each.
+
+  Purchases need two taps. The main Shop's prices are unchanged.
+- **Practice and sync:** answers count toward the daily goal (+5 XP each). Stats, Focus, owned gear and Bursts sync in `vocab_progress.derby`.
+- **Question checks:** `scripts/validate-content.js` builds 11,000 generated questions and checks each has 4 distinct choices and one defensible answer. Words close in meaning, or near-opposites, are never used as each other's distractors.
 
 ## Gamification
 
@@ -155,7 +186,7 @@ js/themes.js                casts and avatars
 js/questions.js             curriculum framework: chapter plan, official stems, addChapter/build API
 js/curriculum/ch1-ch10.js   one file per chapter: lesson + 20 questions with per-choice notes
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
-js/derby.js                 Vocab Derby: race logic, question generator, race view
+js/derby.js                 SAT Vocabulary Derby: race rules, rivals, Focus, Stable, question generator, views
 js/rewards.js               Sparks, shop, Focus, Aura Shields, wager, badges (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push

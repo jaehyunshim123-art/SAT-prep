@@ -532,6 +532,408 @@
         "Surprise alone doesn't explain why the doubters were persuaded.",
       ],
     },
+    // ---------- Advanced (level: "advanced"): harder Digital SAT words. They
+    // lead the Vocab Derby and join flashcards/sprints after the core words. ----------
+    {
+      id: "equanimity", word: "equanimity", pos: "noun", format: "blank", level: "advanced",
+      definition: "mental calmness and composure, especially in a difficult situation",
+      synonyms: ["composure", "calm", "poise"], antonyms: ["agitation", "anxiety", "panic"],
+      root: "Latin aequus (even, level) + animus (mind): an even mind.",
+      clue: "“Calmly adjusting the plan while teammates scrambled” shows composure under pressure.",
+      text: "Even when the judges at {{EVENT}} announced a sudden rule change, {{NAME_1}} responded with remarkable ______, calmly adjusting the plan while teammates scrambled.",
+      choices: ["equanimity", "trepidation", "indignation", "ambivalence"],
+      answer: 0,
+      notes: [
+        "Calmly adjusting while others panic is composure: “equanimity.”",
+        "“Trepidation” is fear or anxiety, which contradicts “calmly.”",
+        "“Indignation” is anger at unfairness. A calm response isn't anger.",
+        "“Ambivalence” means mixed feelings. It doesn't explain the calm, decisive action.",
+      ],
+    },
+    {
+      id: "fastidious", word: "fastidious", pos: "adjective", format: "blank", level: "advanced",
+      definition: "very attentive to accuracy and detail; hard to please",
+      synonyms: ["exacting", "particular", "punctilious"], antonyms: ["careless", "slapdash", "lax"],
+      root: "Latin fastidium (distaste): so particular that every flaw feels distasteful.",
+      clue: "Rechecking every citation twice and rejecting weak sources shows extreme attention to detail.",
+      text: "Known for being ______, {{NAME_2}} rechecked every citation in the 40-page report twice and rejected any source that lacked a verifiable publication date.",
+      choices: ["fastidious", "cavalier", "gregarious", "dilatory"],
+      answer: 0,
+      notes: [
+        "Double-checking every citation is exactly what a “fastidious” person does.",
+        "“Cavalier” means carelessly dismissive, the opposite of rechecking everything.",
+        "“Gregarious” means sociable. The sentence is about precision, not friendliness.",
+        "“Dilatory” means slow or delaying. Careful rechecking isn't procrastinating.",
+      ],
+    },
+    {
+      id: "obdurate", word: "obdurate", pos: "adjective", format: "meaning", level: "advanced",
+      definition: "stubbornly refusing to change one's opinion or course of action",
+      synonyms: ["unyielding", "inflexible", "adamant"], antonyms: ["flexible", "amenable", "compliant"],
+      root: "Latin obdurare (to harden): ob- (against) + durus (hard), as in “durable.”",
+      clue: "Refusing “even to schedule a review” despite three contrary studies signals stubbornness.",
+      text: "Despite three independent studies contradicting the claim, the committee chair at {{LOCATION}} remained [[obdurate]], refusing even to schedule a review of the evidence.",
+      choices: ["stubbornly unwilling to change", "openly hostile", "deeply confused", "quietly uncertain"],
+      answer: 0,
+      notes: [
+        "Ignoring strong evidence and refusing a review is stubborn refusal to change.",
+        "The chair refuses to act but shows no aggression, so “hostile” overreaches.",
+        "Nothing suggests confusion. The chair understands and still refuses.",
+        "Refusing a review shows certainty, the opposite of being uncertain.",
+      ],
+    },
+    {
+      id: "recalcitrant", word: "recalcitrant", pos: "adjective", format: "blank", level: "advanced",
+      definition: "stubbornly uncooperative toward authority or control",
+      synonyms: ["defiant", "unruly", "intractable"], antonyms: ["docile", "obedient", "cooperative"],
+      root: "Latin re- (back) + calcitrare (to kick): kicking back, like a stubborn mule.",
+      clue: "A system that rejects every patch and crashes on update resists all control.",
+      text: "The engineers had expected the old software to be ______, but even they were surprised when the system rejected every patch and crashed the moment {{NAME_3}} tried to update it.",
+      choices: ["recalcitrant", "pliable", "innocuous", "ostentatious"],
+      answer: 0,
+      notes: [
+        "Rejecting every fix is stubborn resistance to control: “recalcitrant.”",
+        "“Pliable” means easily bent or adjusted, the opposite of rejecting every patch.",
+        "“Innocuous” means harmless. A system that crashes isn't harmless.",
+        "“Ostentatious” means showy, which has nothing to do with failing updates.",
+      ],
+    },
+    {
+      id: "surreptitious", word: "surreptitious", pos: "adjective", format: "blank", level: "advanced",
+      definition: "kept secret because it would not be approved of; stealthy",
+      synonyms: ["stealthy", "covert", "furtive"], antonyms: ["open", "overt", "blatant"],
+      root: "Latin surripere (to snatch secretly): sub- (under) + rapere (to seize).",
+      clue: "Avoiding “tipping off” rivals and looking down only when “no one was watching” point to secrecy.",
+      text: "To avoid tipping off the rival team before {{EVENT}}, {{NAME_1}} took ______ notes on the team's strategy, glancing down only when no one was watching.",
+      choices: ["surreptitious", "conspicuous", "flamboyant", "gratuitous"],
+      answer: 0,
+      notes: [
+        "Hidden, watch-your-back note-taking is “surreptitious.”",
+        "“Conspicuous” means easy to notice, the opposite of hiding the notes.",
+        "“Flamboyant” means showy and attention-seeking.",
+        "“Gratuitous” means unnecessary or unjustified. It says nothing about secrecy.",
+      ],
+    },
+    {
+      id: "perfunctory", word: "perfunctory", pos: "adjective", format: "meaning", level: "advanced",
+      definition: "carried out with minimal effort or reflection; routine and superficial",
+      synonyms: ["cursory", "superficial", "halfhearted"], antonyms: ["thorough", "diligent", "conscientious"],
+      root: "Latin perfungi (to get through with): just getting it over with.",
+      clue: "A review that lasted “barely a minute” and addressed “none of the key arguments” took minimal effort.",
+      text: "After weeks of careful preparation for {{EVENT}}, {{NAME_2}} was disappointed by the judge's [[perfunctory]] review, which lasted barely a minute and addressed none of the key arguments.",
+      choices: ["done quickly and without real care", "extremely harsh and critical", "carefully balanced", "widely praised"],
+      answer: 0,
+      notes: [
+        "Barely a minute and no key arguments: done quickly, without care.",
+        "Nothing in the review is described as harsh. It was empty, not critical.",
+        "Addressing none of the arguments can't be “carefully balanced.”",
+        "The text never mentions praise for the review.",
+      ],
+    },
+    {
+      id: "laconic", word: "laconic", pos: "adjective", format: "blank", level: "advanced",
+      definition: "using very few words; concise to the point of seeming curt",
+      synonyms: ["terse", "succinct", "pithy"], antonyms: ["verbose", "wordy", "talkative"],
+      root: "From Laconia, home of ancient Sparta, whose people were famous for blunt, brief speech.",
+      clue: "“Three crisp sentences” contrasted with “long-winded speakers” signals brevity.",
+      text: "Unlike the long-winded speakers before {{NAME_3}}, the final presenter at {{EVENT}} was famously ______, summarizing two years of research in three crisp sentences.",
+      choices: ["laconic", "verbose", "effusive", "pedantic"],
+      answer: 0,
+      notes: [
+        "Two years of research in three sentences is “laconic.”",
+        "“Verbose” means wordy, which describes the earlier speakers, not this one.",
+        "“Effusive” means gushing with emotion. Crisp summaries aren't gushing.",
+        "“Pedantic” means fussy about minor details. Nothing suggests nitpicking.",
+      ],
+    },
+    {
+      id: "magnanimous", word: "magnanimous", pos: "adjective", format: "blank", level: "advanced",
+      definition: "generous or forgiving, especially toward a rival or someone less powerful",
+      synonyms: ["gracious", "big-hearted", "charitable"], antonyms: ["petty", "spiteful", "vindictive"],
+      root: "Latin magnus (great) + animus (spirit): great-spirited.",
+      clue: "Praising the opponents and inviting them to collaborate is generosity toward a rival.",
+      text: "After winning the debate final at {{EVENT}}, {{NAME_1}} was ______ in victory, praising the opposing team's research and inviting its members to co-author the follow-up paper.",
+      choices: ["magnanimous", "vindictive", "sanctimonious", "complacent"],
+      answer: 0,
+      notes: [
+        "Honoring a defeated rival is the classic “magnanimous” winner.",
+        "“Vindictive” means seeking revenge, the opposite of praising opponents.",
+        "“Sanctimonious” means acting morally superior. Praising others isn't self-righteous.",
+        "“Complacent” means smugly satisfied. Inviting new collaboration isn't complacency.",
+      ],
+    },
+    {
+      id: "obsequious", word: "obsequious", pos: "adjective", format: "meaning", level: "advanced",
+      definition: "excessively eager to please or obey; fawning",
+      synonyms: ["fawning", "servile", "sycophantic"], antonyms: ["assertive", "independent", "domineering"],
+      root: "Latin obsequi (to comply): ob- (toward) + sequi (to follow), as in “sequence.”",
+      clue: "Agreeing “instantly with every suggestion” and “showering” compliments is over-the-top eagerness to please.",
+      text: "The new assistant's [[obsequious]] manner, agreeing instantly with every suggestion and showering the director with compliments, made {{NAME_2}} doubt the sincerity of any feedback at {{LOCATION}}.",
+      choices: ["excessively eager to please", "quietly confident", "openly rebellious", "carefully neutral"],
+      answer: 0,
+      notes: [
+        "Instant agreement plus constant flattery is excessive eagerness to please.",
+        "Agreeing with everything shows a need for approval, not confidence.",
+        "“Rebellious” is the opposite of agreeing with every suggestion.",
+        "Showering someone with compliments isn't neutral.",
+      ],
+    },
+    {
+      id: "pernicious", word: "pernicious", pos: "adjective", format: "blank", level: "advanced",
+      definition: "having a harmful effect, especially in a gradual or subtle way",
+      synonyms: ["insidious", "destructive", "injurious"], antonyms: ["harmless", "benign", "beneficial"],
+      root: "Latin pernicies (destruction), from nex (death).",
+      clue: "Effects “nearly invisible at first” that “steadily eroded trust” are subtle, gradual harm.",
+      text: "Public-health researchers at {{LOCATION}} warned that the rumor was especially ______: its effects were nearly invisible at first but steadily eroded trust in vaccines over many years.",
+      choices: ["pernicious", "benign", "salutary", "transparent"],
+      answer: 0,
+      notes: [
+        "Slow, hidden damage is the hallmark of something “pernicious.”",
+        "“Benign” means harmless, but the rumor eroded trust.",
+        "“Salutary” means beneficial, the opposite of eroding trust.",
+        "“Transparent” means obvious or clear, but the effects were nearly invisible.",
+      ],
+    },
+    {
+      id: "quixotic", word: "quixotic", pos: "adjective", format: "meaning", level: "advanced",
+      definition: "exceedingly idealistic; unrealistic and impractical",
+      synonyms: ["idealistic", "unrealistic", "visionary"], antonyms: ["realistic", "sensible", "down-to-earth"],
+      root: "From Don Quixote, the hero of Cervantes's novel who charges at windmills while chasing noble but hopeless dreams.",
+      clue: "“Admirable but” plus ignoring “budgets, laws, and basic engineering” means noble yet unrealistic.",
+      text: "{{NAME_3}}'s plan to eliminate all traffic at {{LOCATION}} within a single summer was admirable but [[quixotic]]; even supporters admitted it ignored budgets, laws, and basic engineering.",
+      choices: ["idealistic but impractical", "secretive and dishonest", "cautious and modest", "popular but temporary"],
+      answer: 0,
+      notes: [
+        "Admirable goals that ignore every real-world limit are idealistic but impractical.",
+        "Nothing about the plan is hidden or dishonest.",
+        "Eliminating all traffic in one summer is the opposite of cautious.",
+        "The text is about practicality, not about popularity or how long the plan lasts.",
+      ],
+    },
+    {
+      id: "sanguine", word: "sanguine", pos: "adjective", format: "blank", level: "advanced",
+      definition: "optimistic or positive, especially in a difficult situation",
+      synonyms: ["optimistic", "hopeful", "upbeat"], antonyms: ["pessimistic", "gloomy", "despondent"],
+      root: "Latin sanguis (blood): old medicine linked a “blood” temperament to cheerful confidence.",
+      clue: "“Although” results were mixed, the scientist still predicted success: optimism despite difficulty.",
+      text: "Although early test results were mixed, the lead scientist remained ______ about the project, predicting at {{EVENT}} that the final trial would confirm the hypothesis.",
+      choices: ["sanguine", "despondent", "indifferent", "sardonic"],
+      answer: 0,
+      notes: [
+        "Predicting success despite mixed results is being “sanguine.”",
+        "“Despondent” means hopeless, which contradicts predicting success.",
+        "“Indifferent” means not caring, but making a confident prediction shows investment.",
+        "“Sardonic” means mocking or cynical. Nothing in the prediction is mocking.",
+      ],
+    },
+    {
+      id: "ephemeral", word: "ephemeral", pos: "adjective", format: "meaning", level: "advanced",
+      definition: "lasting for a very short time",
+      synonyms: ["fleeting", "transient", "short-lived"], antonyms: ["permanent", "enduring", "lasting"],
+      root: "Greek ephemeros: epi- (on) + hemera (day): lasting only a day.",
+      clue: "Works “designed to vanish within days” are short-lived.",
+      text: "The exhibit at {{LOCATION}} celebrated [[ephemeral]] art: sand sculptures, chalk murals, and ice carvings designed to vanish within days.",
+      choices: ["lasting a very short time", "extremely expensive", "created by amateurs", "widely misunderstood"],
+      answer: 0,
+      notes: [
+        "Art designed to vanish within days lasts a very short time.",
+        "Sand, chalk and ice suggest cheap materials, not expensive ones.",
+        "Nothing says who made the art.",
+        "The text never mentions how the art is understood.",
+      ],
+    },
+    {
+      id: "esoteric", word: "esoteric", pos: "adjective", format: "blank", level: "advanced",
+      definition: "intended for or understood by only a small group with specialized knowledge",
+      synonyms: ["obscure", "arcane", "specialized"], antonyms: ["accessible", "mainstream", "popular"],
+      root: "Greek esoterikos (belonging to an inner circle), from eso (within).",
+      clue: "Only “the handful of specialists” could follow, so the content was for an inner circle.",
+      text: "The lecture at {{EVENT}} was so ______ that only the handful of specialists in medieval manuscript dating could follow it; most of the audience left at intermission.",
+      choices: ["esoteric", "accessible", "banal", "lucid"],
+      answer: 0,
+      notes: [
+        "Content only specialists can follow is “esoteric.”",
+        "“Accessible” means easy to understand, but most of the audience left.",
+        "“Banal” means dull and ordinary. The problem was difficulty, not dullness.",
+        "“Lucid” means clear. A clear lecture wouldn't lose most of its audience.",
+      ],
+    },
+    {
+      id: "mercurial", word: "mercurial", pos: "adjective", format: "meaning", level: "advanced",
+      definition: "subject to sudden, unpredictable changes of mood or mind",
+      synonyms: ["volatile", "fickle", "changeable"], antonyms: ["stable", "steady", "consistent"],
+      root: "From Mercury, the swift Roman messenger god, and the restless liquid metal named after him.",
+      clue: "Praising a passage “one minute” and demanding a rewrite “the next” is sudden change.",
+      text: "The orchestra at {{LOCATION}} struggled to rehearse under its [[mercurial]] conductor, who praised a passage as flawless one minute and demanded that it be rewritten the next.",
+      choices: ["unpredictably changeable", "extremely talented", "strict but fair", "quietly reserved"],
+      answer: 0,
+      notes: [
+        "Flipping from praise to a rewrite in a minute is unpredictable change.",
+        "The text describes mood swings, not skill.",
+        "Flip-flopping isn't consistent, so it can't be “fair.”",
+        "Loud swings between praise and demands aren't quiet or reserved.",
+      ],
+    },
+    {
+      id: "prescient", word: "prescient", pos: "adjective", format: "blank", level: "advanced",
+      definition: "having or showing knowledge of events before they happen",
+      synonyms: ["farsighted", "prophetic", "foresighted"], antonyms: ["shortsighted", "myopic", "unaware"],
+      root: "Latin prae- (before) + scire (to know): knowing beforehand, as in “science.”",
+      clue: "The essay “predicted” problems that “would emerge years later”: foreknowledge.",
+      text: "{{NAME_2}}'s 2015 essay now seems remarkably ______: it predicted, almost detail for detail, the supply-chain problems that would emerge years later.",
+      choices: ["prescient", "anachronistic", "myopic", "derivative"],
+      answer: 0,
+      notes: [
+        "Predicting future events in detail is being “prescient.”",
+        "“Anachronistic” means out of place in time. The essay isn't misplaced; it was early.",
+        "“Myopic” means shortsighted, the opposite of accurate prediction.",
+        "“Derivative” means unoriginal. Nothing suggests the essay was copied.",
+      ],
+    },
+    {
+      id: "temerity", word: "temerity", pos: "noun", format: "meaning", level: "advanced",
+      definition: "excessive confidence or boldness; audacity",
+      synonyms: ["audacity", "nerve", "gall"], antonyms: ["timidity", "caution", "shyness"],
+      root: "Latin temere (rashly, blindly).",
+      clue: "A first-year intern interrupting the CEO is a strikingly bold act.",
+      text: "As a first-year intern, {{NAME_1}} had the [[temerity]] to interrupt the CEO's presentation at {{EVENT}} and point out an error in the revenue projections.",
+      choices: ["bold, even reckless, nerve", "careful politeness", "deep embarrassment", "quiet patience"],
+      answer: 0,
+      notes: [
+        "Interrupting the CEO as an intern takes bold, even reckless, nerve.",
+        "Interrupting a presentation is not careful politeness.",
+        "The text shows boldness, not embarrassment.",
+        "Interrupting is the opposite of waiting patiently.",
+      ],
+    },
+    {
+      id: "alacrity", word: "alacrity", pos: "noun", format: "blank", level: "advanced",
+      definition: "brisk and cheerful readiness",
+      synonyms: ["eagerness", "readiness", "promptness"], antonyms: ["reluctance", "hesitation", "apathy"],
+      root: "Latin alacer (lively, brisk).",
+      clue: "“Eager to begin” and every slot filled “within ten minutes” is quick, willing response.",
+      text: "Eager to begin, the volunteers responded to {{NAME_3}}'s call for help at {{LOCATION}} with such ______ that every sign-up slot was filled within ten minutes.",
+      choices: ["alacrity", "reluctance", "lethargy", "trepidation"],
+      answer: 0,
+      notes: [
+        "Eager, fast sign-ups show “alacrity.”",
+        "“Reluctance” is unwillingness, which contradicts “eager to begin.”",
+        "“Lethargy” is sluggishness. The slots filled in ten minutes.",
+        "“Trepidation” is fear, which doesn't fit eager volunteers.",
+      ],
+    },
+    {
+      id: "acrimony", word: "acrimony", pos: "noun", format: "meaning", level: "advanced",
+      definition: "bitterness or ill feeling, often expressed in harsh words",
+      synonyms: ["bitterness", "rancor", "animosity"], antonyms: ["goodwill", "harmony", "friendliness"],
+      root: "Latin acrimonia (sharpness), from acer (sharp): sharpness of temper.",
+      clue: "“Trading insults” and refusing to sign even agreed points signal bitterness.",
+      text: "The negotiations at {{LOCATION}} ended in [[acrimony]], with both delegations trading insults and refusing to sign even the points they had already agreed on.",
+      choices: ["bitter, angry hostility", "reluctant compromise", "polite disagreement", "confused silence"],
+      answer: 0,
+      notes: [
+        "Trading insults is bitter, angry hostility.",
+        "Refusing to sign anything is the opposite of compromise.",
+        "Insults aren't polite.",
+        "Trading insults is loud, not silent.",
+      ],
+    },
+    {
+      id: "paucity", word: "paucity", pos: "noun", format: "blank", level: "advanced",
+      definition: "the presence of something only in small or insufficient amounts; scarcity",
+      synonyms: ["scarcity", "shortage", "dearth"], antonyms: ["abundance", "plethora", "surplus"],
+      root: "Latin paucus (few, little).",
+      clue: "“Only a few damaged tablets survive,” so the records are scarce.",
+      text: "Historians on {{NAME_1}}'s team face a ______ of written records about the ancient city: only a few damaged tablets survive, so most conclusions rest on archaeological evidence.",
+      choices: ["paucity", "plethora", "chronology", "veracity"],
+      answer: 0,
+      notes: [
+        "A few damaged tablets is a “paucity,” a scarcity, of records.",
+        "“Plethora” means an excess, the opposite of a few tablets.",
+        "“Chronology” is an order of events. It doesn't explain relying on archaeology.",
+        "“Veracity” means truthfulness. “A veracity of records” doesn't make sense.",
+      ],
+    },
+    {
+      id: "vacillate", word: "vacillate", pos: "verb", format: "blank", level: "advanced",
+      definition: "to waver between different opinions or actions; to be indecisive",
+      synonyms: ["waver", "dither", "fluctuate"], antonyms: ["decide", "commit", "settle"],
+      root: "Latin vacillare (to sway, totter).",
+      clue: "Choosing one offer “in the morning” and switching “by dinner” is wavering.",
+      text: "For weeks, {{NAME_2}} continued to ______ between the two college offers, choosing one in the morning and switching to the other by dinner.",
+      choices: ["vacillate", "persevere", "capitulate", "extrapolate"],
+      answer: 0,
+      notes: [
+        "Switching back and forth daily is to “vacillate.”",
+        "“Persevere” means to persist steadily, the opposite of switching.",
+        "“Capitulate” means to surrender under pressure. No one is pressuring.",
+        "“Extrapolate” means to infer beyond data. It doesn't fit choosing between offers.",
+      ],
+    },
+    {
+      id: "enervate", word: "enervate", pos: "verb", format: "meaning", level: "advanced",
+      definition: "to drain someone of energy or strength; to weaken",
+      synonyms: ["exhaust", "sap", "fatigue"], antonyms: ["energize", "invigorate", "refresh"],
+      root: "Latin enervare: e- (out) + nervus (sinew): to cut the sinews. It sounds like “energize” but means the opposite.",
+      clue: "Runners “slowed to a walk one by one,” so the heat drained their strength.",
+      text: "The final miles at {{EVENT}} were run in 95-degree heat that seemed to [[enervate]] even the most experienced runners, who slowed to a walk one by one.",
+      choices: ["drain of energy", "energize", "irritate", "confuse"],
+      answer: 0,
+      notes: [
+        "Runners slowing to a walk were drained of energy.",
+        "Trap! “Enervate” sounds like “energize” but means the opposite.",
+        "Slowing to a walk points to exhaustion, not annoyance.",
+        "Nothing suggests the runners were confused.",
+      ],
+    },
+    {
+      id: "exacerbate", word: "exacerbate", pos: "verb", format: "blank", level: "advanced",
+      definition: "to make a problem, bad situation or feeling worse",
+      synonyms: ["worsen", "aggravate", "compound"], antonyms: ["alleviate", "relieve", "soothe"],
+      root: "Latin ex- (thoroughly) + acerbus (harsh, bitter): to make harsher.",
+      clue: "Crowding students into fewer rooms makes an existing shortage worse.",
+      text: "Cutting the library's evening hours would only ______ the shortage of quiet study space at {{LOCATION}}, since students would be crowded into fewer rooms.",
+      choices: ["exacerbate", "alleviate", "delineate", "corroborate"],
+      answer: 0,
+      notes: [
+        "Crowding students makes the shortage worse: “exacerbate.”",
+        "“Alleviate” means to ease, the opposite of what crowding does.",
+        "“Delineate” means to describe precisely. Cutting hours doesn't describe anything.",
+        "“Corroborate” means to confirm with evidence. A shortage isn't a claim to confirm.",
+      ],
+    },
+    {
+      id: "obfuscate", word: "obfuscate", pos: "verb", format: "meaning", level: "advanced",
+      definition: "to make something unclear or hard to understand, often deliberately",
+      synonyms: ["obscure", "muddle", "cloud"], antonyms: ["clarify", "illuminate", "explain"],
+      root: "Latin ob- (over) + fuscare (to darken): to darken over.",
+      clue: "Jargon that made it “nearly impossible” to see the losses hid them on purpose.",
+      text: "{{NAME_1}} and other critics argued that the company's 80-page report used jargon to [[obfuscate]] its losses, making it nearly impossible for investors to see how much money had disappeared.",
+      choices: ["deliberately make unclear", "accurately calculate", "publicly apologize for", "quickly recover"],
+      answer: 0,
+      notes: [
+        "Using jargon so no one can see the losses deliberately makes them unclear.",
+        "The report hid the numbers, the opposite of calculating them clearly.",
+        "Nothing suggests an apology.",
+        "Hiding losses isn't recovering them.",
+      ],
+    },
+    {
+      id: "assuage", word: "assuage", pos: "verb", format: "blank", level: "advanced",
+      definition: "to make an unpleasant feeling less intense; to soothe",
+      synonyms: ["allay", "calm", "pacify"], antonyms: ["aggravate", "inflame", "stoke"],
+      root: "Latin ad- (to) + suavis (sweet, pleasant): to sweeten.",
+      clue: "A tour of the safety equipment is meant to calm “parents' fears.”",
+      text: "To ______ parents' fears about the new science lab, {{NAME_3}} invited families to {{LOCATION}} for a tour of the safety equipment and emergency procedures.",
+      choices: ["assuage", "stoke", "ignore", "quantify"],
+      answer: 0,
+      notes: [
+        "Showing families the safety gear is meant to “assuage,” or soothe, their fears.",
+        "“Stoke” means to fuel or increase, the opposite of a reassuring tour.",
+        "Inviting families on a tour addresses their fears; it doesn't ignore them.",
+        "“Quantify” means to measure. A tour doesn't measure fears.",
+      ],
+    },
   ];
 
   const BY_ID = Object.fromEntries(WORDS.map((w) => [w.id, w]));
@@ -564,7 +966,8 @@
     const byAge = (a, b) => a.s.tier - b.s.tier || a.s.lastAt - b.s.lastAt;
     const flagged = states.filter((x) => x.s.review && x.s.lastDay !== today).sort(byAge);
     const learning = states.filter((x) => x.s.seen && x.s.tier < 3 && x.s.lastDay !== today).sort(byAge);
-    const fresh = shuffle(states.filter((x) => !x.s.seen), rand);
+    const adv = (x) => (BY_ID[x.id].level === "advanced" ? 1 : 0);
+    const fresh = shuffle(states.filter((x) => !x.s.seen), rand).sort((a, b) => adv(a) - adv(b)); // core words first
     const seenToday = states.filter((x) => x.s.seen && x.s.tier < 3 && x.s.lastDay === today).sort(byAge);
     const mastered = states.filter((x) => x.s.tier === 3).sort(byAge);
     const pick = [];
@@ -584,7 +987,8 @@
     const states = shuffle(WORDS, rand).map((w) => ({ id: w.id, s: wordState(p, w.id) }));
     const rank = (s) => (s.review ? 0 : s.seen && s.tier < 3 ? 1 : !s.seen ? 2 : 3);
     return states
-      .sort((a, b) => rank(a.s) - rank(b.s) || (rank(a.s) === 1 ? a.s.tier - b.s.tier : 0))
+      .sort((a, b) => rank(a.s) - rank(b.s) || (rank(a.s) === 1 ? a.s.tier - b.s.tier : 0)
+        || (BY_ID[a.id].level === "advanced") - (BY_ID[b.id].level === "advanced"))
       .slice(0, RULES.deckSize)
       .map((x) => x.id);
   }
@@ -750,7 +1154,7 @@
             </div>
             <button class="mode-btn derby-btn" type="button" id="derby-start">
               <span class="mode-ico" aria-hidden="true">🏇</span>
-              <span><b>Vocab Derby</b><small>Bet Sparks, race 5 rivals to the finish. Wins pay 2×.</small></span>
+              <span><b>SAT Vocabulary Derby</b><small>Advanced words, 7 rivals, real bets. Wins pay ×1.5.</small></span>
             </button>
             <p class="muted small">+${RULES.sparksPerCorrect} ⚡ per correct sprint word · +${RULES.masterySparks} ⚡ when a word reaches 👑 Master</p>
           </section>
@@ -1170,7 +1574,12 @@
     }
 
     // busy: a sprint or deck is in progress, so background re-renders should wait.
-    return { render, isOpen: () => Boolean(drawer), busy: () => Boolean(sprint || deck || derby.racing()) };
+    return {
+      render,
+      openDerbyStable: () => { sprint = null; deck = null; derby.openStable(); },
+      isOpen: () => Boolean(drawer),
+      busy: () => Boolean(sprint || deck || derby.racing()),
+    };
   }
 
   SW.vocab = { WORDS, TIERS, RULES, emptyProgress, drawSprint, drawDeck, grade, reviewCard, flag, finishSprint, summary, mergeProgress, mount };

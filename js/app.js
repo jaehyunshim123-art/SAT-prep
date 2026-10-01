@@ -1421,6 +1421,11 @@
             <li><b>+${RULES.dailyGoalSparks}</b> for your daily goal</li>
           </ul>
         </section>
+        <section class="panel stable-link">
+          <span class="shop-icon" aria-hidden="true">🐎</span>
+          <div class="shop-info"><b>Derby Stable</b><span>Jockey silks, mounts, Focus Elixirs and Starting Bursts for the SAT Vocabulary Derby.</span></div>
+          <button class="buy owned" type="button" id="goto-stable">Visit →</button>
+        </section>
         <section class="panel">
           <h2>Theme packs</h2>
           <p class="muted">New casts for every question.</p>
@@ -1468,6 +1473,7 @@
       </div>`;
 
     v.querySelectorAll("[data-buy]").forEach((b) => b.addEventListener("click", () => onBuy(b.dataset.buy)));
+    v.querySelector("#goto-stable").addEventListener("click", () => { show("vocab"); vocab.openDerbyStable(); });
     v.querySelectorAll("[data-wear-avatar]").forEach((b) => b.addEventListener("click", () => {
       setAvatar(b.dataset.wearAvatar);
       renderShop();

@@ -1605,6 +1605,52 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
   .wager-chips { gap: 6px; }
 }
 
+/* ---------- Vocab Derby v2: intro, Focus, Stable, review ---------- */
+.silk-plum { --silk: #8a3ffc; }
+.silk-slate { --silk: #5a6683; }
+.silk-gold { --silk: #c99700; }
+.silk-ink { --silk: #2b2d7c; }
+.silk-crimson { --silk: #b0122e; }
+.silk-emerald { --silk: #0f8a5f; }
+.lane.you { box-shadow: 0 0 0 2px var(--silk) inset; }
+.silk-dot.big { width: 2.2rem; height: 2.2rem; font-size: 1rem; }
+.shop-icon.mount { font-size: 1.8rem; }
+.derby-banner {
+  margin: 0;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--bg);
+  font: 700 clamp(0.72rem, 3.4vw, 0.95rem) / 1.35 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  text-align: center;
+  white-space: pre;
+  overflow: hidden;
+}
+.center { text-align: center; }
+.rule-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 8px; line-height: 1.45; }
+.intro-focus, .setup-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-weight: 700; }
+.start-btn { font-size: 1.15rem; letter-spacing: 0.06em; }
+.field-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.field-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: center; }
+.field-list li .muted { grid-column: 2; }
+.focus-bar { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; letter-spacing: 0.08em; color: var(--volt); white-space: nowrap; }
+.focus-bar.spooked { color: var(--bad); }
+.bad-text { color: var(--bad); }
+.focus-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 8px 2px 0; }
+.focus-row .muted { flex: 1 1 10rem; }
+.lane.spooked .lane-horse { filter: grayscale(1); opacity: 0.6; }
+.wallet-line { margin: 0; }
+.table-wrap { overflow-x: auto; }
+.review-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.review-table th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 4px 6px; border-bottom: 2px solid var(--line); }
+.review-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.35; }
+.review-table td:first-child { width: 32%; overflow-wrap: anywhere; }
+.review-table .res { width: 2rem; text-align: center; font-weight: 800; font-size: 1.1rem; }
+.review-table tr.ok .res { color: var(--good); }
+.review-table tr.no .res { color: var(--bad); }
+.stable-link { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.wager-chips { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition: none !important; }
   .confetti { display: none; }
