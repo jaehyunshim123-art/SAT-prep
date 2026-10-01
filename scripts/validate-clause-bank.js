@@ -16,10 +16,10 @@ const BANNED = /\b(Justice League|Avengers|Marvel|DC Comics|Dragon Ball|Scouter|
 const EXAMPLES = [
   ["c1-01", "posts. With"],
   ["c2-01", "is"],
-  ["c3-01", "Curry, intending"],
+  ["c3-01", "{{NAME_1}}, intending"], // names are cast placeholders (generic until a pack is bought),
   ["c4-01", "measures"],
   ["c5-01", "However,"],
-  ["c7-01", "Starlight Letters (Taylor’s Version),"],
+  ["c7-01", "Starlight Letters (Deluxe Edition),"],
 ];
 
 if (B.chapters.length !== 7) bad.push(`expected 7 chapters, got ${B.chapters.length}`);

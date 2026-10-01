@@ -526,7 +526,7 @@
           const cast = castOf();
           return [
             `<small class="muted">${esc(q.skill)}</small><br>${renderPassage(q.text, cast, fill(q.choices[q.answer], cast, false))}`,
-            esc(q.rule || "") || fill(q.notes[q.answer], cast, false),
+            q.rule ? fill(q.rule, cast, false) : fill(q.notes[q.answer], cast, false),
           ];
         },
         note: "Missed questions come back first in your next race and in mixed review.",
@@ -832,7 +832,7 @@
     inner.innerHTML = `
       <div class="meta"><span class="domain">Personalize</span></div>
       <h2>Who should star in your questions?</h2>
-      <p>Every sentence uses your cast's names. Pick one now or change it later under Personalize.</p>
+      <p>Every sentence uses your cast's names. Pick one now or change it later in Profile.</p>
       <div class="cast-grid"></div>
       <p class="preview" id="welcome-preview"></p>
       <button class="btn wide next-row" type="button">Start practicing ↓</button>`;
@@ -1021,7 +1021,7 @@
       // Inside the Focus Break drawer: keep the explanation inline.
       fb.innerHTML = `
         <h3>${verdict}<small>${esc(tag)}</small></h3>
-        ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${esc(q.rule)}</p>` : ""}
+        ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${fill(q.rule, cast, false)}</p>` : ""}
         <p>${fill(q.notes[q.answer], cast, false)}</p>`;
       next.addEventListener("click", () => card._onDone?.());
     } else {
@@ -1135,7 +1135,7 @@
         <button class="linkbtn" type="button" data-close>Close</button>
       </div>
       <p class="explain-sentence">${filled}</p>
-      ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${esc(q.rule)}</p>` : ""}
+      ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${fill(q.rule, cast, false)}</p>` : ""}
       ${shortcut ? `<p class="shortcut-chip"><b>Shortcut ${esc(q.shortcut)}</b> ${esc(shortcut)}</p>` : ""}
       <ol class="why-list">${order.map((o) => rows[o.pos]).join("")}</ol>
       <button class="btn wide" type="button" data-next>Next question ↓</button>`;
@@ -1637,12 +1637,12 @@
             <li><b>+${RULES.dailyGoalSparks}</b> for your daily goal · <b>+${RULES.chapterSparks}</b> per chapter completed</li>
           </ul>
           <nav class="shop-jump" aria-label="Shop sections">
-            <a href="#shop-silks">🏇 Jockey Skins</a><a href="#shop-mounts">🦄 Mounts</a><a href="#shop-casts">🎭 Casts</a><a href="#shop-avatars">🙂 Avatars</a><a href="#shop-rods">🎣 Rods</a><a href="#shop-spots">🌊 Spots</a><a href="#shop-elixir">🧪 Elixir</a>
+            <a href="#shop-casts">🎭 Casts</a><a href="#shop-silks">🏇 Jockey Skins</a><a href="#shop-mounts">🦄 Mounts</a><a href="#shop-avatars">🙂 Avatars</a><a href="#shop-rods">🎣 Rods</a><a href="#shop-spots">🌊 Spots</a><a href="#shop-elixir">🧪 Elixir</a>
           </nav>
         </section>
+        <div id="shop-casts">${section("🎭", "Character Casts", "Questions use generic names until you unlock a cast. Then every Practice and Derby question stars your cast.", packRows)}</div>
         <div id="shop-silks">${section("🏇", "Jockey Skins", "Silks for your jockey in the Derby.", silkRows)}</div>
         <div id="shop-mounts">${section("🦄", "Derby Mounts", "Ride something rarer than a horse.", mountRows)}</div>
-        <div id="shop-casts">${section("🎭", "Character Casts", "New names for every extra-practice question.", packRows)}</div>
         <div id="shop-avatars">${section("🙂", "Avatars", "Rare profile pictures for the leaderboard.", avatarRows)}</div>
         <div id="shop-rods">${section("🎣", "Fishing Rods", "Each rod has a small perk in Vocab Fishing.", rodRows)}</div>
         <div id="shop-spots">${section("🌊", "Fishing Spots", "New scenery, and a different set of words to fish.", spotRows)}</div>
@@ -1836,6 +1836,7 @@
             <p class="muted">Clears your streak, XP, Sparks, purchases and stats on this device${auth.user() ? " and in your account" : ""}.</p>
             <div class="row" id="reset-row"><button class="btn ghost" type="button" id="reset-btn">Reset progress</button></div>
           </section>
+          <p class="memorial">In memory of Terry</p>
         </div>`;
       wireTabs();
       renderSettings();
@@ -1882,7 +1883,7 @@
         <div id="streak-slot"></div>
         <section class="panel">
           <h2>Your cast</h2>
-          <p class="muted">Names in the extra-practice questions switch to the cast you pick.</p>
+          <p class="muted">Every question uses your cast's names. The Everyday cast is free; unlock more in the Shop.</p>
           <div class="cast-grid" id="you-casts"></div>
           <div id="custom-box" class="stack" ${S.themeId === "custom" ? "" : "hidden"}>
             ${c.people.map((p, i) => `

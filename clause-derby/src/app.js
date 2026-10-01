@@ -13,6 +13,24 @@
   const SW = window.SatWizz;
   const D = SW.derby;
   const BANK = window.ClauseBank;
+  // The bank uses cast placeholders ({{NAME_1}}, {{NAME_1_POSS}}…) so the SatWizz
+  // site can swap in purchased character casts. This standalone game uses one
+  // generic cast.
+  const CAST = [{ name: "Alex", poss: "their", obj: "them" }, { name: "Jordan", poss: "their", obj: "them" }, { name: "Sam", poss: "their", obj: "them" }];
+  const castFill = (t) => String(t).replace(/\{\{NAME_([123])(?:_(POSS|OBJ))?\}\}/g, (m, n, form) => {
+    const p = CAST[n - 1];
+    return form === "POSS" ? p.poss : form === "OBJ" ? p.obj : p.name;
+  });
+  for (const ch of BANK.chapters) {
+    ch.rules = ch.rules.map(castFill);
+    ch.focus = castFill(ch.focus);
+    for (const q of ch.questions) {
+      q.text = castFill(q.text);
+      q.rule = castFill(q.rule);
+      q.choices = q.choices.map(castFill);
+      q.notes = q.notes.map(castFill);
+    }
+  }
   const $ = (sel, el = document) => el.querySelector(sel);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const fmt = (n) => Number(n).toLocaleString("en-US");

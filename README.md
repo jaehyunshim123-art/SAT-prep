@@ -26,7 +26,15 @@ The stems live in `SatWizz.STEMS` in `js/questions.js`. `SatWizz.stemFor(q)` pic
 
 ## Curriculum
 
-Seven chapters, in this order, plus two bonus chapters. Each core chapter starts with **25 pop-culture questions** (Ronaldo, Voldemort, Stephen Curry, Batman, Taylor Swift and more; shared with Clause Derby in `clause-derby/src/chN.js`). Then come **20 extra-practice questions** that use your cast's names (`js/curriculum/chN.js`). That makes **345 questions** in all.
+Seven chapters, in this order, plus two bonus chapters. Each core chapter starts with **25 questions in the user's passage style** (shared with Clause Derby in `clause-derby/src/chN.js`). Then come **20 extra-practice questions** (`js/curriculum/chN.js`). That makes **345 questions** in all.
+
+**Names come from your cast.** Every person in a question is a cast slot:
+- `{{NAME_1}}`–`{{NAME_3}}` for names;
+- `{{NAME_n_POSS}}` / `{{NAME_n_OBJ}}` for his/her/their and him/her/them.
+
+Without a purchased pack, questions use the free generic **Everyday** cast (John, Jane, Sam). Unlocking a **Character Cast** in the Shop swaps in that pack's names. For example, Football Legends makes the first question "In 2010, Ronaldo was scoring many goals in China… With the help of Messi…".
+
+Facts tied to real historical people (radium, penicillin) were reworded to stay accurate with any name. Novel and album titles are invented.
 
 Each chapter opens with an **Explanation Pause** lesson card: the chapter's explicit rules, ✓/✗ pattern chips and a worked example. After each answer a **slide-up drawer** shows the rule being tested, why the right answer works and why every other choice fails. A wrong answer comes back two cards later marked "↺ Try again".
 
@@ -35,7 +43,7 @@ Each chapter opens with an **Explanation Pause** lesson card: the chapter's expl
 
 | # | Chapter | What it covers |
 |---|---|---|
-| 1 | Independent Clause Connectors & Sentence Boundaries | Comma + FANBOYS, semicolons, periods; comma splices and run-ons. Includes the Ronaldo/Pessi example (`posts. With`) |
+| 1 | Independent Clause Connectors & Sentence Boundaries | Comma + FANBOYS, semicolons, periods; comma splices and run-ons. Includes the user's goal-post example (`posts. With`) |
 | 2 | Subject-Verb Agreement | Singular vs. plural; tracking the subject past prepositional and parenthetical phrases; the **3:1 / 2:1 shortcuts**. Includes the "Dark Lord's name ___ pronounced" example (`is`) |
 | 3 | Verb vs. Non-Verb Identification (Appositives) | Does the blank need a conjugated main verb or a participle modifier? Includes the Stephen Curry example (`Curry, intending` vs. `Curry intends`) |
 | 4 | Verb Tenses & Aspect | Explicit time frames: past (happened), future (will happen), past perfect (had happened), present perfect (until now), present (general truths) |
@@ -186,7 +194,7 @@ A separate **grammar racing game** in one self-contained, dark-themed HTML file.
 
 **Flow:** intro (`=== 🐎 SAT WIZZ: VOCAB DERBY 🐎 ===` banner, rules, **Start Game**) → chapter select → chapter rules → bet → live race → results and the **Post-Race Vault** → shop.
 
-**Curriculum:** 7 chapters × 25 questions (175), in a pop-culture, research or narrative passage style. Every question has a rule line and a note for each choice.
+**Curriculum:** 7 chapters × 25 questions (175), in a research or narrative passage style. The bank uses cast placeholders, and this standalone game fills them with one generic cast (Alex, Jordan, Sam). Every question has a rule line and a note for each choice.
 
 | Ch | Topic |
 |---|---|
@@ -285,7 +293,7 @@ node scripts/build-derby.js
   |---|---|
   | 🏇 Jockey Skins | 4 Derby silks |
   | 🦄 Derby Mounts | 4 mounts |
-  | 🎭 Character Casts | 6 casts for the extra-practice questions |
+  | 🎭 Character Casts (first) | 6 casts. Questions use generic names until you unlock one |
   | 🙂 Avatars | 6 rare profile pictures |
   | 🎣 Fishing Rods | 3 rods with perks |
   | 🌊 Fishing Spots | 3 spots with their own word pools |
@@ -295,6 +303,7 @@ node scripts/build-derby.js
   Purchases need two taps. Anything you already own stays owned. Derby wins pay your bet back ×1.5.
 - **Starting balance.** New players start with 2,500 ⚡. Existing saves keep their balance. A fresh device that signs in to an account that has played takes the account's balance, so a new browser can't top up an account.
 - **Achievements.** Wearable titles: Spark Starter, Syntax Warlock and Lightning Fast.
+- **Settings** (Profile → Settings): sound, vibration, push alerts, daily goal and reset. At the bottom, the dedication "In memory of Terry".
 - **Sound & haptics.** Web Audio effects: a crisp tap, a correct chime, a wrong thud, a combo sparkle and a chapter fanfare. There's no audio file to load. `navigator.vibrate(50)` fires on correct answers and combo milestones. Both can be turned off under Profile → Settings.
 - **Demo Mode.** Tap the SatWizz logo 5 times to unlock every chapter and max out Sparks for testing or demos. Your real progress is saved first and restored when you tap 5 times again. Nothing syncs or reaches the leaderboards while Demo Mode is on.
 
