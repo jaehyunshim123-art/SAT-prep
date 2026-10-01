@@ -35,7 +35,6 @@
   const wordsSeen = (s) => words(s).filter((w) => w && (w.seen || w.cards)).length;
   const wordsMaster = (s) => words(s).filter((w) => w && w.tier === 3).length;
   const wordsMarked = (s) => words(s).filter((w) => w && w.mastered).length;
-  const totalWords = () => (SW.vocab && SW.vocab.WORDS ? SW.vocab.WORDS.length : 55);
   const derby = (s) => obj(s.vocab && s.vocab.derby);
   const fish = (s) => obj(s.vocab && s.vocab.fishing);
   const casts = (s) => (s.unlockedThemes || []).length;
@@ -97,7 +96,7 @@
 
     // ---------- Vocab (10) ----------
     count("word-explorer", "vocab", "🔎", "Word Explorer", "Study 10 Vocab Vault words.", wordsSeen, 10, "words"),
-    count("vault-explorer", "vocab", "🗝️", "Vault Explorer", "Study every Vocab Vault word.", wordsSeen, totalWords(), "words"),
+    count("vault-explorer", "vocab", "🗝️", "Vault Explorer", "Study 100 Vocab Vault words.", wordsSeen, 100, "words"),
     count("first-master", "vocab", "🌱", "First Master", "Raise a word to 👑 Master.", wordsMaster, 1, "Master words"),
     count("lexicon", "vocab", "📖", "Lexicon", "Raise 10 words to 👑 Master.", wordsMaster, 10, "Master words"),
     count("wordsmith", "vocab", "🖋️", "Wordsmith", "Raise 25 words to 👑 Master.", wordsMaster, 25, "Master words"),

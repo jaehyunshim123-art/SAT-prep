@@ -125,7 +125,31 @@ One meter, shown in the header and shared by Practice and the Derby (`js/focus.j
 
 ## Vocab Vault
 
-The **Vault** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core high-frequency words and 25 advanced ones (*equanimity, fastidious, obdurate, recalcitrant, surreptitious, …*). New users see core words first; the Derby leads with advanced ones.
+The **Vocab Vault** tab (`js/vocab.js`) teaches **944 SAT words**: 511 core high-frequency words and 433 advanced ones (*equanimity, obdurate, perspicacious, sycophant, …*). New users see core words first; the Derby leads with advanced ones.
+
+**Where the words come from.**
+- **55 hand-built words** live in `js/vocab.js`, each with its own passage, 4 choices and a note for every choice.
+- **The rest are in the word bank**, `js/vocab/bank-*.js`: five core files (A–Z) and four advanced ones. Each word is one line:
+
+  ```
+  word|pos|definition|synonyms|antonyms|root|sentence with ______ where the word goes
+  ```
+
+  `pos` is n, v, adj or adv. Lists are comma-separated. The sentence uses the word's base form and may use cast slots (`{{NAME_1}}`, `{{NAME_1_POSS}}`…), so it shows the applied cast like every other question. Never put "a"/"an" right before the blank.
+- **`js/vocab.js` builds a full Vault word from each line, the same way every visit:**
+  - 60% get the "blank" format (choose the word) and 40% the "meaning" format ("As used in the text, … most nearly means").
+  - Three distractors are words of the same part of speech that aren't close in meaning (no shared synonyms or antonyms, no look-alike spellings). If a part of speech is too rare, the word uses the meaning format with any distractors.
+  - Every choice gets a note.
+  - Picking distractors takes about 40ms in total.
+- **`node scripts/validate-content.js` checks every bank word:**
+  - no "a/an" right before the blank, exactly one blank, and 4 distinct choices;
+  - at least 2 synonyms and 1 antonym, with no "—" placeholders;
+  - a known part of speech;
+  - no duplicates within the bank or against the hand-built words.
+
+  It also builds sample Derby questions and Fishing casts for each word.
+
+**📖 Word bank.** The Vault home has a searchable list of every word. Search by word, meaning or synonym, filter All / Core / Advanced, and open any word for its definition, synonyms, antonyms, root and 🔊 pronunciation. "Your words" shows the first 60 words you've studied, with a "Show all" toggle.
 
 **🃏 Flashcards.** A deck of 10 cards that flip in 3D.
 - **Front:** the word, its part of speech and its context sentence, filled in with your cast and highlighted.
@@ -161,7 +185,7 @@ The **Vault** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
   |---|---|---|
   | 🪷 Village Pond | free | core words |
   | 🌫️ Misty Lake | 500 ⚡ | advanced words |
-  | 🪸 Coral Reef | 500 ⚡ | all 55 words |
+  | 🪸 Coral Reef | 500 ⚡ | every word, core and advanced |
   | 🌙 Moonlit Bay | 500 ⚡ | flagged words first |
 
 - **Syncing:** gear and stats sync in `vocab_progress.fishing`.
@@ -315,7 +339,7 @@ The SAT Vocabulary Derby also ships as **one self-contained HTML file**, with al
 
 It plays exactly like the in-app Derby:
 - the intro screen and banner → **Start Derby** → bet → the live race against seven independent CPU rivals → results and review table → the Stable;
-- the same 55 words, engine, tactics, Focus Meter and prices. It keeps its own Focus, separate from the app.
+- the same 944 words, engine, tactics, Focus Meter and prices. It keeps its own Focus, separate from the app.
 
 What differs in the standalone file:
 - **Its own economy:** you start with **2,500 ⚡**. Wins pay ×1.5, with no daily betting limit.
@@ -356,7 +380,8 @@ node scripts/build-derby.js
   - **Share** copies a short brag to the clipboard; **Wear title** shows it on your streak card.
   - **How they unlock:** every save runs one check of all 50, so progress from tests, the Vocab Vault, the Derby and the Shop all counts. Players with existing progress get what they've already earned on first run, with one toast instead of a celebration per badge. A "flawless run" is 10/10 on a test or practice set.
 
-- **Settings** (Profile → Settings): sound, vibration, push alerts, daily goal and reset. At the bottom, the dedication "In memory of Terry".
+- **🌙 Light / dark mode.** The site opens in **dark mode** by default. Switch it with the ☀️/🌙 button on the Dashboard banner, or choose **Profile → Settings → Appearance**: 🌙 Dark, ☀️ Light, or 🖥️ Match device (follows the phone or computer, including when it switches). The choice is saved per device in `localStorage` (`satwizz.theme`), and a small script in `index.html` applies it before the first paint, so there's never a white flash. Question text stays sharp in both modes; low Focus shows as an orange or red outline.
+- **Settings** (Profile → Settings): sound, vibration, appearance, push alerts, daily goal and reset. At the bottom, the dedication "In memory of Terry".
 - **Sound & haptics.** Web Audio effects: a crisp tap, a correct chime, a wrong thud, a combo sparkle and a chapter fanfare. There's no audio file to load. `navigator.vibrate(50)` fires on correct answers and combo milestones. Both can be turned off under Profile → Settings.
 - **Demo Mode.** Tap the SatWizz logo 5 times to unlock every chapter and max out Sparks for testing or demos. Your real progress is saved first and restored when you tap 5 times again. Nothing syncs or reaches the leaderboards while Demo Mode is on.
 
@@ -442,7 +467,8 @@ js/curriculum/ch1-ch9.js    extra practice per chapter: lesson patterns + questi
 js/curriculum/gen/          question generator: core.js + one builder per chapter (~3,600 questions)
 js/curriculum/rules.js      rule names and short explanations for the Diagnostic screen
 js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row restore, Elixir, hourly recharge, locks, low-Focus outline/shake
-js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI, 🔊 pronunciation (Web Speech)
+js/vocab.js                 Vocab Vault: 55 hand-built words + the bank builder, flashcards, tiers, sprint UI, word bank search, 🔊 pronunciation
+js/vocab/bank.js            word bank loader; js/vocab/bank-core-1..5.js and bank-adv-1..4.js hold ~890 more words, one line each
 js/fishing.js               Vocab Fishing (Vault): casts, rods, spots, view
 js/derby.js                 Grammar Derby (Derby tab, pluggable question source): real-time CPU rival engine and tactics, Stable purchases, question generator, views
 js/badges.js                the 50 Trophy Case accomplishments: categories, progress, unlock checks

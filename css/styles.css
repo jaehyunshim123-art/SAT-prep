@@ -2304,3 +2304,9 @@ kbd {
 .theme-toggle:hover { background: rgba(255, 255, 255, 0.28); }
 .dash-hero .label-sm { padding-right: 44px; }
 .appearance-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+
+/* ---------- Vocab Vault: word bank search ---------- */
+.word-bank { gap: 10px; }
+.word-bank .input { width: 100%; }
+.bank-levels button { font-size: 0.85rem; padding: 6px 8px; }
+.word-bank h2 small, .panel h2 small { font-size: 0.8rem; font-weight: 700; }

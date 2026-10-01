@@ -20,7 +20,8 @@ const safeStyle = (code) => code.replace(/<\/style/gi, "<\\/style");
 
 // Order matters: themes (pronouns, default cast) → questions (stems) →
 // derby (engine) → vocab (words; uses SatWizz.derby at call time) → sfx.
-const SOURCES = ["js/themes.js", "js/questions.js", "js/focus.js", "js/derby.js", "js/fishing.js", "js/vocab.js", "js/sfx.js"];
+const BANKS = require("fs").readdirSync(require("path").join(__dirname, "..", "js/vocab")).filter((f) => /^bank-.+\.js$/.test(f)).sort().map((f) => `js/vocab/${f}`);
+const SOURCES = ["js/themes.js", "js/questions.js", "js/focus.js", "js/derby.js", "js/fishing.js", "js/vocab/bank.js", ...BANKS, "js/vocab.js", "js/sfx.js"];
 
 // The standalone shell: state, HUD, toasts, celebrations and the Derby ctx.
 const SHELL = String.raw`

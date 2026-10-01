@@ -37,7 +37,7 @@
   const SPOTS = [
     { id: "pond", name: "Village Pond", emoji: "🪷", price: 0, desc: "Core high-frequency words.", pool: "core" },
     { id: "lake", name: "Misty Lake", emoji: "🌫️", price: 500, desc: "Advanced words only.", pool: "advanced" },
-    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "All 55 Vocab Vault words.", pool: "all" },
+    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "Every Vocab Vault word, core and advanced.", pool: "all" },
     { id: "bay", name: "Moonlit Bay", emoji: "🌙", price: 500, desc: "Words you flagged for review bite first.", pool: "review" },
   ];
   const rodById = (id) => RODS.find((r) => r.id === id) || RODS[0];

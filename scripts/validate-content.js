@@ -24,6 +24,8 @@ require(`${repo}/js/curriculum/rules.js`);
 require(`${repo}/js/focus.js`);
 require(`${repo}/js/derby.js`);
 require(`${repo}/js/fishing.js`);
+require(`${repo}/js/vocab/bank.js`);
+for (const f of require("fs").readdirSync(`${repo}/js/vocab`).filter((x) => /^bank-.+\.js$/.test(x)).sort()) require(`${repo}/js/vocab/${f}`);
 require(`${repo}/js/vocab.js`);
 const SW = window.SatWizz;
 SW.curriculum.build();
@@ -89,10 +91,18 @@ for (const w of SW.vocab.WORDS) {
   checkCommon(tag, w, [w.clue]);
   for (const k of ["word", "pos", "definition", "root", "clue"]) if (!w[k]) bad.push(`${tag}: missing ${k}`);
   for (const k of ["synonyms", "antonyms"]) {
-    if (!Array.isArray(w[k]) || w[k].length < 2) bad.push(`${tag}: needs at least 2 ${k} for the flashcard back`);
+    if (!Array.isArray(w[k]) || w[k].length < (w.bank && k === "antonyms" ? 1 : 2)) bad.push(`${tag}: needs at least ${w.bank && k === "antonyms" ? 1 : 2} ${k} for the flashcard back`);
     else if (w[k].some((x) => x.toLowerCase() === w.word.toLowerCase())) bad.push(`${tag}: ${k} include the word itself`);
   }
   if (w.synonyms && w.antonyms && w.synonyms.some((x) => w.antonyms.includes(x))) bad.push(`${tag}: a word is both a synonym and an antonym`);
+  if (w.bank) {
+    if (/\b(a|an)\s+(______|\[\[)/i.test(w.text)) bad.push(`${tag}: "a/an" right before the word (the choices start with different sounds)`);
+    if ((w.text.match(/______/g) || []).length > 1) bad.push(`${tag}: more than one blank`);
+    if (w.choices.length !== 4 || new Set(w.choices.map((c) => c.toLowerCase())).size !== 4) bad.push(`${tag}: needs 4 distinct choices (${w.choices.join(" | ")})`);
+    if (!["noun", "verb", "adjective", "adverb"].includes(w.pos)) bad.push(`${tag}: unknown part of speech ${w.pos}`);
+    if (w.definition.length < 8 || w.root.length < 3) bad.push(`${tag}: definition or root too short`);
+    if ([...w.synonyms, ...w.antonyms].some((x) => /^[—–-]+$/.test(x))) bad.push(`${tag}: placeholder dash in synonyms/antonyms`);
+  }
   if (w.format === "blank") {
     if (!w.text.includes("______")) bad.push(`${tag}: blank format needs ______`);
     if (w.choices[w.answer] !== w.word) bad.push(`${tag}: correct choice should be the word itself`);
@@ -103,6 +113,20 @@ for (const w of SW.vocab.WORDS) {
   } else bad.push(`${tag}: format must be blank or meaning`);
 }
 
+// Bank lines that were skipped as duplicates of an existing word.
+{
+  const seen = new Map();
+  for (const [, line] of SW.VOCAB_BANK) {
+    const word = line.split("|")[0].trim().toLowerCase();
+    seen.set(word, (seen.get(word) || 0) + 1);
+  }
+  const dupes = [...seen].filter(([, n]) => n > 1).map(([w]) => w);
+  if (dupes.length) bad.push(`vocab bank: duplicate words ${dupes.join(", ")}`);
+  const original = new Set(SW.vocab.WORDS.filter((w) => !w.bank).map((w) => w.word.toLowerCase()));
+  const clash = [...seen.keys()].filter((w) => original.has(w));
+  if (clash.length) bad.push(`vocab bank: already in the Vault ${clash.join(", ")}`);
+}
+
 // ---------- derby questions ----------
 {
   let seed = 42;
@@ -110,7 +134,7 @@ for (const w of SW.vocab.WORDS) {
   const words = SW.vocab.WORDS;
   const owner = (text, field) => words.filter((x) => (Array.isArray(x[field]) ? x[field].includes(text) : x[field] === text));
   let made = 0;
-  for (const w of words) for (const kind of ["context", "definition", "synonym", "antonym"]) for (let i = 0; i < 50; i++) {
+  for (const w of words) for (const kind of ["context", "definition", "synonym", "antonym"]) for (let i = 0; i < (w.bank ? 4 : 50); i++) {
     const q = SW.derby.makeQuestion(w, kind, rand);
     const tag = `derby:${w.id}:${kind}`;
     made++;
@@ -160,7 +184,7 @@ console.log("generated questions", generated);
 // Every cast: 4 fish with distinct definitions, exactly one right, no near-synonym distractors.
 let casts = 0;
 for (const w of SW.vocab.WORDS) {
-  for (let k = 0; k < 40; k++) {
+  for (let k = 0; k < (w.bank ? 4 : 40); k++) {
     const c = SW.fishing.makeCast(w);
     casts++;
     const defs = c.fish.map((f) => f.def);

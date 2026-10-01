@@ -1471,8 +1471,8 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
 .fc-hint { align-self: center; color: var(--muted); font-size: 0.8rem; font-weight: 700; }
 .fc-def { font-size: 1.1rem; font-weight: 600; line-height: 1.4; }
 .fc-row { display: grid; gap: 2px; font-size: 0.92rem; line-height: 1.4; }
-.fc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.fc-actions .btn { padding-inline: 10px; white-space: nowrap; }
+.fc-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.fc-actions .btn { padding-inline: 10px; min-width: 0; flex-wrap: wrap; line-height: 1.2; text-align: center; } /* labels wrap on narrow phones instead of widening the page */
 .fc-actions .btn small { font-weight: 700; opacity: 0.85; }
 .fc-help { text-align: center; }
 @media (hover: none) { .kbd-hint { display: none; } }
@@ -1956,7 +1956,7 @@ body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(
 .dash-hero .label-sm, .dash-hero .muted { color: rgba(255, 255, 255, 0.85); }
 .dash-hero p { margin: 0; }
 .dash-focus { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.dash-focus .fmeter { background: rgba(255, 255, 255, 0.92); border-radius: 999px; padding: 2px 8px; color: var(--ink); }
+.dash-focus .fmeter { background: rgba(255, 255, 255, 0.92); border-radius: 999px; padding: 2px 8px; color: #16213a; } /* fixed dark text: the pill stays white in both modes */
 .dash-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
 .ch-card {
   display: grid;
@@ -2302,6 +2302,30 @@ kbd {
 @supports not (color: color-mix(in srgb, red 50%, white)) {
   .trophy.recent { animation: none; box-shadow: 0 0 0 3px var(--flame-2); }
 }
+
+/* ---------- Appearance: light / dark toggle ---------- */
+.dash-hero { position: relative; }
+.theme-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.theme-toggle:hover { background: rgba(255, 255, 255, 0.28); }
+.dash-hero .label-sm { padding-right: 44px; }
+.appearance-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+
+/* ---------- Vocab Vault: word bank search ---------- */
+.word-bank { gap: 10px; }
+.word-bank .input { width: 100%; }
+.bank-levels button { font-size: 0.85rem; padding: 6px 8px; }
+.word-bank h2 small, .panel h2 small { font-size: 0.8rem; font-weight: 700; }
 
 /* ---------- Standalone build ---------- */
 .scrollview.solo { padding-block: 4px 24px; }
@@ -3964,7 +3988,7 @@ window.SatWizz.avatars = [
   const SPOTS = [
     { id: "pond", name: "Village Pond", emoji: "🪷", price: 0, desc: "Core high-frequency words.", pool: "core" },
     { id: "lake", name: "Misty Lake", emoji: "🌫️", price: 500, desc: "Advanced words only.", pool: "advanced" },
-    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "All 55 Vocab Vault words.", pool: "all" },
+    { id: "reef", name: "Coral Reef", emoji: "🪸", price: 500, desc: "Every Vocab Vault word, core and advanced.", pool: "all" },
     { id: "bay", name: "Moonlit Bay", emoji: "🌙", price: 500, desc: "Words you flagged for review bite first.", pool: "review" },
   ];
   const rodById = (id) => RODS.find((r) => r.id === id) || RODS[0];
@@ -4354,6 +4378,972 @@ window.SatWizz.avatars = [
 
   SW.fishing = { RULES, RODS, SPOTS, rodById, spotById, emptyStats, mergeStats, buyItem, poolFor, makeCast, mount };
 })();
+
+
+/* ===== js/vocab/bank.js ===== */
+// SatWizz Vocab Vault word bank loader. Each js/vocab/bank-*.js file calls
+//   window.SatWizzBank("core" | "advanced", `word|pos|definition|synonyms|antonyms|root|sentence`)
+// with one word per line:
+//   • pos: n, v, adj or adv
+//   • synonyms / antonyms: comma-separated
+//   • sentence: the word's slot is ______ (base form, never right after
+//     "a"/"an"), and it may use cast slots like {{NAME_1}}
+// js/vocab.js turns every line into a full Vault word (flashcard, sprint
+// question, Fishing cast, Derby question). Load these before js/vocab.js.
+(function () {
+  "use strict";
+  const SW = (window.SatWizz = window.SatWizz || {});
+  SW.VOCAB_BANK = SW.VOCAB_BANK || [];
+  window.SatWizzBank = function (level, text) {
+    for (const raw of String(text).split("\n")) {
+      const line = raw.trim();
+      if (line && !line.startsWith("#")) SW.VOCAB_BANK.push([level, line]);
+    }
+  };
+})();
+
+
+/* ===== js/vocab/bank-adv-1.js ===== */
+// Vocab Vault bank: advanced words, A–D. Format: see js/vocab/bank.js.
+window.SatWizzBank("advanced", `
+aberration|n|a departure from what is normal or expected|anomaly, deviation, irregularity|norm, standard|Latin aberrare (to wander away)|The team's terrible loss was ______; they had won every other game that season.
+abhor|v|to regard with disgust and hatred|detest, loathe, despise|love, admire|Latin abhorrere (to shrink back in horror)|{{NAME_1}} would ______ cruelty to animals and volunteered at the shelter every weekend.
+abject|adj|extremely bad or hopeless; without pride|wretched, miserable, hopeless|proud, comfortable|Latin abjicere (to throw away)|The refugees lived in ______ poverty until aid workers arrived.
+abrasive|adj|harsh or rough in manner; able to scrape|harsh, rough, grating|gentle, smooth|Latin abradere (to scrape off)|The manager's ______ comments made several employees quit.
+abstain|v|to choose not to do something|refrain, avoid, decline|indulge, partake|Latin abs- (away) + tenere (to hold)|Three council members chose to ______ from voting on the issue.
+abstruse|adj|difficult to understand; obscure|obscure, complex, esoteric|clear, simple|Latin abstrudere (to conceal)|The professor's lecture on quantum theory was so ______ that half the class was lost.
+acclaim|n|enthusiastic public praise|praise, applause, acclamation|criticism, disapproval|Latin acclamare (to shout at)|The young author's first novel won wide ______ from critics.
+acquiesce|v|to accept something reluctantly but without protest|comply, consent, give in|resist, protest|Latin acquiescere (to rest)|After hours of pleading, the parents decided to ______ and let the kids stay up late.
+acrid|adj|unpleasantly bitter or sharp in smell or taste|bitter, pungent, harsh|sweet, mild|Latin acer (sharp)|The ______ smoke from the burning tires made everyone's eyes water.
+acumen|n|the ability to make good judgments quickly|shrewdness, insight, sharpness|ignorance, stupidity|Latin acuere (to sharpen)|Her business ______ helped her turn a small lemonade stand into a chain of cafés.
+admonish|v|to warn or scold firmly but gently|reprimand, scold, caution|praise, commend|Latin admonere (to remind)|The librarian had to ______ the students for talking too loudly.
+adroit|adj|clever or skillful, especially with hands or mind|skillful, deft, dexterous|clumsy, awkward|French à droit (rightly)|The ______ juggler kept seven balls in the air at once.
+adulation|n|excessive admiration or praise|worship, flattery, idolization|criticism, contempt|Latin adulari (to fawn)|The pop star basked in the ______ of thousands of screaming fans.
+affable|adj|friendly and easy to talk to|friendly, genial, approachable|unfriendly, cold|Latin affabilis (easy to speak to)|The ______ shopkeeper chatted with every customer who walked in.
+allude|v|to refer to something indirectly|hint, suggest, refer|state, declare|Latin alludere (to play with)|The speaker seemed to ______ to the scandal without ever naming it.
+aloof|adj|distant and uninvolved; not friendly|distant, detached, standoffish|friendly, sociable|Dutch loef (windward)|The new student seemed ______ at first but turned out to be just shy.
+altruism|n|unselfish concern for the welfare of others|selflessness, generosity, kindness|selfishness, greed|Italian altrui (somebody else)|{{NAME_1}}'s ______ was clear when {{NAME_1}} donated birthday money to the food bank.
+ambivalent|adj|having mixed feelings about something|uncertain, conflicted, undecided|certain, decisive|Latin ambi- (both) + valere (to be strong)|{{NAME_1}} felt ______ about moving: excited for the new city but sad to leave friends.
+amiable|adj|having a friendly and pleasant manner|friendly, pleasant, good-natured|unfriendly, hostile|Latin amicabilis (friendly)|The ______ bus driver greeted every passenger by name.
+anathema|n|something or someone strongly disliked|abomination, curse, bane|blessing, favorite|Greek anathema (thing devoted to evil)|Cheating was ______ to the honest coach.
+animosity|n|strong hostility or dislike|hostility, hatred, antagonism|friendship, goodwill|Latin animositas (spirit, courage)|Years of competition had created deep ______ between the two rival schools.
+antagonize|v|to make someone hostile or angry|provoke, anger, irritate|appease, please|Greek antagonizesthai (to struggle against)|The players were told not to ______ the referee.
+antiquated|adj|old-fashioned or outdated|outdated, obsolete, archaic|modern, current|Latin antiquus (old)|The office still used ______ computers that ran on floppy disks.
+apathetic|adj|showing no interest or enthusiasm|uninterested, indifferent, unenthusiastic|enthusiastic, passionate|Greek apatheia (without feeling)|The ______ students barely looked up when the fire alarm went off.
+arcane|adj|understood by few; mysterious|mysterious, obscure, esoteric|common, familiar|Latin arcanus (secret)|The library held ______ texts that only a handful of scholars could read.
+archaic|adj|very old or old-fashioned|ancient, outdated, obsolete|modern, contemporary|Greek archaios (ancient)|Words like "thou" and "thee" sound ______ to modern readers.
+ardent|adj|very enthusiastic or passionate|passionate, fervent, eager|apathetic, indifferent|Latin ardere (to burn)|{{NAME_1}}'s love of science fiction is ______; {{NAME_1}} owns over five hundred novels.
+ascetic|adj|avoiding pleasure and comfort, often for religious reasons|austere, self-denying, abstinent|indulgent, luxurious|Greek asketes (monk)|The monks lived ______ lives, eating simple food and sleeping on the floor.
+assiduous|adj|showing great care and steady effort|diligent, careful, industrious|lazy, careless|Latin assiduus (constantly present)|Thanks to ______ practice, {{NAME_1}} mastered the piano piece in a month.
+audacious|adj|willing to take bold risks|bold, daring, fearless|timid, cautious|Latin audax (bold)|The climber's ______ plan was to scale the cliff without ropes.
+auspicious|adj|suggesting future success; favorable|promising, favorable, encouraging|ominous, unfavorable|Latin auspex (bird watcher, augur)|The sunny morning seemed ______ for the start of the long journey.
+austere|adj|severe or strict; plain and without decoration|stern, harsh, plain|lenient, ornate|Greek austeros (harsh)|The ______ room had only a bed, a desk, and a single lamp.
+avarice|n|extreme greed for wealth|greed, materialism, covetousness|generosity, charity|Latin avarus (greedy)|The villain's ______ drove him to steal from his own family.
+aversion|n|a strong dislike|dislike, distaste, hostility|liking, fondness|Latin avertere (to turn away)|Because of {{NAME_1}}'s ______ to loud crowds, {{NAME_1}} always picks quiet places to eat.
+banal|adj|so ordinary that it is boring|boring, dull, commonplace|original, exciting|French banal (common)|The movie's ______ plot was predictable from the very first scene.
+belie|v|to give a false impression of|contradict, disguise, misrepresent|reveal, confirm|Old English beleogan (to deceive)|{{NAME_1}}'s calm face seemed to ______ the panic {{NAME_1}} felt inside.
+belligerent|adj|hostile and aggressive|hostile, aggressive, combative|peaceful, friendly|Latin bellum (war) + gerere (to wage)|The ______ customer shouted at every employee in the store.
+benign|adj|gentle and kind; not harmful|harmless, gentle, kindly|harmful, malignant|Latin benignus (kind)|The doctor was relieved to report that the growth was ______.
+berate|v|to scold or criticize angrily|scold, criticize, reprimand|praise, compliment|be- + rate (to scold)|The coach would ______ players who missed practice without an excuse.
+bombastic|adj|using pompous, inflated language|pompous, grandiose, overblown|plain, modest|from bombast (cotton padding)|The politician's ______ speech promised to "transform the very fabric of the universe."
+brazen|adj|bold and shameless|shameless, bold, audacious|shy, timid|Old English braesen (made of brass)|The thief was so ______ that he returned to the store the next day wearing the stolen jacket.
+burgeon|v|to begin to grow or increase rapidly|flourish, expand, mushroom|shrink, decline|Old French burjon (bud)|The small town began to ______ after the new factory opened.
+cacophony|n|a harsh, discordant mixture of sounds|din, racket, noise|harmony, silence|Greek kakos (bad) + phone (sound)|The ______ of car horns and sirens made it impossible to sleep.
+cajole|v|to persuade by flattery or coaxing|coax, persuade, wheedle|force, compel|French cajoler (to coax)|{{NAME_1}} tried to ______ {{NAME_2}} into doing the dishes by promising to make dessert.
+capricious|adj|given to sudden changes of mood or behavior|unpredictable, fickle, erratic|stable, consistent|Italian capriccio (whim)|The ______ weather changed from sunny to stormy several times that afternoon.
+castigate|v|to criticize or punish severely|reprimand, censure, rebuke|praise, commend|Latin castigare (to correct)|Critics were quick to ______ the director for the film's sloppy ending.
+catharsis|n|the release of strong emotions, bringing relief|release, purging, relief|repression, suppression|Greek katharsis (cleansing)|Writing in a journal provided ______ for {{NAME_1}} after the difficult year.
+caustic|adj|sarcastic in a hurtful way; able to burn|biting, sarcastic, corrosive|kind, gentle|Greek kaustikos (burning)|The critic's ______ review left the young actor in tears.
+censure|v|to express formal disapproval|condemn, criticize, reprimand|praise, approve|Latin censura (judgment)|The senate voted to ______ the senator for his behavior.
+chicanery|n|the use of trickery to deceive|trickery, deception, deceit|honesty, fairness|French chicaner (to quibble)|The election was marred by ______, including fake ballots.
+circumspect|adj|careful to consider all risks before acting|cautious, careful, prudent|reckless, rash|Latin circumspicere (to look around)|{{NAME_1}} was ______ about sharing personal information online.
+clandestine|adj|done secretly, often because it is illegal|secret, covert, hidden|open, public|Latin clandestinus (secret)|The rebels held ______ meetings in an abandoned warehouse.
+clemency|n|mercy shown in punishment|mercy, leniency, forgiveness|severity, harshness|Latin clemens (mild)|The governor granted ______ to the prisoner, shortening his sentence.
+coalesce|v|to come together to form one whole|merge, unite, combine|separate, divide|Latin coalescere (to grow together)|Several small protest groups began to ______ into one national movement.
+cogent|adj|clear, logical, and convincing|convincing, compelling, persuasive|weak, unconvincing|Latin cogere (to compel)|{{NAME_1}}'s argument was so ______ that the debate judges ruled unanimously.
+commensurate|adj|corresponding in size or degree; in proportion|proportionate, equivalent, appropriate|disproportionate, inadequate|Latin com- (together) + mensurare (to measure)|The workers demanded pay ______ with their experience and skill.
+complacency|n|smug satisfaction that leads to carelessness|smugness, self-satisfaction, contentment|concern, vigilance|Latin complacere (to please)|After so many easy wins, ______ set in and the team stopped practicing hard.
+conciliatory|adj|intended to make peace or reduce anger|peacemaking, appeasing, placating|hostile, antagonistic|Latin conciliare (to bring together)|After their argument, {{NAME_1}}'s message to {{NAME_2}} was ______, apologizing for shouting.
+condescend|v|to act in a way that shows one feels superior|patronize, talk down, look down on|respect, admire|Latin condescendere (to stoop)|The expert never seemed to ______ to beginners; she answered every question patiently.
+confluence|n|a coming together of people, things, or rivers|junction, meeting, convergence|divergence, separation|Latin confluere (to flow together)|The city was built at the ______ of two great rivers.
+conjure|v|to call to mind or produce as if by magic|summon, evoke, invoke|dismiss, banish|Latin conjurare (to swear together)|The smell of pine trees can ______ memories of childhood camping trips.
+connoisseur|n|an expert judge of matters of taste|expert, authority, specialist|amateur, novice|French connoître (to know)|A true ______ of cheese, {{NAME_1}} could name over a hundred varieties by taste.
+consternation|n|anxiety or dismay caused by something unexpected|dismay, alarm, distress|calm, composure|Latin consternare (to terrify)|To the ______ of the crowd, the fireworks show was canceled at the last minute.
+contentious|adj|causing or likely to cause an argument|controversial, disputed, divisive|uncontroversial, agreeable|Latin contentio (strife)|The new parking rules were so ______ that the town meeting lasted until midnight.
+convoluted|adj|extremely complex and difficult to follow|complicated, tangled, intricate|simple, straightforward|Latin convolvere (to roll together)|The movie's ______ plot left viewers confused about who had committed the crime.
+credulous|adj|too ready to believe things|gullible, naive, trusting|skeptical, suspicious|Latin credere (to believe)|The ______ tourist believed the street vendor's claim that the watch was solid gold.
+culpable|adj|deserving blame|guilty, responsible, blameworthy|innocent, blameless|Latin culpa (fault)|The investigation found the company ______ for the oil spill.
+cursory|adj|hasty and therefore not thorough|hasty, quick, superficial|thorough, careful|Latin cursor (runner)|Even the teacher's quick, ______ reading of the essay found several spelling mistakes.
+dearth|n|a scarcity or lack of something|lack, shortage, scarcity|abundance, plenty|Middle English derthe (scarcity)|Because of the town's ______ of good restaurants, most people cooked at home.
+debilitate|v|to make someone or something very weak|weaken, cripple, incapacitate|strengthen, invigorate|Latin debilis (weak)|The illness can ______ patients for weeks.
+decorum|n|behavior in keeping with good taste and propriety|propriety, etiquette, dignity|impropriety, rudeness|Latin decorus (seemly)|The judge asked everyone in the courtroom to maintain ______.
+deference|n|polite respect for someone's opinions or authority|respect, regard, esteem|disrespect, contempt|Latin deferre (to carry down)|Out of ______ to the elderly guest, everyone waited for her to start eating.
+deleterious|adj|causing harm or damage|harmful, damaging, detrimental|beneficial, helpful|Greek deleterios (destructive)|Smoking has ______ effects on almost every organ in the body.
+demagogue|n|a leader who gains power by appealing to people's emotions and prejudices|agitator, rabble-rouser, firebrand|statesman, moderate|Greek demos (people) + agogos (leading)|The ______ won votes by blaming every problem on outsiders.
+denigrate|v|to criticize unfairly; to belittle|belittle, disparage, criticize|praise, extol|Latin denigrare (to blacken)|It is unfair to ______ someone's work without reading it first.
+deride|v|to mock or ridicule|ridicule, mock, scorn|praise, respect|Latin deridere (to laugh at)|Critics were quick to ______ the idea, but the inventor proved them wrong.
+desecrate|v|to treat a sacred place or thing with violent disrespect|violate, defile, profane|honor, respect|de- + consecrate|Vandals tried to ______ the old cemetery with spray paint.
+despondent|adj|in low spirits from loss of hope|hopeless, dejected, depressed|hopeful, cheerful|Latin despondere (to give up)|After failing the driving test twice, {{NAME_1}} felt ______.
+destitute|adj|extremely poor; lacking the basic necessities|poor, impoverished, penniless|wealthy, rich|Latin destitutus (abandoned)|The flood left hundreds of families ______, without homes or food.
+deterrent|n|something that discourages an action|disincentive, hindrance, obstacle|incentive, encouragement|Latin deterrere (to frighten off)|The tall fence was meant as ______ for anyone thinking of climbing into the pool at night.
+diatribe|n|a forceful and bitter verbal attack|tirade, rant, denunciation|praise, tribute|Greek diatribe (discourse)|The angry customer's ______ about the slow service went on for ten minutes.
+didactic|adj|intended to teach, especially a moral lesson|instructive, educational, preachy|entertaining, amusing|Greek didaskein (to teach)|The children's book was a bit too ______, with a lesson spelled out on every page.
+diffident|adj|shy and lacking self-confidence|shy, timid, modest|confident, bold|Latin diffidere (to distrust)|The ______ student rarely raised her hand, though she always knew the answer.
+digress|v|to leave the main subject temporarily|stray, wander, deviate|focus, concentrate|Latin digredi (to step away)|The teacher would often ______ from the lesson to tell stories about her travels.
+dilatory|adj|slow to act; intended to cause delay|slow, sluggish, procrastinating|prompt, quick|Latin dilator (delayer)|The company's ______ response to complaints angered many customers.
+dilemma|n|a situation requiring a choice between difficult options|predicament, quandary, problem|solution, resolution|Greek di- (two) + lemma (premise)|{{NAME_1}}'s ______ was simple but painful: go to the concert or study for the test.
+disconcert|v|to unsettle or disturb someone|unsettle, fluster, disturb|reassure, calm|French déconcerter (to put out of harmony)|The unexpected question seemed to ______ the speaker, who paused for a long moment.
+discordant|adj|disagreeing or clashing; harsh sounding|clashing, conflicting, jarring|harmonious, agreeable|Latin discordare (to be at variance)|The band's warm-up was ______, with every instrument playing a different tune.
+discredit|v|to harm the good reputation of|disgrace, dishonor, undermine|credit, honor|dis- + credit|The lawyer tried to ______ the witness by pointing out her past lies.
+disdainful|adj|showing contempt or lack of respect|scornful, contemptuous, arrogant|respectful, admiring|Old French desdeignier (to scorn)|The champion's look at his younger opponent was ______, as if the match were beneath him.
+disparage|v|to speak of as unimportant or of little value|belittle, criticize, denigrate|praise, commend|Old French desparagier (to marry unequally)|It is unkind to ______ other people's hobbies just because you do not share them.
+dispassionate|adj|not influenced by strong emotion; impartial|impartial, objective, neutral|biased, emotional|dis- + passionate|A good judge must stay ______, deciding cases on the facts alone.
+disseminate|v|to spread information widely|spread, circulate, distribute|suppress, withhold|Latin disseminare (to scatter seed)|The health department used radio and social media to ______ the safety guidelines.
+dissonance|n|lack of agreement or harmony|discord, conflict, clash|harmony, agreement|Latin dissonare (to sound harshly)|There was clear ______ between what the company promised and what it delivered.
+dissuade|v|to persuade someone not to do something|discourage, deter, talk out of|persuade, encourage|Latin dissuadere (to advise against)|{{NAME_1}}'s friends tried to ______ {{NAME_1_OBJ}} from skydiving, but {{NAME_1}} went anyway.
+docile|adj|ready to accept control or instruction; submissive|obedient, compliant, gentle|unruly, defiant|Latin docilis (easily taught)|The ______ horse let even the youngest children ride it.
+dogged|adj|having or showing tenacity and determination|determined, persistent, tenacious|irresolute, half-hearted|from dog (persistent like a dog)|Thanks to ______ effort, the team climbed from last place to first.
+duplicity|n|deceitfulness; double-dealing|deceit, dishonesty, deception|honesty, sincerity|Latin duplex (double)|The spy's ______ was revealed when his secret messages were found.
+`);
+
+
+/* ===== js/vocab/bank-adv-2.js ===== */
+// Vocab Vault bank: advanced words, E–L. Format: see js/vocab/bank.js.
+window.SatWizzBank("advanced", `
+ebullient|adj|cheerful and full of energy|exuberant, buoyant, enthusiastic|gloomy, subdued|Latin ebullire (to boil over)|The ______ host greeted every guest with a hug and a joke.
+edify|v|to instruct or improve someone morally or intellectually|educate, enlighten, uplift|corrupt, mislead|Latin aedificare (to build)|The museum's exhibits are meant to ______ visitors as well as entertain them.
+efface|v|to erase or make less noticeable|erase, remove, obliterate|preserve, highlight|French effacer (to rub out)|Centuries of wind and rain had begun to ______ the carvings on the old stone.
+effrontery|n|shameless boldness; nerve|nerve, audacity, impudence|politeness, timidity|Latin effrons (shameless)|{{NAME_1}} could not believe the ______ of the stranger who cut to the front of the line.
+egalitarian|adj|believing that all people are equal and deserve equal rights|equal, fair, democratic|elitist, unequal|French égal (equal)|The club had ______ rules: every member's vote counted the same.
+egregious|adj|outstandingly bad; shocking|shocking, flagrant, outrageous|minor, trivial|Latin egregius (outstanding)|The referee's mistake was so ______ that even the winning team admitted it was wrong.
+elated|adj|extremely happy and excited|thrilled, overjoyed, ecstatic|miserable, dejected|Latin elatus (raised)|{{NAME_1}} was ______ to learn that {{NAME_1_POSS}} short story had won first prize.
+emaciated|adj|abnormally thin and weak|gaunt, skeletal, scrawny|plump, robust|Latin macies (leanness)|The rescued dog was ______ after weeks without food.
+embroil|v|to involve deeply in a conflict or difficult situation|entangle, involve, mire|extricate, free|French embrouiller (to confuse)|The mayor did not want to ______ the city in a long legal battle.
+enamored|adj|filled with love or admiration for|infatuated, captivated, charmed|repelled, indifferent|Old French enamourer (to fill with love)|{{NAME_1}} was so ______ of the city that {{NAME_1}} decided to move there.
+encroach|v|to intrude gradually on someone's territory or rights|intrude, trespass, invade|withdraw, retreat|Old French encrochier (to seize)|The growing suburbs continue to ______ on the farmland around the city.
+endemic|adj|regularly found in a particular place|native, local, indigenous|foreign, imported|Greek endemos (native)|The bird is ______ to the island and lives nowhere else on Earth.
+engender|v|to cause or give rise to a feeling or situation|cause, produce, create|prevent, suppress|Latin ingenerare (to beget)|The coach's fairness helped ______ trust among the players.
+enmity|n|deep hostility between people|hostility, hatred, animosity|friendship, goodwill|Old French enemistié (hostility)|The ______ between the two families lasted for three generations.
+ennui|n|boredom from lack of excitement|boredom, tedium, listlessness|excitement, interest|French ennui (boredom)|Stuck indoors for a week of rain, the children fell into ______.
+ephemera|n|things meant to last only a short time, such as tickets or posters|memorabilia, trivia, collectibles|heirlooms, treasures|Greek ephemeros (lasting a day)|The museum collects ______ like concert tickets and old bus maps.
+epitome|n|a perfect example of something|embodiment, model, essence|opposite, antithesis|Greek epitome (abridgment)|With its perfect lawns and white fences, the town was the ______ of quiet suburban life.
+equivocal|adj|open to more than one interpretation; ambiguous|ambiguous, vague, unclear|clear, unequivocal|Latin aequus (equal) + vox (voice)|The senator's ______ answer left reporters unsure whether she supported the bill.
+erudite|adj|having or showing great knowledge from study|learned, scholarly, knowledgeable|ignorant, uneducated|Latin erudire (to instruct)|The ______ professor could quote poetry in six languages.
+eschew|v|to deliberately avoid|avoid, shun, abstain from|embrace, seek|Old French eschiver (to shun)|The chef chose to ______ fancy techniques and focus on simple, fresh ingredients.
+estranged|adj|no longer close or friendly with someone|alienated, separated, distant|reconciled, close|Old French estranger (to make strange)|The ______ brothers had not spoken in ten years.
+euphemism|n|a mild word used in place of a harsh or blunt one|understatement, softening, polite term|dysphemism, bluntness|Greek eu (well) + pheme (speaking)|"Passed away" is a common ______ for "died."
+evanescent|adj|soon passing out of sight or existence|fleeting, short-lived, vanishing|lasting, permanent|Latin evanescere (to vanish)|The rainbow was ______, disappearing within a minute.
+exacting|adj|making great demands on skill or effort|demanding, rigorous, strict|easy, lenient|Latin exigere (to demand)|The ______ coach insisted on perfect form for every drill.
+exalt|v|to praise highly; to raise in rank|glorify, praise, elevate|criticize, degrade|Latin exaltare (to raise up)|The poem seems to ______ ordinary workers as heroes.
+excoriate|v|to criticize very severely|denounce, condemn, attack|praise, commend|Latin excoriare (to strip off skin)|Reviewers continued to ______ the restaurant for its rude service.
+exhort|v|to strongly urge someone to do something|urge, encourage, press|discourage, dissuade|Latin exhortari (to encourage)|The coach would ______ the players to keep running until the final whistle.
+exorbitant|adj|unreasonably high, especially in price|excessive, outrageous, steep|reasonable, cheap|Latin exorbitare (to go out of the track)|The concert tickets were ______, costing more than a week's wages.
+expedient|adj|convenient and practical, even if not fair or moral|convenient, practical, advantageous|inconvenient, principled|Latin expedire (to free the feet)|Rather than fixing the roof properly, the owner chose the ______ solution of covering it with a tarp.
+extol|v|to praise enthusiastically|praise, celebrate, glorify|criticize, belittle|Latin extollere (to raise up)|Food critics continue to ______ the small café's homemade pies.
+facetious|adj|treating serious issues with inappropriate humor|flippant, joking, frivolous|serious, earnest|Latin facetia (jest)|{{NAME_1}}'s ______ remark during the serious meeting was met with silence.
+fallacious|adj|based on a mistaken belief or bad reasoning|false, erroneous, misleading|accurate, valid|Latin fallax (deceptive)|The ad's claim that the pill made people smarter was ______.
+fathom|v|to understand something after much thought|understand, comprehend, grasp|misunderstand, misconstrue|Old English faethm (outstretched arms)|{{NAME_1}} could not ______ why anyone would leave the party before the fireworks.
+fecund|adj|producing much new growth; fertile|fertile, productive, prolific|barren, sterile|Latin fecundus (fruitful)|The river valley's ______ soil produced enormous harvests.
+felicitous|adj|well chosen or suited to the situation|apt, fitting, appropriate|inappropriate, inapt|Latin felix (happy, lucky)|{{NAME_1}}'s ______ choice of words calmed the angry crowd.
+fervor|n|intense and passionate feeling|passion, zeal, enthusiasm|apathy, indifference|Latin fervere (to boil)|The crowd sang the anthem with real ______.
+flagrant|adj|conspicuously and shockingly bad|blatant, glaring, outrageous|minor, subtle|Latin flagrare (to blaze)|The foul was so ______ that the player was sent off immediately.
+flippant|adj|not showing proper seriousness|frivolous, glib, offhand|serious, respectful|perhaps from flip (to toss)|The judge did not appreciate the witness's ______ answers.
+florid|adj|elaborately decorated; overly fancy in style|ornate, flowery, elaborate|plain, simple|Latin floridus (flowery)|The novel's ______ descriptions went on for pages.
+foible|n|a minor weakness or odd habit|quirk, weakness, flaw|strength, virtue|French faible (weak)|Being late to everything was {{NAME_1}}'s only real ______.
+foment|v|to stir up trouble or rebellion|incite, provoke, instigate|quell, calm|Latin fomentum (poultice)|The spies were sent to ______ unrest in the rival kingdom.
+forbearance|n|patient self-control and tolerance|patience, tolerance, restraint|impatience, intolerance|Old English forberan (to endure)|The teacher showed great ______ with the noisy class.
+forthright|adj|direct and outspoken|frank, direct, candid|evasive, secretive|Old English forthriht (straightforward)|{{NAME_1}} was ______ about the problem, explaining it plainly to everyone.
+fractious|adj|irritable and quarrelsome; hard to control|unruly, quarrelsome, irritable|calm, cooperative|from fraction (in the old sense of discord)|The ______ meeting ended without any decisions.
+frenetic|adj|fast, energetic, and disorganized|frantic, hectic, frenzied|calm, leisurely|Greek phrenitis (delirium)|The kitchen was ______ during the dinner rush, with cooks shouting orders.
+furtive|adj|done secretly to avoid being noticed|secretive, sly, stealthy|open, honest|Latin furtivus (stolen)|{{NAME_1}} cast ______ glances at the clock, hoping the meeting would end soon.
+garrulous|adj|excessively talkative|talkative, chatty, loquacious|reserved, taciturn|Latin garrire (to chatter)|The ______ passenger talked nonstop for the entire five-hour flight.
+gauche|adj|lacking ease or grace; socially awkward|awkward, clumsy, tactless|graceful, polished|French gauche (left, awkward)|It seemed ______ to check your phone during the wedding toast.
+germane|adj|relevant to the subject being discussed|relevant, pertinent, related|irrelevant, unrelated|Latin germanus (of the same parents)|Only facts ______ to the case may be mentioned in court.
+grandiose|adj|impressive but too ambitious or showy|pompous, extravagant, overblown|modest, simple|Italian grandioso (grand)|The architect's ______ plans called for a palace with five hundred rooms.
+guile|n|sly or cunning intelligence|cunning, craftiness, deceit|honesty, sincerity|Old French guile (deceit)|The fox in the fable used ______ to trick the crow into dropping the cheese.
+hackneyed|adj|used so often that it is no longer interesting|clichéd, trite, overused|original, fresh|from Hackney, where horses were hired out|Writers are told to avoid openings as ______ as "It was a dark and stormy night."
+harangue|v|to lecture someone at length in an aggressive way|lecture, rant at, berate|praise, compliment|Old French arenge (speech)|The coach would ______ the team for an hour after every loss.
+hedonist|n|a person who believes pleasure is the most important thing|pleasure-seeker, sybarite, epicurean|ascetic, puritan|Greek hedone (pleasure)|The ______ spent every penny on parties and fancy dinners.
+heresy|n|a belief strongly opposed to accepted views|dissent, nonconformity, heterodoxy|orthodoxy, conformity|Greek hairesis (choice)|In the restaurant, suggesting ketchup on the steak was considered ______.
+hiatus|n|a pause or break in activity|break, pause, interruption|continuation, resumption|Latin hiatus (opening)|The band returned from a five-year ______ with a brand-new album.
+hubris|n|excessive pride or self-confidence|arrogance, conceit, overconfidence|humility, modesty|Greek hybris (insolence)|The champion's ______ cost him the match; he barely trained for it.
+iconoclast|n|a person who attacks cherished beliefs or institutions|rebel, critic, dissenter|conformist, traditionalist|Greek eikon (image) + klastes (breaker)|The young chef was the kitchen's biggest ______, refusing to follow any traditional recipe.
+idiosyncrasy|n|a distinctive or peculiar habit|quirk, peculiarity, eccentricity|normality, conformity|Greek idios (own) + synkrasis (mixture)|{{NAME_1}}'s strangest ______ is humming while doing math homework.
+ignominious|adj|deserving or causing public disgrace|humiliating, shameful, disgraceful|honorable, glorious|Latin ignominia (disgrace)|The favorites' 10–0 defeat was ______, and the players hid from reporters afterward.
+illicit|adj|forbidden by law, rules, or custom|illegal, unlawful, forbidden|legal, lawful|Latin illicitus (not allowed)|Police shut down the ______ fireworks factory hidden in the warehouse.
+immutable|adj|unchanging over time|unchangeable, fixed, permanent|changeable, variable|Latin immutabilis (unchangeable)|The laws of physics are ______; they work the same everywhere.
+impassive|adj|not showing or feeling emotion|expressionless, emotionless, stoic|emotional, expressive|im- + passive|The guard's face remained ______ as tourists tried to make him laugh.
+impeccable|adj|in accordance with the highest standards; faultless|flawless, perfect, faultless|flawed, imperfect|Latin impeccabilis (not liable to sin)|{{NAME_1}}'s manners were ______, so the grandparents adored {{NAME_1_OBJ}}.
+impecunious|adj|having little or no money|poor, penniless, broke|wealthy, rich|Latin pecunia (money)|The ______ artist traded paintings for meals at the local diner.
+imperious|adj|arrogant and domineering|domineering, overbearing, bossy|humble, meek|Latin imperium (command)|The ______ queen expected everyone to obey her without question.
+impertinent|adj|not showing proper respect; rude|rude, insolent, impudent|polite, respectful|Latin impertinens (not belonging)|The ______ student talked back to the principal.
+impetuous|adj|acting quickly without thought or care|impulsive, rash, hasty|cautious, careful|Latin impetus (assault)|Being ______, {{NAME_1}} quit the team after one bad game and regretted it the next day.
+implacable|adj|unable to be calmed or satisfied|relentless, unforgiving, inexorable|forgiving, appeasable|Latin implacabilis (not appeasable)|The general's enemy was ______ and would never accept any offer of peace.
+inane|adj|silly; lacking sense or meaning|silly, foolish, senseless|sensible, meaningful|Latin inanis (empty)|The talk show host asked ______ questions that no one wanted answered.
+incendiary|adj|tending to stir up conflict; designed to cause fires|inflammatory, provocative, rabble-rousing|calming, soothing|Latin incendere (to set on fire)|The blogger's ______ post started a fierce online argument.
+incisive|adj|intelligently analytical and clear|sharp, perceptive, penetrating|dull, vague|Latin incidere (to cut into)|The critic's ______ review pointed out exactly why the plot failed.
+incongruous|adj|out of place; not in harmony with the surroundings|inappropriate, out of place, discordant|appropriate, fitting|Latin incongruus (inconsistent)|The bright pink house looked ______ on the street of gray stone buildings.
+incorrigible|adj|unable to be corrected or reformed|hopeless, incurable, unreformable|reformable, manageable|Latin incorrigibilis (not correctable)|The puppy was ______, chewing shoes no matter how often it was scolded.
+indefatigable|adj|persisting tirelessly|tireless, untiring, relentless|tired, lazy|Latin in- + defatigare (to wear out)|The ______ volunteers worked through the night to fill sandbags.
+indolent|adj|wanting to avoid activity or effort; lazy|lazy, idle, sluggish|industrious, energetic|Latin indolentia (freedom from pain)|The ______ cat slept in the sun all day.
+inexorable|adj|impossible to stop or prevent|relentless, unstoppable, inevitable|stoppable, avoidable|Latin inexorabilis (unyielding)|The ______ advance of the glacier destroyed everything in its path.
+ingenuous|adj|innocent and unsuspecting|naive, innocent, trusting|cunning, worldly|Latin ingenuus (freeborn, frank)|The ______ child believed every story the older kids told her.
+insatiable|adj|impossible to satisfy|unquenchable, greedy, voracious|satisfied, content|Latin insatiabilis (not to be satisfied)|{{NAME_1}}'s appetite for mystery novels is ______; {{NAME_1}} reads three a week and always wants more.
+insolent|adj|rude and disrespectful|rude, impudent, disrespectful|polite, respectful|Latin insolens (unaccustomed, arrogant)|The ______ customer insulted the waiter and refused to pay.
+intransigent|adj|refusing to change one's views|stubborn, uncompromising, inflexible|flexible, compromising|Spanish intransigente (uncompromising)|Because both sides were ______, the negotiations collapsed.
+intrepid|adj|fearless and adventurous|fearless, bold, daring|timid, cowardly|Latin intrepidus (not alarmed)|The ______ explorers crossed the frozen sea on foot.
+inundate|v|to overwhelm with things or people; to flood|flood, overwhelm, swamp|trickle, drain|Latin inundare (to flood)|Fans began to ______ the singer with messages after her surprise announcement.
+invective|n|insulting, abusive language|abuse, insults, vituperation|praise, compliments|Latin invehere (to attack with words)|The angry letter was full of ______ against the city council.
+irascible|adj|easily made angry|irritable, short-tempered, cranky|easygoing, calm|Latin irasci (to grow angry)|The ______ old neighbor yelled at anyone who stepped on his lawn.
+itinerant|adj|traveling from place to place|wandering, roaming, nomadic|settled, stationary|Latin iter (journey)|The ______ musicians played in a different town every night.
+jocular|adj|fond of joking; humorous|humorous, playful, jokey|serious, solemn|Latin jocus (joke)|The coach's ______ manner made even hard practices fun.
+jubilant|adj|feeling or expressing great joy|joyful, triumphant, elated|sad, dejected|Latin jubilare (to shout for joy)|The ______ crowd poured onto the field after the final whistle.
+lackadaisical|adj|lacking enthusiasm and determination; careless|careless, lazy, half-hearted|enthusiastic, diligent|from lackaday (an expression of sorrow)|The team's ______ effort in practice showed in their sloppy play.
+languid|adj|slow and relaxed; lacking energy|slow, relaxed, listless|energetic, lively|Latin languere (to be faint)|The cat's stretch was slow and ______, as if it had nowhere to be all day.
+largesse|n|generosity in giving gifts or money|generosity, charity, bounty|stinginess, greed|French largesse (generosity)|Thanks to a local company's ______, every student got a new laptop.
+laud|v|to praise highly|praise, acclaim, celebrate|criticize, condemn|Latin laus (praise)|Critics continue to ______ the young poet for her daring style.
+lethargy|n|lack of energy or enthusiasm|sluggishness, fatigue, inertia|energy, vigor|Greek lethargia (forgetfulness)|A wave of ______ swept over the class after lunch.
+levity|n|humor or lack of seriousness|humor, lightheartedness, frivolity|seriousness, gravity|Latin levis (light)|A little ______ helped lighten the mood during the long meeting.
+lionize|v|to treat someone as a celebrity|celebrate, glorify, idolize|ignore, vilify|from lion (a celebrity, in old slang)|The town began to ______ the young swimmer after her gold medal.
+ludicrous|adj|so foolish as to be amusing; absurd|absurd, ridiculous, preposterous|sensible, reasonable|Latin ludus (play)|The idea that the cat had done the homework was ______.
+lugubrious|adj|looking or sounding sad and dismal|mournful, gloomy, somber|cheerful, joyful|Latin lugere (to mourn)|The ______ music made the movie feel even sadder.
+luminous|adj|bright or shining, especially in the dark|glowing, radiant, brilliant|dark, dim|Latin lumen (light)|The ______ clock face was easy to read in the dark bedroom.
+`);
+
+
+/* ===== js/vocab/bank-adv-3.js ===== */
+// Vocab Vault bank: advanced words, M–R. Format: see js/vocab/bank.js.
+window.SatWizzBank("advanced", `
+machination|n|a scheming or crafty plot|scheme, plot, intrigue|honesty, openness|Latin machinari (to contrive)|The villain's ______ were finally exposed in the last chapter of the novel.
+magnate|n|a wealthy and influential person in business|tycoon, mogul, baron|nobody, pauper|Latin magnus (great)|The shipping ______ owned more than two hundred cargo vessels.
+malevolent|adj|wishing to do evil to others|malicious, spiteful, hostile|benevolent, kind|Latin male (badly) + volens (wishing)|The ______ witch in the fairy tale cursed the entire kingdom.
+malign|v|to speak harmful untruths about someone|slander, defame, disparage|praise, compliment|Latin malignare (to contrive maliciously)|The rival candidate tried to ______ her with false rumors.
+maudlin|adj|self-pityingly or tearfully sentimental|sentimental, mawkish, weepy|unsentimental, restrained|from Mary Magdalene, often painted weeping|The ______ movie made {{NAME_1}} roll {{NAME_1_POSS}} eyes instead of cry.
+maxim|n|a short statement expressing a general truth|saying, proverb, adage|nonsense, babble|Latin maxima (greatest premise)|"Practice makes perfect" was the coach's favorite ______.
+mendacious|adj|not telling the truth; lying|lying, dishonest, untruthful|honest, truthful|Latin mendax (lying)|The ______ salesman claimed the used car had never been in an accident.
+mercenary|adj|primarily concerned with making money|greedy, money-oriented, grasping|generous, altruistic|Latin merces (wages)|The team's ______ owner moved them to a new city for a bigger stadium deal.
+minutiae|n|small, precise, or trivial details|details, particulars, trivia|essentials, fundamentals|Latin minutia (smallness)|{{NAME_1}} got lost in the ______ of the rules and forgot the main goal of the game.
+misanthrope|n|a person who dislikes humankind|cynic, recluse, hater of people|philanthropist, humanitarian|Greek misein (to hate) + anthropos (person)|The grumpy ______ in the story refuses to speak to any of his neighbors.
+moribund|adj|at the point of death; no longer effective|dying, declining, failing|thriving, flourishing|Latin mori (to die)|The once-busy mall was ______, with most of its stores closed.
+morose|adj|sullen and ill-tempered|gloomy, sullen, glum|cheerful, happy|Latin morosus (peevish)|After losing the game, the players sat ______ and silent on the bus.
+munificent|adj|very generous|generous, lavish, bountiful|stingy, miserly|Latin munus (gift)|The donor was so ______ that she paid for every student's field trip.
+myopic|adj|lacking imagination or foresight; nearsighted|shortsighted, narrow-minded, unimaginative|farsighted, visionary|Greek myops (nearsighted)|Cutting the art budget to save money was ______, since it hurt the school's reputation.
+nadir|n|the lowest point|bottom, low point, depths|peak, summit|Arabic nazir (opposite)|The team reached its ______ in March, losing eight games in a row.
+nascent|adj|just beginning to exist or develop|emerging, budding, developing|mature, established|Latin nasci (to be born)|The ______ company had only three employees and one tiny office.
+nebulous|adj|unclear, vague, or ill-defined|vague, hazy, unclear|clear, definite|Latin nebula (mist)|{{NAME_1}}'s plans for the summer were still ______, with no dates or places chosen.
+nefarious|adj|wicked or criminal|wicked, evil, villainous|good, virtuous|Latin nefas (wrong)|The detective uncovered the gang's ______ plot to rob the bank.
+neophyte|n|a beginner in a particular activity|beginner, novice, newcomer|expert, veteran|Greek neophytos (newly planted)|As a chess ______, {{NAME_1}} still forgot how the knight moves.
+nonplussed|adj|so surprised and confused that one is unsure how to react|baffled, bewildered, perplexed|composed, unfazed|Latin non plus (no further)|{{NAME_1}} was ______ when the teacher announced a test that no one had heard about.
+nostalgia|n|a sentimental longing for the past|longing, wistfulness, reminiscence|indifference, forward-looking|Greek nostos (return home) + algos (pain)|Looking at old photos filled {{NAME_1}} with ______ for summer camp.
+notoriety|n|the state of being famous for something bad|infamy, disrepute, ill fame|good reputation, honor|Latin notorius (well known)|The hacker gained ______ after shutting down the city's website.
+noxious|adj|harmful, poisonous, or very unpleasant|toxic, poisonous, harmful|harmless, safe|Latin noxa (harm)|The factory released ______ fumes that made nearby residents sick.
+oblique|adj|indirect; not straightforward|indirect, roundabout, implied|direct, explicit|Latin obliquus (slanting)|{{NAME_1}}'s hints about the surprise party were ______; {{NAME_1}} never said it outright.
+obliterate|v|to destroy completely|destroy, wipe out, demolish|preserve, build|Latin obliterare (to strike out)|The tornado threatened to ______ everything in its path.
+oblivious|adj|not aware of what is happening|unaware, unconscious, heedless|aware, conscious|Latin oblivisci (to forget)|Wearing headphones, {{NAME_1}} was ______ to the fire alarm.
+obstreperous|adj|noisy and difficult to control|unruly, rowdy, boisterous|quiet, obedient|Latin obstrepere (to make a noise against)|The ______ fans were escorted out of the stadium.
+obtuse|adj|slow to understand|dense, slow, unintelligent|sharp, perceptive|Latin obtusus (blunted)|{{NAME_1}} pretended to be ______ so that {{NAME_1}} would not have to answer the awkward question.
+odious|adj|extremely unpleasant; hateful|hateful, repulsive, detestable|delightful, pleasant|Latin odium (hatred)|Cleaning the fish tank was {{NAME_1}}'s most ______ chore.
+officious|adj|too eager to give orders or advice|meddlesome, bossy, interfering|unobtrusive, reserved|Latin officium (duty)|The ______ hall monitor wrote up students for walking too slowly.
+onerous|adj|involving heavy effort or difficulty|burdensome, demanding, oppressive|easy, light|Latin onus (burden)|Grading two hundred essays in one weekend was ______ for the teacher.
+opportunist|n|a person who takes advantage of chances without regard for principles|exploiter, self-seeker, schemer|idealist, altruist|French opportunisme|The ______ raised his prices as soon as the storm warning was announced.
+opulent|adj|rich and luxurious|luxurious, lavish, sumptuous|plain, modest|Latin opulentus (wealthy)|The hotel lobby was ______, with marble floors and crystal chandeliers.
+orator|n|a skilled public speaker|speaker, lecturer, rhetorician|listener, mumbler|Latin orare (to speak)|The famous ______ held the audience spellbound for two hours.
+ornate|adj|elaborately decorated|elaborate, decorative, fancy|plain, simple|Latin ornare (to adorn)|The old theater had ______ ceilings covered in gold leaf.
+ostracize|v|to exclude from a group|exclude, shun, banish|include, welcome|Greek ostrakon (pottery shard used in voting)|The other birds would ______ the injured gull, refusing to let it near the flock.
+palliate|v|to make less severe without curing|ease, alleviate, soothe|aggravate, worsen|Latin pallium (cloak)|The medicine can ______ the pain but cannot cure the disease.
+palpable|adj|so intense it seems almost touchable; obvious|tangible, obvious, noticeable|imperceptible, intangible|Latin palpare (to touch gently)|The tension in the room was ______ as everyone waited for the results.
+panacea|n|a solution claimed to cure all problems|cure-all, remedy, elixir|poison, problem|Greek pan (all) + akos (remedy)|Technology is no ______ for every problem in education.
+paragon|n|a model of excellence|model, ideal, epitome|failure, disgrace|Italian paragone (touchstone)|The new teacher was the very ______ of patience, never once raising her voice.
+parsimonious|adj|extremely unwilling to spend money|stingy, miserly, frugal|generous, lavish|Latin parsimonia (thrift)|The ______ owner refused to fix the heater even in January.
+pathos|n|a quality that stirs pity or sadness|poignancy, sadness, tragedy|comedy, cheer|Greek pathos (suffering)|The scene where the dog waits for its owner is full of ______.
+pedantic|adj|overly concerned with minor details or rules|nitpicking, fussy, overprecise|easygoing, flexible|Italian pedante (teacher)|The ______ editor corrected every comma, even in casual emails.
+pejorative|adj|expressing contempt or disapproval|derogatory, disparaging, insulting|complimentary, flattering|Latin pejor (worse)|"Nerd" was once ______, but many people now use it proudly.
+penitent|adj|feeling sorrow for wrongdoing|remorseful, repentant, contrite|unrepentant, defiant|Latin paenitere (to repent)|The ______ thief returned the stolen bike and apologized.
+pensive|adj|engaged in deep or serious thought|thoughtful, reflective, contemplative|thoughtless, carefree|French penser (to think)|{{NAME_1}} sat ______ by the window, thinking about the big decision.
+perfidious|adj|deceitful and untrustworthy|treacherous, disloyal, faithless|loyal, faithful|Latin perfidia (treachery)|The ______ advisor sold the king's secrets to his enemies.
+peripatetic|adj|traveling from place to place|itinerant, nomadic, wandering|settled, stationary|Greek peripatein (to walk about)|The ______ reporter lived out of a suitcase, moving to a new country every month.
+perspicacious|adj|having a ready insight into things|perceptive, astute, shrewd|obtuse, dull|Latin perspicax (sharp-sighted)|The ______ detective noticed the tiny scratch on the doorframe.
+petulant|adj|childishly sulky or bad-tempered|sulky, peevish, irritable|good-natured, easygoing|Latin petulans (impudent)|The ______ toddler threw his toys when he did not get candy.
+philanthropist|n|a person who gives money to help others|benefactor, donor, patron|miser, misanthrope|Greek philein (to love) + anthropos (person)|The ______ funded scholarships for hundreds of students.
+pious|adj|devoutly religious|devout, religious, reverent|irreverent, impious|Latin pius (dutiful)|The ______ villagers attended services every morning.
+placate|v|to make someone less angry|appease, pacify, soothe|enrage, provoke|Latin placare (to please)|The airline offered vouchers to ______ the stranded passengers.
+platitude|n|a remark used too often to be interesting|cliché, truism, commonplace|insight, original remark|French plat (flat)|"Everything happens for a reason" is the kind of ______ that rarely comforts anyone.
+plethora|n|an excessive amount|excess, abundance, surplus|shortage, scarcity|Greek plethore (fullness)|The ______ of choices on the new menu is overwhelming; no one could try them all in a year.
+poignant|adj|evoking a keen sense of sadness or regret|moving, touching, affecting|unemotional, comic|Latin pungere (to prick)|The final scene, where the friends say goodbye, was especially ______.
+polemic|n|a strong written or spoken attack on something|attack, criticism, diatribe|praise, defense|Greek polemos (war)|The author's latest book is one long ______ against social media.
+ponderous|adj|slow and clumsy because of great weight; dull|heavy, cumbersome, tedious|light, lively|Latin pondus (weight)|The elephant moved with ______ steps across the river.
+precocious|adj|having developed certain abilities earlier than usual|advanced, gifted, mature|slow, backward|Latin praecox (early ripening)|The ______ child was reading novels at age four.
+predilection|n|a preference or special liking for something|preference, fondness, partiality|dislike, aversion|French prédilection|{{NAME_1}}'s ______ for spicy food surprised everyone at the table.
+presumptuous|adj|failing to observe the limits of what is appropriate|arrogant, forward, bold|modest, humble|Latin praesumere (to take beforehand)|It was ______ of {{NAME_1}} to start planning the victory party before the game.
+prevaricate|v|to speak or act evasively to avoid the truth|equivocate, dodge, hedge|be direct, be honest|Latin praevaricari (to walk crookedly)|When asked where the money went, the treasurer began to ______.
+probity|n|the quality of having strong moral principles|integrity, honesty, uprightness|dishonesty, corruption|Latin probus (good)|The judge was known for her ______; no one ever questioned her fairness.
+proclivity|n|a tendency to choose or do something regularly|tendency, inclination, propensity|aversion, dislike|Latin proclivis (sloping)|{{NAME_1}}'s ______ for staying up late made mornings difficult.
+prodigal|adj|spending money or resources wastefully|wasteful, extravagant, spendthrift|thrifty, frugal|Latin prodigus (lavish)|The ______ heir spent his entire fortune in two years.
+prodigious|adj|remarkably great in extent, size, or degree|enormous, immense, remarkable|small, ordinary|Latin prodigium (portent)|The young pianist had ______ talent, playing concertos at age nine.
+profligate|adj|recklessly extravagant or wasteful|wasteful, extravagant, reckless|thrifty, frugal|Latin profligare (to ruin)|The company's ______ spending on parties led to bankruptcy.
+proliferate|v|to increase rapidly in number|multiply, spread, mushroom|decrease, dwindle|Latin proles (offspring)|Coffee shops seem to ______ in every new neighborhood.
+propagate|v|to spread and promote an idea or belief widely|spread, promote, disseminate|suppress, contain|Latin propagare (to multiply plants)|The website was accused of trying to ______ false rumors.
+propitious|adj|giving or indicating a good chance of success|favorable, auspicious, promising|unfavorable, inauspicious|Latin propitius (favorable)|Clear skies and calm winds made the morning ______ for the rocket launch.
+prosaic|adj|lacking imagination or excitement; dull|dull, ordinary, mundane|imaginative, exciting|Latin prosa (prose)|The movie's ______ dialogue made even the action scenes boring.
+proscribe|v|to forbid, especially by law|forbid, ban, prohibit|allow, permit|Latin proscribere (to publish in writing)|The city decided to ______ fireworks within its limits.
+protracted|adj|lasting longer than expected or usual|prolonged, lengthy, extended|brief, short|Latin protrahere (to prolong)|After ______ negotiations, the two sides finally signed the deal.
+provincial|adj|having narrow or unsophisticated views|narrow-minded, parochial, insular|cosmopolitan, worldly|Latin provincia (province)|Some city visitors wrongly assumed the villagers would be ______.
+prudence|n|the quality of being cautious|caution, wisdom, care|recklessness, carelessness|Latin prudentia (foresight)|Saving part of every paycheck showed real ______.
+pugnacious|adj|eager to argue or fight|combative, aggressive, belligerent|peaceful, agreeable|Latin pugnax (combative)|The ______ goose chased every visitor out of the farmyard.
+punctilious|adj|showing great attention to detail or correct behavior|meticulous, careful, scrupulous|careless, lax|Italian puntiglio (fine point)|The ______ butler made sure every fork was perfectly aligned.
+quagmire|n|a difficult and complicated situation; a bog|predicament, mess, swamp|solution, way out|quag (marsh) + mire (bog)|Stuck in the ______ of paperwork and lawsuits, the project stalled for years.
+quandary|n|a state of uncertainty about what to do|dilemma, predicament, plight|certainty, solution|origin unknown, perhaps Latin quando (when)|{{NAME_1}} faced quite the ______: both teams wanted {{NAME_1}} as their captain.
+querulous|adj|complaining in a petty or whining way|whining, peevish, grumbling|contented, uncomplaining|Latin queri (to complain)|The ______ passenger complained about everything from the seats to the snacks.
+rancor|n|bitterness or resentfulness, especially long-lasting|bitterness, resentment, hostility|goodwill, friendship|Latin rancor (rancidness)|Despite the close race, the candidates parted without ______.
+rapacious|adj|aggressively greedy|greedy, grasping, predatory|generous, giving|Latin rapere (to seize)|The ______ landlord raised the rent every six months.
+raucous|adj|making a harsh, loud noise|noisy, rowdy, boisterous|quiet, soft|Latin raucus (hoarse)|The ______ crowd at the game could be heard a mile away.
+rebuff|v|to reject in a sudden or ungracious way|reject, refuse, snub|accept, welcome|Italian ribuffo (reproof)|{{NAME_1}} tried to make peace, but {{NAME_2}} chose to ______ the offer.
+recant|v|to publicly withdraw a statement or belief|retract, withdraw, take back|reaffirm, maintain|Latin recantare (to revoke)|Under pressure, the witness decided to ______ her earlier testimony.
+reclusive|adj|avoiding the company of other people|solitary, withdrawn, hermitlike|sociable, outgoing|Latin recludere (to shut away)|The ______ author never gave interviews and lived alone in the mountains.
+redolent|adj|strongly reminiscent of something; fragrant|evocative, suggestive, fragrant|odorless, unreminiscent|Latin redolere (to emit a scent)|The old house was ______ of cinnamon and wood smoke.
+refurbish|v|to renovate and redecorate|renovate, restore, revamp|neglect, damage|re- + furbish (to polish)|The school plans to ______ the auditorium over the summer.
+relegate|v|to assign to a lower position|demote, downgrade, consign|promote, elevate|Latin relegare (to send away)|After the injury, the star player was ______ to the bench.
+relinquish|v|to voluntarily give up|surrender, give up, abandon|keep, retain|Latin relinquere (to leave behind)|The king refused to ______ his crown.
+remiss|adj|lacking care or attention to duty|negligent, careless, lax|careful, diligent|Latin remissus (slack)|It would be ______ of me not to thank everyone who helped.
+renegade|n|a person who abandons a cause or group|traitor, rebel, defector|loyalist, follower|Spanish renegado (apostate)|The ______ left the gang and helped police catch the others.
+replete|adj|filled or well supplied with something|full, packed, abundant|empty, lacking|Latin replere (to fill again)|The report was ______ with charts and graphs.
+reprehensible|adj|deserving condemnation|shameful, disgraceful, inexcusable|admirable, praiseworthy|Latin reprehendere (to blame)|Cheating on the exam was ______ behavior.
+reprieve|n|a temporary relief from something unpleasant|respite, break, relief|continuation, sentence|Old French repris (taken back)|The players welcomed the ______ from practice that the sudden rainstorm gave them.
+reproach|v|to express disappointment or disapproval|criticize, scold, rebuke|praise, approve|Old French reprochier (to bring back)|{{NAME_1}}'s parents did not ______ {{NAME_1_OBJ}} for the low grade, but encouraged harder study.
+rescind|v|to revoke or cancel a law or agreement|cancel, revoke, repeal|enact, enforce|Latin rescindere (to cut off)|The school decided to ______ the new dress code after student protests.
+restive|adj|unable to keep still; resisting control|restless, fidgety, unruly|calm, relaxed|Old French restif (stubborn)|The ______ audience began to whisper as the delay stretched on.
+reticent|adj|not revealing one's thoughts or feelings readily|reserved, quiet, reluctant|forthcoming, talkative|Latin reticere (to keep silent)|{{NAME_1}} was ______ about the injury, saying only that {{NAME_1}} was fine.
+reverent|adj|feeling or showing deep respect|respectful, admiring, awed|irreverent, disrespectful|Latin revereri (to revere)|The crowd fell ______ and silent as the old veteran spoke.
+rhetoric|n|the art of persuasive speaking or writing; empty talk|oratory, eloquence, bombast|plain speech, substance|Greek rhetor (orator)|The candidate's speech was all ______ and no specific plans.
+ribald|adj|humorous in a coarse, vulgar way|vulgar, bawdy, crude|clean, proper|Old French ribauld (rascal)|The comedian's ______ jokes made some parents leave the show.
+rife|adj|widespread, especially of something bad|widespread, rampant, common|rare, scarce|Old Norse rifr (abundant)|The old essay was ______ with spelling errors.
+ruminate|v|to think deeply about something|ponder, reflect, contemplate|ignore, forget|Latin ruminare (to chew the cud)|{{NAME_1}} tends to ______ on mistakes long after everyone else has forgotten them.
+ruse|n|an action intended to deceive|trick, ploy, scheme|honesty, candor|Old French ruser (to drive back)|The fake phone call was just part of the ______ to get the teacher out of the room.
+`);
+
+
+/* ===== js/vocab/bank-adv-4.js ===== */
+// Vocab Vault bank: advanced words, S–Z. Format: see js/vocab/bank.js.
+window.SatWizzBank("advanced", `
+saccharine|adj|excessively sweet or sentimental|sugary, syrupy, mawkish|bitter, unsentimental|Latin saccharum (sugar)|The movie's ______ ending, with everyone hugging in the rain, made critics groan.
+sacrosanct|adj|too important or valuable to be changed or questioned|sacred, untouchable, inviolable|unimportant, open to change|Latin sacro (sacred) + sanctus (holy)|For {{NAME_1}}, Sunday family dinner is ______; nothing is allowed to interfere.
+sagacious|adj|having good judgment and keen insight|wise, shrewd, perceptive|foolish, unwise|Latin sagax (keen)|The ______ old captain could predict storms by watching the birds.
+salubrious|adj|good for health; pleasant|healthy, wholesome, beneficial|unhealthy, harmful|Latin salus (health)|People once traveled to the mountains for the ______ air.
+sanctimonious|adj|acting morally superior to others|self-righteous, preachy, smug|humble, modest|Latin sanctimonia (holiness)|The ______ neighbor lectured everyone about recycling but never recycled himself.
+sardonic|adj|grimly mocking or cynical|mocking, sarcastic, scornful|sincere, earnest|Greek sardonios (bitter laughter)|Told that the bus would be "just a little late" again, {{NAME_1}} gave a smile that was purely ______.
+satiate|v|to satisfy fully|satisfy, fill, quench|starve, deprive|Latin satis (enough)|The huge meal was enough to ______ even the hungriest hikers.
+scathing|adj|harshly critical|harsh, severe, withering|gentle, complimentary|Old Norse skatha (to harm)|The critic's ______ review called the play "three hours of my life I will never get back."
+scintillating|adj|sparkling or shining brightly; brilliantly clever|sparkling, brilliant, dazzling|dull, boring|Latin scintilla (spark)|The guests enjoyed ______ conversation late into the night.
+scrupulous|adj|very careful to do things correctly and honestly|careful, meticulous, conscientious|careless, unscrupulous|Latin scrupulus (small sharp stone; worry)|The ______ accountant checked every receipt twice.
+secular|adj|not connected with religious matters|nonreligious, worldly, civil|religious, sacred|Latin saeculum (age, world)|The holiday is celebrated in both religious and ______ ways.
+sedulous|adj|showing dedication and diligence|diligent, assiduous, industrious|lazy, careless|Latin sedulus (zealous)|The ______ student rewrote the essay five times before handing it in.
+seminal|adj|strongly influencing later developments|influential, groundbreaking, formative|unimportant, derivative|Latin semen (seed)|Her ______ paper on climate change shaped decades of later research.
+sententious|adj|given to moralizing in a pompous way|preachy, moralizing, pompous|humble, unassuming|Latin sententia (opinion)|The ______ narrator interrupts the story to lecture readers about honesty.
+serendipity|n|the occurrence of happy events by chance|luck, chance, fortune|misfortune, design|coined from the tale "The Three Princes of Serendip"|By pure ______, {{NAME_1}} sat next to {{NAME_1_POSS}} future business partner on the train.
+servile|adj|excessively willing to please others|obsequious, submissive, fawning|assertive, independent|Latin servus (slave)|The ______ assistant agreed with every word the boss said.
+solicitous|adj|showing interest or concern|attentive, caring, concerned|indifferent, neglectful|Latin sollicitus (anxious)|The ______ nurse checked on her patients every hour.
+soporific|adj|tending to induce sleep|sleep-inducing, sedative, boring|stimulating, invigorating|Latin sopor (deep sleep)|The professor's ______ voice put half the class to sleep.
+specious|adj|seeming reasonable but actually wrong|misleading, deceptive, false|valid, sound|Latin species (appearance)|The ad's ______ claim sounded scientific but had no evidence behind it.
+spurious|adj|not genuine or true; false|false, fake, bogus|genuine, authentic|Latin spurius (illegitimate)|The historian proved that the famous letter was ______.
+squalid|adj|extremely dirty and unpleasant|filthy, dirty, wretched|clean, pristine|Latin squalidus (dirty)|The rescued animals had been living in ______ conditions.
+squander|v|to waste in a reckless way|waste, misuse, fritter away|save, conserve|origin unknown|{{NAME_1}} did not want to ______ the prize money on things {{NAME_1}} did not need.
+staid|adj|sedate and unadventurous|sedate, serious, conventional|adventurous, lively|old past tense of stay|The ______ bank manager had worn the same gray suit for twenty years.
+stalwart|adj|loyal, reliable, and hardworking|loyal, steadfast, dependable|disloyal, unreliable|Old English stael (place) + wierthe (worthy)|The ______ volunteers showed up every Saturday for ten years.
+stoic|adj|enduring pain or hardship without complaint|uncomplaining, patient, impassive|emotional, complaining|Greek Stoa (porch where the Stoics taught)|The ______ runner finished the race on a sprained ankle without a word.
+strident|adj|loud and harsh; presenting views forcefully|harsh, shrill, forceful|soft, mild|Latin stridere (to creak)|The protesters' ______ chants echoed through the square.
+stupefy|v|to astonish or shock someone|astonish, amaze, stun|bore, underwhelm|Latin stupere (to be stunned)|The magician's final trick seemed to ______ the entire audience.
+stymie|v|to prevent or hinder progress|hinder, thwart, obstruct|help, assist|from golf (a ball blocking the path)|A lack of funding continues to ______ the research project.
+subjugate|v|to bring under control by force|conquer, suppress, subdue|liberate, free|Latin sub (under) + jugum (yoke)|The empire tried to ______ the neighboring kingdoms.
+sublime|adj|of such excellence or beauty as to inspire great admiration|magnificent, glorious, awe-inspiring|ordinary, ugly|Latin sublimis (lofty)|The view from the mountaintop was truly ______.
+subversive|adj|seeking to undermine an established system|rebellious, revolutionary, seditious|loyal, conformist|Latin subvertere (to overturn)|The government banned the ______ newspaper.
+succor|n|help and support in times of hardship|help, aid, relief|hindrance, harm|Latin succurrere (to run to help)|The shelter offered ______ to families who had lost their homes.
+supplant|v|to take the place of; to replace|replace, displace, supersede|retain, maintain|Latin supplantare (to trip up)|Many experts expected streaming to ______ cable television.
+surfeit|n|an excessive amount of something|excess, glut, surplus|shortage, lack|Old French sorfait (excess)|After the ______ of holiday candy, nobody wanted dessert for a week.
+surmise|v|to suppose something without proof|guess, suppose, conjecture|know, prove|Old French surmettre (to accuse)|From the muddy boots, {{NAME_1}} could ______ that it had rained.
+sycophant|n|a person who flatters someone powerful to gain advantage|flatterer, toady, yes-man|critic, rebel|Greek sykophantes (informer)|The king's favorite ______ never told him the truth, only what he wanted to hear.
+taciturn|adj|reserved; saying little|quiet, reserved, uncommunicative|talkative, chatty|Latin tacitus (silent)|The ______ farmer answered every question with a single word.
+tangential|adj|only slightly connected to the main subject|peripheral, incidental, irrelevant|central, essential|Latin tangere (to touch)|The speaker's ______ stories made it hard to follow her main point.
+tantamount|adj|equivalent in seriousness to|equivalent, equal, comparable|unequal, different|Anglo-French tant amunter (to amount to as much)|Refusing to answer the question was ______ to admitting guilt.
+temperance|n|moderation or self-restraint|moderation, restraint, self-control|excess, indulgence|Latin temperantia (moderation)|{{NAME_1}} showed ______ at the buffet, taking only one plate.
+tenable|adj|able to be defended or maintained|defensible, reasonable, justifiable|untenable, indefensible|Latin tenere (to hold)|Once the new evidence appeared, the old theory was no longer ______.
+tirade|n|a long, angry speech of criticism|rant, diatribe, harangue|praise, compliment|Italian tirata (volley)|The coach's ______ after the loss lasted twenty minutes.
+torpid|adj|mentally or physically inactive|sluggish, lethargic, inactive|energetic, lively|Latin torpere (to be numb)|In the summer heat, even the dogs were ______.
+tractable|adj|easy to control or influence|manageable, compliant, docile|unruly, stubborn|Latin tractare (to handle)|The puppy became more ______ after a few weeks of training.
+transgress|v|to go beyond the limits of what is acceptable|violate, break, overstep|obey, respect|Latin transgredi (to step across)|Players who ______ the rules three times are suspended.
+trenchant|adj|vigorous or incisive in expression|incisive, sharp, cutting|vague, weak|Old French trenchier (to cut)|The editor's ______ comments made every draft better.
+trepidation|n|fear or anxiety about what may happen|fear, apprehension, anxiety|confidence, calm|Latin trepidare (to tremble)|{{NAME_1}} approached the stage with ______ but sang beautifully.
+trite|adj|overused and therefore dull|clichéd, hackneyed, stale|original, fresh|Latin tritus (worn)|The speech was full of ______ phrases like "the sky is the limit."
+truculent|adj|eager to argue or fight; aggressively defiant|defiant, belligerent, combative|cooperative, peaceful|Latin trux (fierce)|The ______ customer refused to leave the store.
+truncate|v|to shorten by cutting off a part|shorten, cut, abbreviate|lengthen, extend|Latin truncare (to maim)|The editor had to ______ the article to fit on one page.
+turpitude|n|depraved or wicked behavior|wickedness, depravity, corruption|virtue, goodness|Latin turpis (shameful)|The senator was removed from office for moral ______.
+umbrage|n|offense or annoyance|offense, resentment, displeasure|pleasure, delight|Latin umbra (shadow)|{{NAME_1}} took ______ at the suggestion that {{NAME_1}} had copied the answers.
+unctuous|adj|excessively flattering or ingratiating|oily, smarmy, obsequious|sincere, genuine|Latin unctus (anointed with oil)|The ______ salesman complimented every customer's taste.
+unequivocal|adj|leaving no doubt; clear|clear, definite, absolute|ambiguous, equivocal|un- + equivocal|The principal's answer was ______: "No, and please don't ask again."
+unfettered|adj|released from restraint|unrestrained, free, unrestricted|restricted, confined|un- + fetter (chain)|With ______ access to the library, {{NAME_1}} read every book on the shelf.
+unscrupulous|adj|having no moral principles|dishonest, unprincipled, corrupt|honest, principled|un- + scrupulous|The ______ dealer sold fake paintings as originals.
+untenable|adj|not able to be defended|indefensible, unsound, weak|defensible, sound|un- + tenable|After the video surfaced, the player's excuse was ______.
+upbraid|v|to scold severely|scold, reprimand, rebuke|praise, compliment|Old English upbregdan (to reproach)|The captain would ______ any sailor who left his post.
+urbane|adj|courteous and refined in manner|sophisticated, suave, polished|crude, unsophisticated|Latin urbanus (of the city)|The ______ diplomat charmed guests from every country.
+usurp|v|to take a position of power illegally or by force|seize, take over, commandeer|surrender, relinquish|Latin usurpare (to seize for use)|The general tried to ______ the throne while the king was away.
+vacuous|adj|lacking thought or intelligence|empty, mindless, inane|thoughtful, intelligent|Latin vacuus (empty)|The interview was ______, with no real questions about the candidate's plans.
+vapid|adj|offering nothing stimulating or challenging|dull, bland, insipid|interesting, stimulating|Latin vapidus (flat, of wine)|The ______ reality show had no plot at all.
+variegated|adj|having different colors in patches|multicolored, mottled, varied|plain, uniform|Latin variegare (to make varied)|The garden's ______ leaves were green, white, and purple.
+venal|adj|willing to do dishonest things for money|corrupt, bribable, mercenary|honest, incorruptible|Latin venalis (for sale)|The ______ official accepted bribes from anyone who asked for a favor.
+veneer|n|a thin decorative surface; a false outward appearance|facade, front, surface|substance, core|German furnieren (to furnish)|Beneath the ______ of politeness, the two rivals despised each other.
+veracity|n|truthfulness; accuracy|truthfulness, accuracy, honesty|falsehood, dishonesty|Latin verax (truthful)|The reporter checked the ______ of every quote.
+verbose|adj|using more words than needed|wordy, long-winded, rambling|concise, succinct|Latin verbum (word)|The ______ essay could have been half as long.
+vestige|n|a trace of something that once existed|trace, remnant, sign|whole, entirety|Latin vestigium (footprint)|One crumbling ______ of the old castle wall still stands in the park.
+vex|v|to make someone annoyed or worried|annoy, irritate, frustrate|please, soothe|Latin vexare (to shake)|The puzzle continued to ______ {{NAME_1}} for days.
+vicarious|adj|experienced through another person's actions|indirect, secondhand, surrogate|direct, firsthand|Latin vicarius (substitute)|{{NAME_1}} felt ______ excitement watching {{NAME_2}} open the college acceptance letter.
+vilify|v|to speak or write about in an abusive way|defame, slander, denigrate|praise, celebrate|Latin vilis (cheap, worthless)|The newspapers began to ______ the coach after the losing streak.
+vindictive|adj|having a strong desire for revenge|vengeful, spiteful, unforgiving|forgiving, merciful|Latin vindicta (vengeance)|The ______ villain plotted for years to get back at the hero.
+virtuoso|n|a person highly skilled in music or another art|master, expert, maestro|amateur, novice|Italian virtuoso (skilled)|The violin ______ played a piece that most musicians would not even attempt.
+virulent|adj|extremely severe or harmful; bitterly hostile|severe, deadly, hostile|mild, harmless|Latin virus (poison)|The ______ flu strain spread through the city in weeks.
+viscous|adj|having a thick, sticky consistency|thick, sticky, syrupy|thin, runny|Latin viscum (birdlime)|Honey is so ______ that it pours very slowly.
+vitriolic|adj|filled with bitter criticism|bitter, caustic, venomous|kind, gentle|from vitriol (sulfuric acid)|The ______ comments on the video were removed by the moderators.
+vivacious|adj|attractively lively and animated|lively, spirited, bubbly|dull, lifeless|Latin vivax (lively)|The ______ host kept the party going all night.
+vociferous|adj|expressing opinions loudly and forcefully|loud, vocal, outspoken|quiet, silent|Latin vox (voice) + ferre (to carry)|The ______ fans booed every call against their team.
+voracious|adj|wanting great quantities of something; very eager|insatiable, ravenous, avid|uninterested, sated|Latin vorare (to devour)|{{NAME_1}}'s appetite for books is ______; {{NAME_1}} finishes one every day.
+wanton|adj|deliberate and unprovoked; without restraint|reckless, malicious, unrestrained|restrained, justified|Middle English wantowen (undisciplined)|The ______ destruction of the park benches angered the whole town.
+wistful|adj|having a feeling of vague longing or regret|nostalgic, longing, melancholy|content, satisfied|from wishful|Feeling ______, {{NAME_1}} looked back at the old house one last time before driving away.
+zenith|n|the highest point|peak, summit, pinnacle|nadir, bottom|Arabic samt ar-ras (path over the head)|At the ______ of her career, the singer filled stadiums around the world.
+abet|v|to encourage or assist someone, especially in wrongdoing|assist, aid, encourage|hinder, prevent|Old French abeter (to bait)|The guard was charged with helping to ______ the prisoner's escape.
+abdicate|v|to give up a position or responsibility|renounce, resign, relinquish|retain, claim|Latin abdicare (to disown)|The aging king decided to ______ the throne in favor of his daughter.
+abscond|v|to leave secretly to avoid arrest or with stolen money|flee, escape, bolt|stay, remain|Latin abscondere (to hide away)|The treasurer tried to ______ with the club's funds.
+affinity|n|a natural liking or connection|liking, fondness, kinship|aversion, dislike|Latin affinis (related)|{{NAME_1}}'s ______ for animals was obvious; stray cats followed {{NAME_1}} everywhere.
+aggrandize|v|to increase the power or status of|exaggerate, inflate, enhance|diminish, belittle|French agrandir (to enlarge)|The dictator built statues to ______ himself.
+amalgam|n|a mixture or blend|mixture, blend, combination|separation, element|Greek malagma (soft mass)|The city's food is a delicious mix, the ______ of flavors from around the world.
+amorphous|adj|without a clear shape or form|shapeless, formless, vague|defined, shaped|Greek a- (without) + morphe (form)|The club's plans were still ______, with no clear goals or dates.
+antipathy|n|a deep-seated feeling of dislike|dislike, hostility, aversion|affection, liking|Greek anti (against) + pathos (feeling)|{{NAME_1}}'s ______ toward spiders was so strong that {{NAME_1}} refused to enter the basement.
+apocryphal|adj|of doubtful authenticity, though widely repeated|doubtful, fictitious, legendary|authentic, true|Greek apokryphos (hidden)|The story that the inventor discovered gravity by being hit with an apple is likely ______.
+approbation|n|approval or praise|approval, praise, acceptance|disapproval, criticism|Latin approbare (to approve)|The plan won the ______ of the entire committee.
+ascendancy|n|occupation of a position of power or influence|dominance, supremacy, control|decline, subordination|Latin ascendere (to climb up)|The team's ______ in the league began with a twenty-game winning streak.
+assail|v|to attack violently or criticize strongly|attack, assault, criticize|defend, protect|Latin assilire (to leap upon)|Critics continue to ______ the new law as unfair.
+attenuate|v|to reduce the force or effect of|weaken, reduce, diminish|strengthen, intensify|Latin tenuis (thin)|Thick walls ______ the noise from the street.
+beguile|v|to charm or enchant, sometimes deceptively|charm, enchant, deceive|repel, disgust|be- + guile (trickery)|The magician's smile seemed to ______ the entire audience.
+bellicose|adj|eager to fight|aggressive, hostile, warlike|peaceful, conciliatory|Latin bellum (war)|The ______ general wanted to attack immediately.
+bucolic|adj|relating to the pleasant aspects of the countryside|rural, pastoral, rustic|urban, industrial|Greek boukolos (herdsman)|The painting showed ______ scenes of cows grazing beside a stream.
+burnish|v|to polish or improve|polish, shine, enhance|tarnish, dull|Old French burnir (to make brown, polish)|The mayor hoped the new park would ______ the city's image.
+cantankerous|adj|bad-tempered and argumentative|grumpy, irritable, quarrelsome|easygoing, cheerful|perhaps from Middle English contakour (troublemaker)|The ______ old man yelled at kids who stepped on his lawn.
+capitulate|v|to stop resisting; to surrender|surrender, yield, give in|resist, defy|Latin capitulum (heading of terms)|After hours of pleading, the parents finally decided to ______ and buy the puppy.
+chimerical|adj|existing only as a product of imagination; unrealistic|imaginary, fanciful, unrealistic|real, practical|from the Chimera of Greek myth|The plan to build a city on the moon by next year was ______.
+churlish|adj|rude in a mean-spirited way|rude, surly, impolite|polite, gracious|Old English ceorl (peasant)|It seemed ______ to refuse the gift.
+circuitous|adj|longer than the most direct way|roundabout, indirect, winding|direct, straight|Latin circuitus (going around)|The taxi's route was so ______ that the fare doubled.
+complicity|n|involvement with others in wrongdoing|involvement, collusion, conspiracy|innocence, ignorance|Latin complex (closely connected)|The guard's ______ in the robbery was proven by video.
+consummate|adj|showing great skill; complete or perfect|skilled, accomplished, perfect|incompetent, amateurish|Latin consummare (to complete)|The ______ performer never missed a note.
+contrition|n|the state of feeling sorry for one's actions|remorse, regret, repentance|pride, defiance|Latin contritio (grinding)|{{NAME_1}} showed real ______ after breaking the window and offered to pay for it.
+`);
+
+
+/* ===== js/vocab/bank-core-1.js ===== */
+// Vocab Vault bank: core words, A–C. Format: see js/vocab/bank.js.
+window.SatWizzBank("core", `
+abandon|v|to leave behind or give up completely|desert, forsake, quit|keep, maintain|Old French a bandon (under another's control)|When the storm grew worse, the hikers had to ______ their plan to reach the summit and turn back.
+abundant|adj|existing in large quantities; more than enough|plentiful, ample, copious|scarce, sparse|Latin abundare (to overflow)|After the spring rains, wildflowers were so ______ that the hillside looked purple from miles away.
+accessible|adj|easy to reach, enter, or understand|reachable, available, approachable|inaccessible, remote|Latin accedere (to approach)|The museum added ramps and elevators so that every gallery would be ______ to visitors using wheelchairs.
+accommodate|v|to make room for or adjust to meet someone's needs|house, adapt, oblige|refuse, reject|Latin accommodare (to make fit)|The small theater added extra rows of seats to ______ the unexpectedly large crowd.
+accumulate|v|to gather or build up gradually over time|amass, collect, gather|disperse, scatter|Latin ad- (to) + cumulus (heap)|If you never empty the gutters, leaves and twigs will ______ until water can no longer drain.
+accurate|adj|correct and free of errors|precise, exact, correct|inaccurate, wrong|Latin accuratus (done with care)|{{NAME_1}} double-checked every measurement so that the final map would be completely ______.
+acknowledge|v|to admit or recognize that something is true or exists|admit, recognize, concede|deny, ignore|Old English on + knowledge|After reviewing the replay, the referee had to ______ that the call had been a mistake.
+acquire|v|to get or gain something, often through effort|obtain, gain, procure|lose, forfeit|Latin ad- (to) + quaerere (to seek)|Over three summers of practice, {{NAME_1}} managed to ______ real skill in {{SKILL}}.
+adapt|v|to change in order to suit new conditions|adjust, modify, acclimate|resist, persist|Latin ad- (to) + aptare (to fit)|Animals that live in the desert must ______ to extreme heat and very little water.
+adequate|adj|enough or good enough for a particular need|sufficient, acceptable, satisfactory|inadequate, insufficient|Latin adaequare (to make equal)|The old gym was not ideal, but it was ______ for a few weeks of practice.
+adhere|v|to stick to something or follow it closely|stick, cling, comply|detach, disregard|Latin ad- (to) + haerere (to stick)|Players who do not ______ to the safety rules will be removed from the game.
+adjacent|adj|next to or very near something else|neighboring, adjoining, bordering|distant, separate|Latin ad- (near) + jacere (to lie)|The library is ______ to the cafeteria, so students can walk between them in seconds.
+advantageous|adj|providing a benefit or favorable position|beneficial, favorable, helpful|disadvantageous, harmful|French avantage (benefit)|Starting the race on the inside lane proved ______, since it was the shortest path around the track.
+adverse|adj|harmful or unfavorable|unfavorable, hostile, harmful|favorable, beneficial|Latin adversus (turned against)|The new medicine works well for most patients, though a few experience ______ side effects.
+aesthetic|adj|concerned with beauty or artistic taste|artistic, visual, decorative|practical, functional|Greek aisthetikos (of perception)|The architect cared about function, but she also made ______ choices, like the curved glass entrance.
+affirm|v|to state firmly or confirm that something is true|assert, confirm, declare|deny, contradict|Latin affirmare (to make firm)|The witness was asked to ______ under oath that her account was accurate.
+aggregate|n|a total formed by combining several separate parts|total, sum, whole|part, piece|Latin aggregare (to add to a flock)|No single test decides your grade; the final mark is the ______ of all twelve quizzes.
+alleviate|v|to make pain or a problem less severe|relieve, ease, lessen|aggravate, worsen|Latin ad- + levis (light)|Planting trees along the street helped ______ the summer heat for people waiting at the bus stop.
+allocate|v|to set aside or distribute for a particular purpose|assign, allot, distribute|withhold, hoard|Latin ad- + locare (to place)|The club decided to ______ half of its budget to new equipment and half to travel.
+alter|v|to change or make different|change, modify, adjust|preserve, maintain|Latin alter (other)|The tailor offered to ______ the jacket so that the sleeves would be shorter.
+alternative|n|another possible choice or option|option, substitute, choice|necessity, requirement|Latin alternus (one after another)|If the bridge is closed, the ferry is the only ______ for crossing the river.
+ambition|n|a strong desire to achieve something|drive, aspiration, determination|apathy, indifference|Latin ambitio (going around seeking votes)|{{NAME_1}}'s ______ to become a doctor kept {{NAME_1_OBJ}} studying long after everyone else had gone home.
+amend|v|to make small changes to improve something|revise, modify, correct|preserve, retain|Latin emendare (to free from fault)|The student council voted to ______ its rules so that freshmen could also serve as officers.
+analogy|n|a comparison between two things to explain or clarify|comparison, parallel, likeness|difference, contrast|Greek analogia (proportion)|The teacher used ______ to explain electricity, comparing a wire to a pipe carrying water.
+analyze|v|to examine something closely in order to understand it|examine, study, evaluate|ignore, overlook|Greek analyein (to break up)|Before writing the report, {{NAME_1}} had to ______ two years of attendance data.
+anecdote|n|a short, interesting story about a real event|story, account, tale|statistics, data|Greek anekdota (unpublished things)|The speaker opened with a funny ______ about getting lost on the way to her first job interview.
+anomaly|n|something that differs from what is normal or expected|irregularity, oddity, exception|norm, rule|Greek anomalos (uneven)|Every reading was normal except one strange ______: a temperature of 140 degrees on a cool morning.
+anticipate|v|to expect or predict and prepare for something|expect, foresee, predict|overlook, ignore|Latin ante- (before) + capere (to take)|The organizers did not ______ such a large crowd, so they ran out of programs within an hour.
+apathy|n|lack of interest or concern|indifference, unconcern, detachment|enthusiasm, passion|Greek a- (without) + pathos (feeling)|Voter ______ was so widespread that fewer than one in five residents bothered to vote.
+apparent|adj|clearly visible or understood; obvious|obvious, evident, clear|hidden, obscure|Latin apparere (to appear)|It was ______ from the muddy footprints that someone had walked through the kitchen.
+appease|v|to calm someone by giving them what they want|pacify, placate, soothe|provoke, anger|Old French a pais (to peace)|To ______ the angry customers, the manager offered everyone a free meal.
+appreciate|v|to recognize the value or quality of something|value, admire, treasure|disregard, belittle|Latin ad- + pretium (price)|After a week of camping, {{NAME_1}} learned to ______ simple things like hot water and a soft bed.
+apprehensive|adj|anxious or fearful that something bad will happen|anxious, uneasy, nervous|confident, calm|Latin apprehendere (to seize)|{{NAME_1}} felt ______ before the audition, worried that {{NAME_1_POSS}} voice would crack.
+arduous|adj|requiring great effort; difficult and tiring|strenuous, grueling, demanding|easy, effortless|Latin arduus (steep)|The climb to the summit was ______, taking nine hours over steep and rocky ground.
+articulate|adj|able to express ideas clearly and effectively|eloquent, clear, fluent|inarticulate, incoherent|Latin articulus (small joint)|{{NAME_1}} was so ______ in the debate that even the opposing team praised {{NAME_1_POSS}} clear arguments.
+ascertain|v|to find out for certain|determine, discover, establish|guess, assume|Old French acertener (to make certain)|Detectives worked for weeks to ______ exactly when the painting had been taken.
+aspire|v|to have a strong hope of achieving something|aim, seek, hope|settle, give up|Latin aspirare (to breathe upon)|Many young musicians ______ to play in a national orchestra one day.
+assert|v|to state something confidently and forcefully|declare, claim, maintain|deny, retract|Latin asserere (to claim)|The lawyer continued to ______ that her client had been out of town on the night of the theft.
+assess|v|to judge or evaluate the quality or value of something|evaluate, appraise, gauge|ignore, neglect|Latin assidere (to sit beside, as a judge)|The coach watched the tryouts to ______ which players were ready for the varsity team.
+assimilate|v|to absorb and fully understand information or ideas|absorb, integrate, digest|reject, exclude|Latin assimilare (to make like)|It took the new employees a month to ______ all of the company's procedures.
+astute|adj|clever at noticing things and making good judgments|shrewd, perceptive, sharp|foolish, naive|Latin astutus (crafty)|Always ______ about money, {{NAME_1}} noticed the trend months before other investors did.
+attain|v|to succeed in reaching or achieving something|achieve, reach, accomplish|fail, miss|Latin attingere (to touch)|With steady practice, the team was able to ______ its goal of a winning season.
+attribute|v|to regard something as caused by someone or something|credit, ascribe, assign|dissociate, separate|Latin attribuere (to assign)|Doctors ______ the drop in flu cases to the school's new vaccination program.
+augment|v|to make something greater by adding to it|increase, expand, enlarge|reduce, decrease|Latin augere (to increase)|{{NAME_1}} took a weekend job to ______ the small income {{NAME_1}} earned from tutoring.
+authentic|adj|real and genuine; not fake|genuine, real, original|fake, counterfeit|Greek authentikos (original)|Experts confirmed that the signature on the old letter was ______ and not a forgery.
+autonomy|n|freedom to make one's own decisions|independence, self-rule, freedom|dependence, control|Greek autos (self) + nomos (law)|Older students were given more ______, choosing their own research topics and deadlines.
+benevolent|adj|kind and generous; wanting to help others|kind, charitable, generous|cruel, malicious|Latin bene (well) + volens (wishing)|The ______ shop owner gave free meals to anyone who could not afford to pay.
+bias|n|an unfair preference for or against something|prejudice, partiality, favoritism|fairness, impartiality|Old French biais (slant)|The judges were chosen from other towns to avoid any ______ toward the local team.
+bolster|v|to support or strengthen|strengthen, reinforce, boost|weaken, undermine|Old English bolster (cushion)|The new evidence helped ______ the scientist's theory, which many had doubted.
+brevity|n|the quality of being short or concise|conciseness, shortness, succinctness|wordiness, length|Latin brevis (short)|The audience loved the speech for its ______: it lasted barely three minutes.
+candor|n|the quality of being open and honest|honesty, frankness, openness|deceit, evasiveness|Latin candor (whiteness, purity)|Reporters appreciated the mayor's ______ when she admitted that the plan had failed.
+capacity|n|the maximum amount something can hold or do|volume, capability, ability|inability, incapacity|Latin capax (able to hold)|The stadium's ______ is fifty thousand people, and every seat was filled for the final.
+catalyst|n|something that causes or speeds up an important change|trigger, spark, stimulus|obstacle, hindrance|Greek katalysis (dissolving)|The new coach was the ______ for the team's turnaround, inspiring players to train harder than ever.
+caution|n|care taken to avoid danger or mistakes|care, prudence, wariness|recklessness, carelessness|Latin cavere (to beware)|The icy roads called for extreme ______, so the bus driver slowed to a crawl.
+cease|v|to come or bring to an end|stop, halt, end|begin, continue|Latin cessare (to stop)|The factory will ______ operations next month after nearly a century in business.
+chronological|adj|arranged in the order in which events happened|sequential, ordered, consecutive|random, disordered|Greek chronos (time) + logos (account)|The museum's timeline is ______, starting with the town's founding and ending with today.
+circumvent|v|to find a way around an obstacle or rule|bypass, evade, sidestep|confront, face|Latin circum (around) + venire (to come)|The engineers built a temporary road to ______ the flooded section of the highway.
+clarify|v|to make something easier to understand|explain, illuminate, simplify|confuse, obscure|Latin clarus (clear)|The teacher drew a diagram on the board to ______ the difference between the two terms.
+coherent|adj|logical and consistent; easy to follow|logical, clear, consistent|incoherent, confused|Latin cohaerere (to stick together)|After a night of rest, {{NAME_1}}'s account of what had happened was finally clear and ______.
+collaborate|v|to work together with others on a task|cooperate, team up, join forces|compete, work alone|Latin com- (with) + laborare (to work)|Students from three schools will ______ on a single robot for the national competition.
+commend|v|to praise formally or officially|praise, applaud, compliment|criticize, condemn|Latin commendare (to entrust)|The mayor will ______ the volunteers for their tireless work during the flood.
+compatible|adj|able to exist or work together without conflict|harmonious, consistent, suited|incompatible, conflicting|Latin compati (to suffer with)|The new charger is ______ with every phone model sold in the last five years.
+compensate|v|to make up for something, often by paying|repay, offset, reimburse|deprive, penalize|Latin compensare (to weigh together)|To ______ for the canceled flight, the airline gave every passenger a free ticket.
+competent|adj|having enough skill to do something well|capable, skilled, qualified|incompetent, unqualified|Latin competere (to be fit)|{{NAME_1}} was not the fastest typist, but {{NAME_1}} was ______ enough to finish the report on time.
+complacent|adj|too satisfied with oneself to see danger or the need to improve|smug, self-satisfied, careless|vigilant, concerned|Latin complacere (to please)|After three easy wins, the team grew ______ and stopped practicing hard.
+complement|v|to complete or improve something by adding to it|enhance, complete, supplement|clash, detract|Latin complere (to fill up)|The bright scarf was chosen to ______ the gray coat.
+comprehensive|adj|including all or nearly all parts of something|thorough, complete, extensive|limited, partial|Latin comprehendere (to grasp)|The final exam was ______, covering every chapter from the entire year.
+comprise|v|to consist of or be made up of|include, contain, consist of|exclude, omit|French compris (included)|The committee will ______ five teachers, three parents, and two students.
+concise|adj|giving information clearly in few words|brief, succinct, short|wordy, rambling|Latin concidere (to cut up)|The editor asked that every summary be ______: no more than fifty words.
+concur|v|to agree with someone's opinion|agree, assent, accord|disagree, dissent|Latin con- (together) + currere (to run)|All three judges ______ that the final dive deserved a perfect score.
+condone|v|to accept or allow behavior that is wrong|excuse, overlook, permit|condemn, forbid|Latin condonare (to give up entirely)|The principal made it clear that she would not ______ cheating of any kind.
+conducive|adj|making a certain outcome likely or possible|favorable, helpful, beneficial|unfavorable, harmful|Latin conducere (to bring together)|The quiet, well-lit library is ______ to long hours of studying.
+confide|v|to tell someone a secret because you trust them|reveal, disclose, entrust|conceal, withhold|Latin confidere (to trust fully)|{{NAME_1}} decided to ______ in {{NAME_2}}, sharing a worry {{NAME_1}} had told no one else.
+conform|v|to follow accepted rules or standards|comply, obey, fit in|rebel, deviate|Latin conformare (to shape)|All new buildings must ______ to the city's safety code.
+consensus|n|general agreement among a group|agreement, accord, unanimity|disagreement, discord|Latin consentire (to agree)|After two hours of discussion, the group finally reached ______ on where to hold the picnic.
+consequence|n|a result or effect of an action|result, outcome, effect|cause, origin|Latin consequi (to follow closely)|Missing the bus had one unfortunate ______: {{NAME_1}} was late for the final exam.
+considerable|adj|large in size, amount, or importance|substantial, significant, sizable|negligible, minor|Latin considerare (to examine)|The new bridge saved commuters ______ time, cutting the trip from an hour to twenty minutes.
+consistent|adj|acting or done the same way over time|steady, reliable, constant|inconsistent, erratic|Latin consistere (to stand firm)|{{NAME_1}}'s grades were ______ all year, never dropping below a B.
+conspicuous|adj|easy to notice; standing out|noticeable, obvious, prominent|inconspicuous, hidden|Latin conspicere (to look at attentively)|In {{NAME_1_POSS}} bright orange jacket, {{NAME_1}} was ______ in the crowd of gray suits.
+constrain|v|to restrict or limit|restrict, limit, confine|free, liberate|Latin constringere (to bind tightly)|A tight budget will ______ the club's travel plans this year.
+contemplate|v|to think deeply about something for a long time|consider, ponder, reflect on|ignore, disregard|Latin contemplari (to observe)|{{NAME_1}} sat by the lake to ______ whether to accept the job offer across the country.
+contemporary|adj|belonging to the present time; modern|modern, current, present-day|ancient, old-fashioned|Latin con- (with) + tempus (time)|The gallery shows only ______ art, made by artists who are still working today.
+contend|v|to argue or claim that something is true|argue, maintain, assert|concede, deny|Latin contendere (to strive)|Some historians ______ that the war could have been avoided entirely.
+contradict|v|to say the opposite of something; to deny|dispute, deny, oppose|confirm, agree|Latin contra (against) + dicere (to say)|The second witness went on to ______ the first, insisting the car had been blue, not red.
+controversial|adj|causing strong public disagreement|disputed, contentious, divisive|uncontroversial, accepted|Latin controversus (turned against)|The plan to close the park was ______, with hundreds of residents protesting at city hall.
+convey|v|to communicate or make an idea known|communicate, express, transmit|conceal, withhold|Latin conviare (to accompany)|The painting manages to ______ a deep sense of loneliness without showing a single face.
+cordial|adj|warm and friendly in a polite way|friendly, warm, gracious|hostile, unfriendly|Latin cor (heart)|Although the two rivals had argued for years, their meeting was surprisingly ______.
+credible|adj|able to be believed; trustworthy|believable, plausible, reliable|unbelievable, dubious|Latin credere (to believe)|The reporter refused to publish the story until she found sources that were ______ enough to confirm it.
+criteria|n|standards used to judge or decide something|standards, measures, benchmarks|guesses, whims|Greek kriterion (means of judging)|The judges announced their ______ in advance: creativity, accuracy, and presentation.
+crucial|adj|extremely important; decisive|vital, essential, critical|trivial, unimportant|Latin crux (cross)|Getting enough sleep before the test is ______, since tired students make more mistakes.
+cultivate|v|to develop or improve through effort|develop, nurture, foster|neglect, abandon|Latin cultivare (to till)|{{NAME_1}} worked hard to ______ good habits, like reading for twenty minutes every night.
+cumulative|adj|increasing by successive additions|accumulated, collective, growing|individual, single|Latin cumulus (heap)|The ______ effect of small daily savings was a fund large enough to buy a car.
+curtail|v|to reduce or limit something|reduce, cut back, restrict|extend, expand|French court (short)|The city had to ______ bus service on weekends because of a shortage of drivers.
+cynical|adj|believing that people act only out of selfishness|distrustful, skeptical, pessimistic|trusting, optimistic|Greek kynikos (doglike; a school of philosophers)|After so many broken promises, the voters had grown ______ about every new campaign pledge.
+`);
+
+
+/* ===== js/vocab/bank-core-2.js ===== */
+// Vocab Vault bank: core words, D–F. Format: see js/vocab/bank.js.
+window.SatWizzBank("core", `
+daunting|adj|seeming difficult to deal with; intimidating|intimidating, formidable, overwhelming|easy, manageable|Latin domitare (to tame)|The pile of unread textbooks looked ______ at first, but {{NAME_1}} finished one chapter at a time.
+debate|v|to discuss or argue about something formally|discuss, argue, dispute|agree, accept|Old French debatre (to fight)|The council will ______ the new parking rules at Tuesday's meeting before voting.
+decisive|adj|settling an issue; able to make decisions quickly|conclusive, determined, firm|indecisive, hesitant|Latin decidere (to cut off)|The goal in the final minute was ______, giving the team its first championship.
+decline|v|to become smaller or worse; to refuse politely|decrease, diminish, refuse|increase, accept|Latin declinare (to turn aside)|Sales of paper maps began to ______ as more drivers used phone navigation.
+deduce|v|to reach a conclusion by reasoning from evidence|infer, conclude, reason|guess, assume|Latin de- (from) + ducere (to lead)|From the wet umbrella by the door, {{NAME_1}} was able to ______ that it was raining outside.
+defer|v|to put off until later; to yield to another's judgment|postpone, delay, yield|hasten, advance|Latin differre (to carry apart)|The committee agreed to ______ the vote until all members could attend.
+deficient|adj|lacking something necessary; not good enough|lacking, inadequate, insufficient|sufficient, adequate|Latin deficere (to fail)|The doctor found that {{NAME_1}}'s diet was ______ in iron, which explained the constant tiredness.
+definitive|adj|final and authoritative; not able to be questioned|conclusive, final, authoritative|tentative, provisional|Latin definire (to set bounds)|The new biography is considered ______, the most complete account of the inventor's life ever written.
+degrade|v|to lower in quality or condition|deteriorate, worsen, damage|improve, enhance|Latin de- (down) + gradus (step)|Over time, sunlight will ______ the plastic until it cracks and crumbles.
+deliberate|adj|done on purpose; slow and careful|intentional, planned, careful|accidental, hasty|Latin deliberare (to weigh well)|The foul was clearly ______; the player looked right at the referee before tripping his opponent.
+delineate|v|to describe or outline precisely|outline, define, describe|blur, confuse|Latin de- + linea (line)|The contract will ______ exactly which tasks each partner is responsible for.
+demonstrate|v|to show clearly by giving proof or examples|show, prove, display|conceal, disprove|Latin demonstrare (to point out)|The science fair project was designed to ______ how plants grow toward light.
+denounce|v|to publicly declare something wrong or evil|condemn, criticize, censure|praise, endorse|Latin denuntiare (to announce)|Leaders from every party came forward to ______ the attack on the peaceful protesters.
+depict|v|to show or represent in a picture or words|portray, represent, illustrate|misrepresent, distort|Latin depingere (to paint)|The mural on the library wall is meant to ______ the town's history from its founding to today.
+deplete|v|to use up the supply of something|exhaust, drain, consume|replenish, restore|Latin deplere (to empty out)|A long, dry summer can ______ the reservoir until there is barely any water left.
+derive|v|to obtain something from a source|obtain, draw, extract|originate, create|Latin derivare (to draw off water)|Many English words ______ from Latin, which is why roots are useful to memorize.
+designate|v|to officially choose for a particular purpose|appoint, assign, name|reject, dismiss|Latin designare (to mark out)|The city will ______ the old factory as a historic site, protecting it from demolition.
+deter|v|to discourage someone from doing something|discourage, prevent, dissuade|encourage, motivate|Latin de- (away) + terrere (to frighten)|Bright lights and cameras are meant to ______ thieves from breaking into the parking lot.
+detrimental|adj|causing harm or damage|harmful, damaging, destructive|beneficial, helpful|Latin detrimentum (loss)|Staying up all night before an exam can be ______ to your performance.
+deviate|v|to depart from a usual or expected course|stray, diverge, depart|conform, follow|Latin de- (from) + via (way)|The pilot had to ______ from the planned route to avoid a thunderstorm.
+devise|v|to plan or invent something clever|invent, design, create|destroy, copy|Old French deviser (to divide, plan)|The engineers had to ______ a way to carry water to the village without electricity.
+devoid|adj|completely lacking in something|lacking, empty, free of|full, rich|Old French devoidier (to empty out)|The desert landscape was ______ of trees, with nothing but sand for miles.
+dexterity|n|skill in using the hands or mind|skill, agility, adroitness|clumsiness, awkwardness|Latin dexter (right-handed, skillful)|Repairing a watch requires great ______, since the parts are smaller than grains of rice.
+dichotomy|n|a sharp division between two opposing things|division, contrast, split|unity, sameness|Greek dicha (in two) + temnein (to cut)|The novel explores the ______ between city life and country life.
+diligent|adj|showing steady, careful effort|hardworking, industrious, conscientious|lazy, careless|Latin diligere (to value highly)|{{NAME_1}} was ______ about homework, finishing every assignment the day it was given.
+diminutive|adj|extremely small|tiny, small, little|enormous, huge|Latin deminuere (to lessen)|The ______ dog barely came up to {{NAME_1}}'s ankle, but its bark was enormous.
+discourse|n|serious discussion or conversation about a topic|discussion, dialogue, debate|silence, quiet|Latin discursus (running to and fro)|The podcast was praised for raising the level of public ______ about science.
+discrepancy|n|a difference between things that should match|inconsistency, difference, mismatch|agreement, consistency|Latin discrepare (to sound differently)|The accountant traced the ______ between the receipts and the bank statement to a single typo.
+discretion|n|the freedom to decide; good judgment about what to say|judgment, prudence, choice|recklessness, indiscretion|Latin discernere (to separate)|The teacher left it to each student's ______ whether to write a poem or an essay.
+disdain|n|the feeling that someone or something is unworthy of respect|contempt, scorn, derision|respect, admiration|Old French desdeignier (to scorn)|The critic made no effort to hide her ______ for the film, calling it a waste of time.
+disparate|adj|so different that they cannot be compared|different, distinct, dissimilar|similar, alike|Latin disparare (to separate)|The festival brings together ______ groups, from jazz musicians to folk dancers.
+disperse|v|to spread or scatter over a wide area|scatter, spread, dissipate|gather, assemble|Latin dispergere (to scatter)|When the rain started, the crowd in the square began to ______ in every direction.
+disregard|v|to pay no attention to; to ignore|ignore, overlook, neglect|heed, regard|dis- (not) + regard|Drivers who ______ the speed limit near schools face steep fines.
+disrupt|v|to interrupt or disturb the normal course of something|interrupt, disturb, upset|maintain, support|Latin dis- (apart) + rumpere (to break)|A loud phone alarm can ______ an entire class during a test.
+dissent|n|disagreement with an official or popular opinion|disagreement, opposition, objection|agreement, consent|Latin dis- (apart) + sentire (to feel)|Although most members supported the plan, there was some ______ from the youngest voters.
+distinct|adj|clearly different or separate|separate, different, unmistakable|similar, vague|Latin distinguere (to separate)|The twins have ______ personalities: one is outgoing and the other is shy.
+diverse|adj|showing a great deal of variety|varied, assorted, mixed|uniform, identical|Latin divertere (to turn aside)|The school's ______ student body includes people from more than forty countries.
+divulge|v|to reveal information that was secret|reveal, disclose, expose|conceal, hide|Latin divulgare (to publish)|The reporter refused to ______ the name of her source, even under pressure.
+dogmatic|adj|insisting that one's beliefs are true without considering others|rigid, inflexible, opinionated|open-minded, flexible|Greek dogma (opinion)|{{NAME_1}} was so ______ about the rules that no one could suggest any changes.
+dominant|adj|most important, powerful, or influential|leading, controlling, prevailing|subordinate, minor|Latin dominari (to rule)|For a decade the team was ______ in the league, losing only a handful of games.
+dormant|adj|temporarily inactive or asleep|inactive, sleeping, latent|active, awake|Latin dormire (to sleep)|The volcano has been ______ for three hundred years, but scientists still monitor it.
+drastic|adj|extreme and having a strong effect|extreme, severe, radical|mild, moderate|Greek drastikos (effective)|After losing every game, the coach made ______ changes, replacing half the starting lineup.
+dubious|adj|doubtful; probably not true or honest|doubtful, questionable, suspicious|certain, reliable|Latin dubium (doubt)|The website's claims about the miracle diet were ______, and none of them cited any research.
+durable|adj|able to last a long time without wearing out|sturdy, long-lasting, tough|fragile, flimsy|Latin durare (to last)|Hiking boots need to be ______ enough to survive years of rocks and mud.
+eccentric|adj|unusual or strange in a harmless way|odd, quirky, unconventional|ordinary, conventional|Greek ek- (out of) + kentron (center)|The ______ professor wore a different colored bow tie every day of the week.
+eclectic|adj|drawn from many different sources or styles|varied, diverse, wide-ranging|narrow, uniform|Greek eklegein (to pick out)|{{NAME_1}}'s playlist is ______, mixing classical piano, hip-hop, and old country songs.
+efficacy|n|the ability to produce the intended result|effectiveness, success, potency|ineffectiveness, failure|Latin efficax (powerful)|Researchers tested the ______ of the new vaccine on thousands of volunteers.
+efficient|adj|working well without wasting time or energy|productive, effective, economical|inefficient, wasteful|Latin efficere (to accomplish)|The new dishwasher is more ______, cleaning twice as many plates with half the water.
+elaborate|adj|detailed and complicated|detailed, intricate, complex|simple, plain|Latin elaborare (to work out)|The wedding cake was so ______ that it had six layers and hundreds of sugar flowers.
+elicit|v|to draw out a response or reaction|evoke, draw out, provoke|suppress, stifle|Latin elicere (to lure out)|The comedian's first joke did not ______ a single laugh from the audience.
+eloquent|adj|fluent and persuasive in speaking or writing|articulate, expressive, persuasive|inarticulate, tongue-tied|Latin eloqui (to speak out)|{{NAME_1}}'s speech was so ______ that several people in the audience were moved to tears.
+elusive|adj|difficult to find, catch, or achieve|evasive, slippery, hard to pin down|obvious, accessible|Latin eludere (to escape)|Despite years of searching, the rare bird remained ______, and no one managed to photograph it.
+embellish|v|to make more attractive by adding details, sometimes untrue ones|decorate, exaggerate, adorn|simplify, strip|Old French embellir (to make beautiful)|{{NAME_1}} tends to ______ every story, so a small fish quickly becomes a giant one.
+emerge|v|to come out or become known|appear, arise, surface|disappear, vanish|Latin emergere (to rise out)|After weeks of investigation, new details began to ______ about the missing painting.
+eminent|adj|famous and respected in a particular field|distinguished, renowned, prominent|unknown, obscure|Latin eminere (to stand out)|The conference featured ______ scientists from around the world, including two Nobel winners.
+empathy|n|the ability to understand and share another's feelings|compassion, understanding, sympathy|indifference, coldness|Greek em- (in) + pathos (feeling)|{{NAME_1}}'s ______ made {{NAME_1_OBJ}} a wonderful nurse; patients felt truly understood.
+emphasize|v|to give special importance to something|stress, highlight, underline|minimize, downplay|Greek emphasis (display)|The coach would always ______ defense, reminding players that games are won by stopping goals.
+emulate|v|to try to match or copy someone admired|imitate, copy, follow|ignore, differ from|Latin aemulari (to rival)|Young players often ______ their heroes, copying their moves and even their haircuts.
+encompass|v|to include a wide range of things|include, cover, contain|exclude, omit|en- (in) + compass|The new course will ______ everything from ancient history to modern politics.
+endeavor|n|a serious attempt to achieve something|effort, attempt, venture|inaction, idleness|French en devoir (in duty)|Building the community garden was a group ______ that took the whole summer.
+endorse|v|to declare public support or approval|support, approve, back|oppose, reject|Latin in- + dorsum (back)|Three former mayors decided to ______ the young candidate, giving her campaign a big boost.
+endure|v|to suffer patiently; to continue to exist|withstand, bear, last|surrender, perish|Latin indurare (to harden)|The old oak tree managed to ______ storms for over two hundred years.
+enhance|v|to improve the quality or value of|improve, boost, strengthen|diminish, worsen|Old French enhaucier (to raise)|Good lighting can ______ a photograph, making colors look richer.
+enigmatic|adj|mysterious and difficult to understand|mysterious, puzzling, cryptic|clear, obvious|Greek ainigma (riddle)|{{NAME_1}}'s ______ smile left everyone wondering what {{NAME_1}} was really thinking.
+enumerate|v|to list items one by one|list, itemize, count|summarize, generalize|Latin enumerare (to count out)|The guide will ______ the safety rules before the rafting trip begins.
+equitable|adj|fair and impartial|fair, just, even-handed|unfair, biased|Latin aequus (equal)|The coach wanted playing time to be ______, so all twelve players got the same number of minutes.
+erode|v|to wear away gradually|wear away, corrode, diminish|build up, strengthen|Latin erodere (to gnaw away)|Ocean waves slowly ______ the cliffs, moving the coastline inland each year.
+erratic|adj|not regular or predictable|unpredictable, irregular, inconsistent|steady, consistent|Latin errare (to wander)|The old car's ______ engine would run perfectly one day and refuse to start the next.
+erroneous|adj|wrong; containing errors|incorrect, mistaken, inaccurate|correct, accurate|Latin erroneus (wandering)|The newspaper printed a correction after publishing ______ figures about the budget.
+escalate|v|to increase rapidly in size or seriousness|intensify, increase, worsen|decrease, de-escalate|from escalator (moving stairs)|What began as a small disagreement threatened to ______ into a shouting match.
+essential|adj|absolutely necessary; extremely important|vital, necessary, crucial|unnecessary, optional|Latin essentia (being)|Water and a flashlight are ______ items in any emergency kit.
+esteem|n|respect and admiration|respect, admiration, regard|contempt, disrespect|Latin aestimare (to value)|The retiring teacher was held in such high ______ that hundreds of former students attended her party.
+evaluate|v|to judge the value or quality of something|assess, appraise, judge|ignore, neglect|French évaluer (to value)|The judges will ______ each project on creativity, accuracy, and presentation.
+evoke|v|to bring a feeling or memory to mind|summon, elicit, conjure|suppress, stifle|Latin evocare (to call out)|The smell of fresh bread can ______ memories of {{NAME_1_POSS}} grandmother's kitchen.
+exasperate|v|to irritate intensely|annoy, irritate, infuriate|soothe, please|Latin exasperare (to roughen)|The constant interruptions began to ______ the speaker, who finally stopped and asked for quiet.
+exceed|v|to go beyond a limit or expected amount|surpass, outdo, top|fall short, trail|Latin excedere (to go out)|Ticket sales were expected to ______ last year's record by thousands.
+exemplary|adj|serving as an excellent example|ideal, model, outstanding|deplorable, poor|Latin exemplum (example)|{{NAME_1}}'s attendance was ______: not a single absence in four years.
+exhaustive|adj|including every possible detail; thorough|comprehensive, thorough, complete|partial, cursory|Latin exhaurire (to drain out)|The detective's search of the house was ______: she checked every drawer, closet, and shelf.
+exonerate|v|to officially clear someone of blame|acquit, clear, absolve|convict, blame|Latin ex- (from) + onus (burden)|New DNA evidence helped ______ the man, who had spent years in prison for a crime he did not commit.
+expedite|v|to make something happen faster|accelerate, hasten, speed up|delay, slow|Latin expedire (to free the feet)|Paying an extra fee will ______ the shipping, so the package arrives tomorrow.
+explicit|adj|stated clearly and directly, leaving no doubt|clear, direct, specific|implicit, vague|Latin explicare (to unfold)|The instructions were ______: no phones may be used during the exam.
+exploit|v|to use something unfairly for one's own advantage|take advantage of, misuse, abuse|respect, protect|Old French esploit (achievement)|The scammers tried to ______ elderly people's trust to steal their savings.
+extensive|adj|covering a large area or amount|wide-ranging, broad, comprehensive|limited, narrow|Latin extendere (to stretch out)|The storm caused ______ damage across three counties.
+extraneous|adj|not relevant or essential|irrelevant, unnecessary, superfluous|relevant, essential|Latin extraneus (external)|The editor cut every ______ detail, trimming the article to a single page.
+fabricate|v|to invent something false in order to deceive|invent, make up, falsify|verify, tell the truth|Latin fabricare (to make)|The reporter was fired after it was discovered that she would ______ quotes from people who did not exist.
+facilitate|v|to make an action or process easier|ease, enable, assist|hinder, obstruct|Latin facilis (easy)|The new software will ______ communication between teachers and parents.
+fallacy|n|a mistaken belief or faulty reasoning|misconception, error, myth|truth, fact|Latin fallere (to deceive)|The belief that lightning never strikes the same place twice is pure ______: tall towers are struck many times a year.
+feasible|adj|possible to do easily or conveniently|possible, practical, achievable|impossible, impractical|Old French faisable (doable)|With only two days left, finishing the entire mural was no longer ______.
+fervent|adj|having or showing intense feeling|passionate, ardent, intense|apathetic, indifferent|Latin fervere (to boil)|{{NAME_1}}'s support for the team was ______: {{NAME_1}} attended every game for ten years.
+fickle|adj|changing one's mind or loyalties frequently|changeable, unpredictable, inconstant|loyal, steady|Old English ficol (deceitful)|The ______ weather switched from sunshine to hail and back again in a single afternoon.
+fluctuate|v|to rise and fall irregularly|vary, change, swing|stabilize, remain|Latin fluctus (wave)|Gas prices can ______ wildly, rising one week and falling the next.
+formidable|adj|inspiring fear or respect because of size or power|intimidating, daunting, powerful|weak, feeble|Latin formido (fear)|The defending champions were ______ opponents who had not lost in three seasons.
+fortify|v|to strengthen or protect|strengthen, reinforce, secure|weaken, undermine|Latin fortis (strong)|Villagers worked through the night to ______ the riverbank with sandbags before the flood.
+fortuitous|adj|happening by lucky chance|lucky, accidental, chance|planned, intentional|Latin fors (chance)|Their meeting was ______: both happened to miss the same train and ended up talking for hours.
+frugal|adj|careful about spending money; thrifty|thrifty, economical, careful|wasteful, extravagant|Latin frugalis (useful, virtuous)|By being ______ for a year, {{NAME_1}} saved enough to pay for a trip abroad.
+dispel|v|to make a feeling or belief disappear|banish, dismiss, eliminate|create, encourage|Latin dis- (apart) + pellere (to drive)|The scientist's clear explanation helped ______ the rumor that the water was unsafe to drink.
+exuberant|adj|full of energy, excitement, and cheerfulness|enthusiastic, lively, high-spirited|subdued, gloomy|Latin exuberare (to be abundant)|The ______ fans danced in the streets for hours after the team won the title.
+flourish|v|to grow or develop in a healthy, successful way|thrive, prosper, bloom|wither, decline|Latin florere (to bloom)|With enough sunlight and water, the tomato plants began to ______ in the backyard garden.
+futile|adj|having no useful result; pointless|pointless, useless, vain|fruitful, effective|Latin futilis (leaky)|It was ______ to keep shouting; the wind carried every word away.
+`);
+
+
+/* ===== js/vocab/bank-core-3.js ===== */
+// Vocab Vault bank: core words, G–M. Format: see js/vocab/bank.js.
+window.SatWizzBank("core", `
+generate|v|to produce or create something|produce, create, cause|destroy, consume|Latin generare (to beget)|The new solar panels will ______ enough electricity to power the entire school.
+genuine|adj|truly what it is said to be; sincere|authentic, real, sincere|fake, insincere|Latin genuinus (natural)|{{NAME_1}}'s surprise at the party was ______; {{NAME_1}} truly had no idea it was planned.
+gratify|v|to give pleasure or satisfaction|please, satisfy, delight|displease, frustrate|Latin gratus (pleasing)|It will ______ the volunteers to see the park full of families after months of cleanup.
+gratuitous|adj|done without good reason; unnecessary|unnecessary, unjustified, needless|justified, necessary|Latin gratuitus (free, spontaneous)|Critics complained that the film's violence was ______ and added nothing to the story.
+gregarious|adj|fond of company; sociable|sociable, outgoing, friendly|shy, introverted|Latin grex (flock)|{{NAME_1}} is so ______ that {{NAME_1}} knows nearly everyone in the school by name.
+grievance|n|a complaint about unfair treatment|complaint, objection, protest|compliment, praise|Old French grever (to burden)|The workers presented their ______ to management: they had not been paid for overtime.
+hamper|v|to slow down or prevent progress|hinder, obstruct, impede|help, assist|Middle English hampren (to restrain)|Heavy snow will ______ the rescue effort, making the mountain roads nearly impassable.
+haphazard|adj|lacking order or plan; random|random, disorganized, careless|orderly, systematic|hap (chance) + hazard|The books were stacked in such ______ piles that finding anything took ages.
+harbinger|n|a sign that something is about to happen|sign, forerunner, omen|aftermath, consequence|Old French herbergere (one who goes ahead to find lodging)|The first robin of the year is often seen as the ______ of spring.
+harmonious|adj|forming a pleasing or peaceful whole|peaceful, cooperative, balanced|discordant, conflicting|Greek harmonia (agreement)|After years of arguing, the neighbors' relationship is now ______, and they even share a garden.
+hasten|v|to make something happen sooner|speed up, hurry, accelerate|delay, slow|Old French haste (haste)|Warm weather will ______ the melting of the snow on the mountain.
+heed|v|to pay careful attention to advice or a warning|obey, follow, mind|ignore, disregard|Old English hedan (to guard)|Hikers who ______ the park ranger's warnings stay safely away from the cliff edge.
+hierarchy|n|a system that ranks people or things by importance|ranking, order, chain of command|equality, flatness|Greek hieros (sacred) + archein (to rule)|In the army's ______, a sergeant ranks above a corporal.
+hinder|v|to make it difficult for something to happen|obstruct, impede, hamper|help, facilitate|Old English hindrian (to keep back)|Loud construction noise will ______ students' ability to concentrate during the test.
+holistic|adj|treating the whole of something rather than its parts|comprehensive, integrated, overall|partial, fragmented|Greek holos (whole)|The school's admissions process is ______: it looks at essays, activities, and grades together rather than one number.
+hostile|adj|unfriendly and aggressive|unfriendly, aggressive, antagonistic|friendly, welcoming|Latin hostis (enemy)|The crowd grew ______ when the referee made another questionable call.
+hypothesis|n|a proposed explanation that can be tested|theory, proposition, supposition|fact, proof|Greek hypo (under) + thesis (placing)|{{NAME_1}}'s ______ was that plants grow faster with music, so {{NAME_1}} tested it with two groups.
+hypothetical|adj|based on a possible situation rather than a real one|theoretical, imagined, supposed|actual, real|Greek hypothesis (supposition)|The teacher's question was purely ______: what would you do if you found a wallet full of cash?
+identical|adj|exactly the same|same, matching, indistinguishable|different, distinct|Latin idem (the same)|The two paintings looked ______, but one was a clever forgery.
+illuminate|v|to light up or make clear|light up, clarify, explain|darken, obscure|Latin lumen (light)|The professor used everyday examples to ______ difficult ideas in physics.
+illustrate|v|to explain or make clear using examples or pictures|demonstrate, show, depict|obscure, confuse|Latin illustrare (to light up)|The author used several stories from her childhood to ______ her main point.
+immense|adj|extremely large or great|huge, enormous, vast|tiny, small|Latin immensus (unmeasured)|The blue whale is ______, longer than two school buses parked end to end.
+imminent|adj|about to happen|impending, approaching, near|distant, remote|Latin imminere (to overhang)|Dark clouds and strong winds warned that a storm was ______.
+impartial|adj|treating all sides equally; fair|unbiased, neutral, fair|biased, partial|im- (not) + partial|A referee must remain ______, never favoring one team over the other.
+impede|v|to delay or prevent progress|obstruct, hinder, block|assist, advance|Latin impedire (to shackle the feet)|Fallen trees on the road will ______ the ambulance's progress.
+imperative|adj|of vital importance; essential|crucial, vital, urgent|unimportant, optional|Latin imperare (to command)|It is ______ that you wear a helmet when riding a bike on the highway.
+implement|v|to put a plan or decision into effect|carry out, execute, apply|abandon, neglect|Latin implere (to fill up)|The school will ______ the new schedule starting in January.
+implication|n|a likely consequence or something suggested but not stated|consequence, suggestion, inference|statement, declaration|Latin implicare (to fold in)|The ______ of the new law is that many small shops may have to close.
+implicit|adj|suggested but not directly expressed|implied, unspoken, understood|explicit, stated|Latin implicitus (entangled)|Although no one said so, there was ______ agreement that the oldest sibling would drive.
+impulsive|adj|acting suddenly without careful thought|rash, hasty, spontaneous|cautious, deliberate|Latin impellere (to push forward)|Feeling ______, {{NAME_1}} spent every dollar of savings on concert tickets without a second thought.
+inadvertent|adj|not intended; accidental|accidental, unintentional, careless|deliberate, intentional|Latin in- (not) + advertere (to turn toward)|The typo was ______, but it changed the meaning of the entire sentence.
+incentive|n|something that motivates someone to act|motivation, encouragement, reward|deterrent, disincentive|Latin incentivus (setting the tune)|Free pizza was the ______ that got students to stay for the meeting.
+incessant|adj|continuing without stopping|constant, unceasing, nonstop|occasional, intermittent|Latin in- (not) + cessare (to stop)|The ______ barking of the neighbor's dog kept {{NAME_1}} awake all night.
+incidental|adj|happening as a minor part of something else|secondary, minor, accidental|essential, central|Latin incidere (to fall upon)|Compared with the concert tickets, the bus fare was ______, hardly worth mentioning.
+incite|v|to encourage or stir up violent or unlawful behavior|provoke, instigate, stir up|calm, discourage|Latin incitare (to set in rapid motion)|The speaker was arrested for trying to ______ a riot.
+incompatible|adj|unable to exist or work together|conflicting, mismatched, inconsistent|compatible, harmonious|in- (not) + compatible|The old printer is ______ with the new computers, so the school must replace it.
+incorporate|v|to include something as part of a whole|include, integrate, combine|exclude, separate|Latin corpus (body)|The chef likes to ______ fresh herbs from her own garden into every dish.
+indifferent|adj|having no interest or concern|uninterested, unconcerned, apathetic|interested, concerned|Latin indifferens (not differing)|{{NAME_1}} seemed ______ to the final score, more interested in the snacks than the game.
+indispensable|adj|absolutely necessary|essential, vital, crucial|unnecessary, expendable|in- (not) + dispensable|For a long hike, a good map is ______.
+induce|v|to bring about or cause something|cause, bring about, prompt|prevent, stop|Latin inducere (to lead in)|Soft music and dim lights can ______ sleep even in a noisy hotel.
+inevitable|adj|certain to happen; unavoidable|unavoidable, certain, inescapable|avoidable, uncertain|Latin in- (not) + evitare (to avoid)|With so many players injured, a loss seemed ______.
+influx|n|the arrival of large numbers of people or things|inflow, flood, rush|exodus, outflow|Latin influere (to flow in)|Every summer, the ______ of tourists doubles the town's population.
+infringe|v|to break a law or limit someone's rights|violate, breach, encroach|obey, respect|Latin infringere (to break)|Copying the song without permission would ______ on the artist's copyright.
+ingenious|adj|clever, original, and inventive|clever, inventive, brilliant|unimaginative, dull|Latin ingenium (natural talent)|{{NAME_1}}'s solution was ______: using a rubber band to hold the broken hinge in place.
+inhibit|v|to hold back or prevent|restrain, hinder, suppress|encourage, promote|Latin inhibere (to hold in)|Cold weather can ______ the growth of bacteria in food.
+initiate|v|to cause a process or action to begin|begin, start, launch|end, finish|Latin initium (beginning)|The principal will ______ a new reading program next month.
+innate|adj|existing from birth; natural|inborn, natural, inherent|learned, acquired|Latin innatus (inborn)|{{NAME_1}}'s sense of rhythm seems ______; {{NAME_1}} was drumming on pots before learning to walk.
+innocuous|adj|not harmful or offensive|harmless, safe, inoffensive|harmful, dangerous|Latin in- (not) + nocuus (harmful)|The question seemed ______, but it led to an hour-long argument.
+inquisitive|adj|curious and eager to learn|curious, questioning, interested|incurious, indifferent|Latin inquirere (to seek into)|The ______ child asked the museum guide question after question.
+insight|n|a deep, clear understanding of something|understanding, perception, awareness|ignorance, confusion|Middle English in + sight|The documentary offered real ______ into how bees communicate.
+insinuate|v|to suggest something unpleasant indirectly|imply, hint, suggest|state, declare|Latin insinuare (to wind into)|Did the coach mean to ______ that {{NAME_1}} had faked the injury?
+insipid|adj|lacking flavor, interest, or energy|bland, dull, tasteless|flavorful, exciting|Latin in- (not) + sapidus (tasty)|The soup was so ______ that {{NAME_1}} added salt, pepper, and lemon juice.
+instigate|v|to bring about or start an action or event|initiate, provoke, launch|stop, halt|Latin instigare (to urge on)|The new manager wanted to ______ changes that would make the store more efficient.
+integral|adj|necessary to make something whole; essential|essential, fundamental, vital|peripheral, unnecessary|Latin integer (whole)|Teamwork is ______ to the club's success; no one wins alone.
+integrity|n|the quality of being honest and having strong moral principles|honesty, honor, principle|dishonesty, corruption|Latin integer (whole, complete)|Returning the extra change showed {{NAME_1}}'s ______.
+intermittent|adj|stopping and starting at irregular intervals|irregular, sporadic, occasional|constant, continuous|Latin intermittere (to leave off)|The forecast calls for ______ rain, with dry spells between the showers.
+intervene|v|to come between in order to prevent or change something|interfere, step in, mediate|stand by, ignore|Latin inter (between) + venire (to come)|When the argument grew heated, the teacher had to ______.
+intricate|adj|very detailed and complicated|complex, elaborate, detailed|simple, plain|Latin intricare (to entangle)|The quilt's ______ pattern included hundreds of tiny stitched stars.
+intrinsic|adj|belonging naturally; essential|inherent, innate, fundamental|extrinsic, external|Latin intrinsecus (inwardly)|The old coin has little ______ value, but collectors pay a lot for it because of its history.
+intuitive|adj|understood easily without conscious reasoning|instinctive, natural, easy|counterintuitive, difficult|Latin intueri (to look at)|The app's design is so ______ that new users figure it out in seconds.
+invariably|adv|always; in every case|always, consistently, unfailingly|rarely, occasionally|in- (not) + variable|Whenever {{NAME_1}} tells that joke, the audience ______ laughs.
+irony|n|the use of words or events that mean the opposite of what is expected|sarcasm, paradox, incongruity|literalness, sincerity|Greek eironeia (feigned ignorance)|The ______ was clear: the fire station burned down.
+irrelevant|adj|not connected to the matter at hand|unrelated, beside the point, immaterial|relevant, pertinent|ir- (not) + relevant|The color of the car is ______ to the question of who caused the accident.
+jeopardize|v|to put in danger of loss or harm|endanger, threaten, risk|protect, safeguard|Old French jeu parti (divided game)|Skipping practice could ______ {{NAME_1}}'s spot on the team.
+judicious|adj|having or showing good judgment|wise, prudent, sensible|foolish, reckless|Latin judicium (judgment)|By making ______ use of her time, she finished her project two days early.
+juxtapose|v|to place side by side for comparison|compare, contrast, place together|separate, isolate|Latin juxta (next to) + French poser (to place)|The exhibit will ______ old photographs of the city with pictures of the same streets today.
+kinetic|adj|relating to or resulting from motion|moving, active, dynamic|static, still|Greek kinein (to move)|Wind turbines turn the ______ energy of moving air into electricity.
+lament|v|to express sorrow or regret about something|mourn, grieve, regret|celebrate, rejoice|Latin lamentum (wailing)|Fans continue to ______ the closing of the old stadium, where they spent so many happy nights.
+latent|adj|present but not yet visible or active|hidden, dormant, undeveloped|active, obvious|Latin latere (to lie hidden)|The coach saw ______ talent in {{NAME_1}} that no one else had noticed.
+legitimate|adj|conforming to rules or laws; valid|valid, lawful, justified|illegitimate, invalid|Latin legitimus (lawful)|{{NAME_1}}'s excuse for being late was ______: the bus really had broken down.
+lenient|adj|not strict in punishment or rules|merciful, tolerant, permissive|strict, harsh|Latin lenis (soft, gentle)|The substitute teacher was ______, allowing students to hand in homework a day late.
+lethargic|adj|lacking energy; sluggish|sluggish, tired, listless|energetic, lively|Greek lethargos (forgetful)|After the huge holiday meal, everyone felt too ______ to go for a walk.
+liability|n|a disadvantage or responsibility that may cause trouble|burden, drawback, responsibility|asset, advantage|Latin ligare (to bind)|If the company skipped the safety inspection, it could face legal ______ for any injuries on the ride.
+literal|adj|taking words in their usual or most basic sense|exact, word-for-word, strict|figurative, metaphorical|Latin littera (letter)|When the teacher said to "break a leg," {{NAME_1}} knew the phrase was not meant to be ______.
+lucid|adj|clearly expressed and easy to understand|clear, understandable, coherent|confusing, unclear|Latin lucidus (bright)|The textbook's ______ explanations made calculus seem simple.
+lucrative|adj|producing a great deal of profit|profitable, rewarding, moneymaking|unprofitable, losing|Latin lucrum (gain)|Opening a second shop proved ______, doubling the owner's income in a year.
+magnitude|n|great size or importance|size, scale, importance|insignificance, smallness|Latin magnus (great)|No one understood the ______ of the problem until the entire city lost power.
+malleable|adj|easily shaped or influenced|flexible, pliable, adaptable|rigid, inflexible|Latin malleus (hammer)|Gold is so ______ that it can be hammered into sheets thinner than paper.
+mandate|n|an official order or authority to act|order, command, authority|request, option|Latin mandare (to command)|The new principal had a clear ______ from the school board: raise reading scores.
+mandatory|adj|required by law or rules|required, compulsory, obligatory|optional, voluntary|Latin mandatum (command)|Attendance at the safety meeting is ______ for all lab assistants.
+manifest|v|to show clearly through actions or appearance|display, reveal, demonstrate|hide, conceal|Latin manifestus (clearly visible)|Signs of the illness may not ______ until several days after infection.
+marginal|adj|small and not very important|minor, slight, negligible|significant, major|Latin margo (edge)|The difference the new paint made was ______; the room still looked gloomy.
+maverick|n|an independent person who does not follow the group|nonconformist, rebel, individualist|conformist, follower|named after Samuel Maverick, a Texas rancher who didn't brand his cattle|A true ______, the young architect ignored every tradition and designed a house shaped like a boat.
+mediocre|adj|of only average or poor quality|ordinary, average, so-so|excellent, outstanding|Latin mediocris (middling)|The food was ______, neither terrible nor memorable.
+melancholy|adj|feeling or expressing deep sadness|sad, gloomy, sorrowful|cheerful, joyful|Greek melas (black) + khole (bile)|The ______ song about lost friendships made several people in the audience cry.
+mentor|n|an experienced and trusted adviser|adviser, guide, teacher|student, protégé|named after Mentor, Odysseus's adviser in Greek myth|{{NAME_1}} met with {{NAME_1_POSS}} ______ every week to talk about college plans.
+methodical|adj|done in an orderly, systematic way|systematic, orderly, organized|disorganized, haphazard|Greek methodos (pursuit of knowledge)|The ______ researcher labeled every sample and recorded every step.
+meager|adj|lacking in quantity or quality|scanty, sparse, insufficient|abundant, plentiful|Old French maigre (thin)|By the third day, the hikers' food supply was so ______ that they rationed every granola bar.
+milestone|n|an important event or stage in development|landmark, turning point, achievement|setback, nonevent|stone marking each mile on a road|Graduating from high school is one ______ that families celebrate with big parties.
+moderate|adj|average in amount or degree; not extreme|reasonable, modest, medium|extreme, excessive|Latin moderari (to regulate)|The doctor recommended ______ exercise, such as a brisk walk each day.
+modify|v|to make partial changes to something|change, alter, adjust|preserve, keep|Latin modus (measure)|The teacher agreed to ______ the assignment so that it could be completed at home.
+momentous|adj|of great importance or significance|historic, significant, important|trivial, insignificant|Latin momentum (movement, importance)|Watched by millions around the world, the moon landing was truly ______.
+monotonous|adj|dull and lacking in variety|dull, tedious, repetitive|varied, exciting|Greek monos (single) + tonos (tone)|The ______ hum of the air conditioner put the whole class to sleep.
+morale|n|the confidence and enthusiasm of a person or group|spirit, confidence, enthusiasm|despair, discouragement|French moral (moral)|A surprise visit from the team's hero boosted ______ before the final game.
+mundane|adj|ordinary and not interesting|ordinary, dull, everyday|extraordinary, exciting|Latin mundus (world)|{{NAME_1}} found the ______ task of folding laundry strangely relaxing.
+mutual|adj|shared by two or more people|shared, common, joint|one-sided, individual|Latin mutuus (borrowed, reciprocal)|{{NAME_1}} and {{NAME_2}} became friends through their ______ love of chess.
+mollify|v|to calm someone's anger or anxiety|soothe, placate, pacify|enrage, provoke|Latin mollis (soft)|The manager tried to ______ the upset customer by offering a full refund.
+meander|v|to follow a winding course; to wander aimlessly|wander, wind, ramble|go straight, rush|from the Maeander, a winding river in ancient Greece|The river seems to ______ across the valley, looping back and forth for miles.
+myriad|adj|countless; extremely great in number|countless, innumerable, many|few, limited|Greek myrias (ten thousand)|The rain forest is home to ______ species of insects, many still unnamed.
+`);
+
+
+/* ===== js/vocab/bank-core-4.js ===== */
+// Vocab Vault bank: core words, N–R, plus common adverbs. Format: see js/vocab/bank.js.
+window.SatWizzBank("core", `
+negligent|adj|failing to take proper care|careless, neglectful, irresponsible|careful, attentive|Latin neglegere (to disregard)|The landlord was found ______ for ignoring repeated reports of a broken stair.
+negligible|adj|so small or unimportant that it can be ignored|insignificant, trivial, minimal|significant, considerable|Latin neglegere (to disregard)|The price difference between the two brands was ______, just a few cents.
+neutral|adj|not supporting either side in a conflict|impartial, unbiased, uninvolved|biased, partisan|Latin neuter (neither)|During the argument, {{NAME_1}} stayed ______, refusing to take either friend's side.
+nonchalant|adj|calm and relaxed; seeming not to care|casual, relaxed, unconcerned|anxious, concerned|French nonchaloir (not to be concerned)|Despite the pressure, {{NAME_1}} looked ______ as {{NAME_1}} stepped up to take the final shot.
+notable|adj|worthy of attention; remarkable|remarkable, noteworthy, significant|ordinary, unremarkable|Latin notare (to mark)|The town is ______ for its annual kite festival, which draws thousands of visitors.
+notorious|adj|famous for something bad|infamous, disreputable, scandalous|respected, esteemed|Latin notus (known)|The intersection is ______ for accidents, so the city finally added a traffic light.
+nuance|n|a subtle difference in meaning, tone, or expression|subtlety, shade, distinction|obviousness, crudeness|French nuer (to shade)|Good translators pay attention to every ______ of a poem, not just the literal meaning.
+nurture|v|to care for and encourage the growth of|nourish, foster, cultivate|neglect, abandon|Latin nutrire (to feed)|Great teachers ______ their students' curiosity instead of crushing it.
+objective|adj|not influenced by personal feelings; factual|unbiased, impartial, neutral|subjective, biased|Latin objectum (thing put before the mind)|A scientist must remain ______, reporting the results even when they disprove her favorite theory.
+obligatory|adj|required by law, rule, or custom|mandatory, compulsory, required|optional, voluntary|Latin obligare (to bind)|Wearing a helmet is ______ for everyone riding in the bike race.
+obscure|adj|not well known or hard to understand|unknown, little-known, unclear|famous, clear|Latin obscurus (dark)|{{NAME_1}} loves digging up ______ bands that only a few hundred people have ever heard.
+obstinate|adj|stubbornly refusing to change one's opinion|stubborn, headstrong, inflexible|flexible, compliant|Latin obstinare (to persist)|The ______ mule refused to cross the bridge no matter how hard the farmer pulled.
+omit|v|to leave out or exclude|exclude, leave out, skip|include, add|Latin omittere (to let go)|The editor decided to ______ the final paragraph because it repeated earlier points.
+ominous|adj|giving the impression that something bad will happen|threatening, menacing, foreboding|promising, encouraging|Latin omen (sign)|The ______ dark clouds rolling in made everyone pack up the picnic early.
+opaque|adj|not able to be seen through; hard to understand|cloudy, murky, unclear|transparent, clear|Latin opacus (shaded)|The bathroom window is made of ______ glass so no one can see inside.
+optimal|adj|best or most favorable|best, ideal, optimum|worst, poor|Latin optimus (best)|Gardeners say that early morning is the ______ time to water plants.
+optimistic|adj|hopeful and confident about the future|hopeful, positive, upbeat|pessimistic, gloomy|Latin optimus (best)|Even after losing the first game, the coach remained ______ about the rest of the season.
+orthodox|adj|following traditional or generally accepted beliefs|traditional, conventional, standard|unorthodox, radical|Greek orthos (right) + doxa (opinion)|The doctor used ______ treatments first before trying anything experimental.
+ostentatious|adj|designed to impress or attract notice; showy|showy, flashy, extravagant|modest, understated|Latin ostentare (to display)|The ______ mansion had gold faucets and a fountain in the driveway.
+outdated|adj|old-fashioned and no longer useful|obsolete, old-fashioned, antiquated|modern, current|out + date|The library replaced its ______ computers, some of which were older than the students.
+overt|adj|done or shown openly|open, obvious, blatant|covert, hidden|Old French ovrir (to open)|The rival teams showed ______ hostility, shouting at each other across the field.
+paradox|n|a statement that seems to contradict itself but may be true|contradiction, puzzle, inconsistency|consistency, truism|Greek para (beyond) + doxa (opinion)|The ______ is that the more choices people have, the harder it can be to feel satisfied.
+paramount|adj|more important than anything else|supreme, foremost, chief|minor, secondary|Old French par amont (above)|For the lifeguards, the swimmers' safety is ______.
+partisan|adj|strongly supporting one party or cause|biased, one-sided, factional|impartial, neutral|Italian partigiano (supporter)|The debate grew so ______ that neither side would admit the other had a good point.
+passive|adj|accepting what happens without active response|inactive, submissive, unresponsive|active, assertive|Latin pati (to suffer)|Instead of being ______ about the problem, {{NAME_1}} started a petition to fix it.
+patron|n|a person who gives financial or other support|supporter, sponsor, benefactor|critic, opponent|Latin patronus (protector)|The art museum's new wing was paid for by its most generous ______.
+penchant|n|a strong liking or habit|liking, fondness, inclination|dislike, aversion|French pencher (to lean)|{{NAME_1}}'s ______ for spicy food is famous; {{NAME_1}} adds hot sauce to almost everything.
+perceive|v|to become aware of or understand something|notice, observe, recognize|overlook, ignore|Latin percipere (to seize)|Dogs can ______ sounds that are far too high for humans to hear.
+peripheral|adj|on the edge; of minor importance|marginal, secondary, outer|central, essential|Greek peripheria (circumference)|The main argument was strong, though some ______ details were wrong.
+perpetual|adj|never ending or changing|constant, endless, permanent|temporary, intermittent|Latin perpetuus (continuous)|The waterfall's ______ roar could be heard from anywhere in the valley.
+persevere|v|to continue in spite of difficulty|persist, keep going, endure|give up, quit|Latin perseverare (to persist)|{{NAME_1}} had to ______ through dozens of failed attempts before the experiment finally worked.
+persistent|adj|continuing firmly or for a long time|determined, tenacious, unrelenting|occasional, irresolute|Latin persistere (to continue steadfastly)|{{NAME_1}}'s ______ questions eventually convinced the principal to reconsider.
+pertinent|adj|relevant to the matter being considered|relevant, applicable, related|irrelevant, unrelated|Latin pertinere (to relate to)|Please include only ______ details in your report, not everything you saw.
+pessimistic|adj|tending to expect the worst|gloomy, negative, cynical|optimistic, hopeful|Latin pessimus (worst)|The forecast made the farmers ______ about this year's harvest.
+placid|adj|calm and peaceful; not easily upset|calm, tranquil, serene|agitated, stormy|Latin placidus (gentle)|The lake was ______ in the early morning, smooth as glass.
+plausible|adj|seeming reasonable or probable|believable, credible, likely|implausible, unlikely|Latin plausibilis (deserving applause)|{{NAME_1}}'s explanation sounded ______, so the teacher accepted it.
+pivotal|adj|of crucial importance|crucial, critical, decisive|unimportant, minor|French pivot (hinge)|The election was ______ for the town, deciding whether the factory would stay.
+polarize|v|to divide into two sharply opposing groups|divide, split, separate|unite, unify|Greek polos (pole)|The proposal to close the school threatened to ______ the community.
+ponder|v|to think about something carefully|consider, contemplate, reflect|ignore, disregard|Latin ponderare (to weigh)|{{NAME_1}} took a long walk to ______ the offer before replying.
+pragmatism|n|a practical approach to problems|practicality, realism, sensibleness|idealism, impracticality|Greek pragma (deed)|The mayor's ______ won voters over: she promised only what she could actually deliver.
+precarious|adj|not securely held; dangerously likely to fall or change|unstable, risky, shaky|secure, stable|Latin precarius (obtained by prayer)|The stack of dishes was ______, balanced on the edge of the counter.
+precise|adj|exact and accurate|exact, accurate, specific|imprecise, vague|Latin praecisus (cut short)|The recipe calls for ______ measurements, so {{NAME_1}} used a kitchen scale.
+preclude|v|to prevent something from happening|prevent, rule out, prohibit|allow, permit|Latin praecludere (to shut off)|{{NAME_1}}'s injury does not ______ playing next season, but it does mean months of rest.
+predecessor|n|a person who held a job before someone else|forerunner, antecedent, precursor|successor, heir|Latin prae (before) + decessor (one who departs)|The new principal kept many of the policies of her ______.
+predominant|adj|present as the strongest or main element|main, chief, prevailing|minor, secondary|Latin prae (before) + dominari (to rule)|Blue is the ______ color in the painting, covering most of the canvas.
+premise|n|an idea on which an argument or theory is based|assumption, basis, proposition|conclusion, result|Latin praemissa (put before)|The movie's ______ is simple: a dog accidentally becomes mayor of a small town.
+prevalent|adj|widespread in a particular area or time|common, widespread, pervasive|rare, uncommon|Latin praevalere (to be very powerful)|Colds are especially ______ in winter, when people stay indoors together.
+pristine|adj|in its original condition; unspoiled|immaculate, untouched, perfect|damaged, dirty|Latin pristinus (former)|The used car was in ______ condition, without a single scratch.
+proficient|adj|skilled and competent at something|skilled, capable, expert|incompetent, unskilled|Latin proficere (to advance)|After two years of lessons, {{NAME_1}} became ______ at playing the violin.
+prolong|v|to extend the duration of something|extend, lengthen, stretch out|shorten, curtail|Latin prolongare (to lengthen)|The rain will ______ the game, forcing several long delays.
+prominent|adj|important and well known; easy to see|famous, noticeable, leading|unknown, inconspicuous|Latin prominere (to jut out)|The museum's most ______ painting hangs in the main hall where everyone sees it first.
+prompt|adj|done without delay|quick, immediate, timely|late, slow|Latin promptus (ready)|Thanks to the firefighters' ______ response, no one was hurt.
+propensity|n|a natural tendency to behave in a particular way|tendency, inclination, disposition|aversion, disinclination|Latin propensus (inclined)|Because of the puppy's ______ for chewing shoes, {{NAME_1}} keeps them on a high shelf.
+prosper|v|to succeed or thrive, especially financially|thrive, flourish, succeed|fail, decline|Latin prosperare (to cause to succeed)|With a new highway nearby, the small diner began to ______.
+protagonist|n|the main character in a story|hero, lead, main character|antagonist, villain|Greek protos (first) + agonistes (actor)|The novel's ______ is a twelve-year-old who solves mysteries in her neighborhood.
+provisional|adj|arranged for now but possibly changed later|temporary, tentative, interim|permanent, final|Latin providere (to foresee)|The dates are ______ until the band confirms which venue is available.
+provoke|v|to cause a strong reaction, often anger|incite, trigger, anger|calm, pacify|Latin provocare (to call forth)|The referee warned the players not to ______ each other.
+prudent|adj|acting with care and thought for the future|wise, careful, sensible|reckless, foolish|Latin providens (foreseeing)|It would be ______ to bring an umbrella, since the forecast calls for rain.
+punctual|adj|happening or arriving at the agreed time|on time, prompt, timely|late, tardy|Latin punctum (point)|{{NAME_1}} is always ______, arriving at practice five minutes early.
+qualitative|adj|relating to qualities rather than numbers|descriptive, subjective, non-numerical|quantitative, numerical|Latin qualitas (quality)|The survey collected ______ data, such as people's descriptions of how the park made them feel.
+quantitative|adj|relating to amounts that can be measured|numerical, measurable, statistical|qualitative, descriptive|Latin quantitas (quantity)|The study gathered ______ data, such as the number of visitors per hour.
+quell|v|to put an end to something, often by force|suppress, crush, calm|provoke, incite|Old English cwellan (to kill)|The principal stepped onto the stage to ______ the noise in the auditorium.
+radical|adj|far-reaching or extreme; favoring complete change|extreme, drastic, revolutionary|moderate, conservative|Latin radix (root)|The new coach made ______ changes, replacing the entire offense.
+random|adj|happening without a plan or pattern|arbitrary, chance, haphazard|systematic, planned|Old French randir (to gallop)|The order of the speakers was ______, decided by pulling names from a hat.
+rational|adj|based on reason or logic|logical, reasonable, sensible|irrational, illogical|Latin ratio (reason)|After calming down, {{NAME_1}} made a choice that was ______ instead of emotional.
+rebuke|v|to express sharp disapproval|scold, reprimand, criticize|praise, commend|Old French rebuker (to beat back)|The coach had to ______ the players for arguing with the referee.
+recede|v|to move back or away; to diminish|retreat, withdraw, ebb|advance, approach|Latin re- (back) + cedere (to go)|As the floodwaters began to ______, residents returned to clean their homes.
+reciprocate|v|to respond to an action by doing something similar|return, repay, match|ignore, withhold|Latin reciprocus (moving back and forth)|When {{NAME_2}} helped with the move, {{NAME_1}} promised to ______ by helping {{NAME_2}} paint.
+redundant|adj|no longer needed; repeating something unnecessarily|unnecessary, superfluous, repetitive|necessary, essential|Latin redundare (to overflow)|The phrase "free gift" is ______, since every gift is free.
+refine|v|to improve something by making small changes|improve, polish, perfect|coarsen, worsen|re- + fine|{{NAME_1}} spent weeks trying to ______ the essay, sharpening every sentence.
+refute|v|to prove that something is wrong|disprove, rebut, contradict|confirm, prove|Latin refutare (to repel)|The scientist used new data to ______ the old theory.
+reinforce|v|to strengthen or support|strengthen, bolster, fortify|weaken, undermine|re- + French enforcer (to strengthen)|Steel beams were added to ______ the old bridge.
+relevant|adj|closely connected to the matter at hand|pertinent, applicable, related|irrelevant, unrelated|Latin relevare (to raise up)|Only include ______ evidence in your essay; leave out the rest.
+reluctant|adj|unwilling and hesitant|unwilling, hesitant, resistant|eager, willing|Latin reluctari (to struggle against)|{{NAME_1}} was ______ to sing in front of the class but finally agreed.
+remedy|n|a treatment or solution for a problem|cure, solution, fix|cause, problem|Latin remedium (cure)|The best ______ for a cold is often rest and plenty of fluids.
+reminiscent|adj|tending to remind one of something|evocative, suggestive, similar|unlike, dissimilar|Latin reminisci (to remember)|The smell of the bakery was ______ of {{NAME_1_POSS}} grandmother's kitchen.
+renounce|v|to formally give up a claim, right, or belief|give up, reject, abandon|claim, embrace|Latin renuntiare (to announce against)|The prince chose to ______ his right to the throne.
+renovate|v|to restore something old to good condition|restore, refurbish, update|neglect, ruin|Latin re- (again) + novus (new)|The town plans to ______ the old train station and turn it into a library.
+repudiate|v|to reject or refuse to accept|reject, disown, deny|accept, embrace|Latin repudiare (to divorce)|The senator was quick to ______ the false statements made in her name.
+resent|v|to feel bitterness about unfair treatment|begrudge, dislike, be annoyed by|appreciate, welcome|French ressentir (to feel strongly)|Some players began to ______ the coach for always favoring his nephew.
+resolute|adj|firmly determined|determined, steadfast, firm|irresolute, wavering|Latin resolutus (loosened, settled)|Despite the critics, the mayor remained ______ about building the new park.
+restrain|v|to keep under control|hold back, restrict, check|release, unleash|Latin restringere (to bind back)|{{NAME_1}} had to ______ the excited dog when the mail carrier arrived.
+retain|v|to continue to have or keep|keep, hold, preserve|lose, release|Latin retinere (to hold back)|Reviewing notes each night helps students ______ what they learn.
+retract|v|to withdraw a statement or promise|withdraw, take back, revoke|confirm, reaffirm|Latin retrahere (to draw back)|The newspaper had to ______ the story after learning that its source had lied.
+revere|v|to feel deep respect or admiration for|admire, honor, respect|despise, scorn|Latin revereri (to stand in awe of)|Many musicians ______ the old jazz pianist as a legend.
+rigorous|adj|extremely thorough and careful|thorough, strict, demanding|lax, careless|Latin rigor (stiffness)|The new medicine went through ______ testing before it was approved.
+robust|adj|strong and healthy; able to withstand stress|sturdy, strong, vigorous|weak, fragile|Latin robur (oak, strength)|The economy remained ______ even during the global slowdown.
+rudimentary|adj|basic and simple; not highly developed|basic, elementary, primitive|advanced, sophisticated|Latin rudimentum (first attempt)|{{NAME_1}} has only ______ knowledge of Spanish: enough to order food, but not to hold a conversation.
+abruptly|adv|suddenly and unexpectedly|suddenly, sharply, without warning|gradually, slowly|Latin abruptus (broken off)|The music stopped ______ when the power went out.
+adamantly|adv|in a firm way that refuses to change|firmly, insistently, resolutely|weakly, uncertainly|Greek adamas (unbreakable)|{{NAME_1}} ______ refused to give up, even when the score was hopeless.
+candidly|adv|in an honest and open way|honestly, frankly, openly|evasively, deceptively|Latin candidus (white, pure)|The coach spoke ______ about the team's mistakes, hiding nothing from reporters.
+cautiously|adv|carefully, to avoid risk or danger|carefully, warily, prudently|recklessly, carelessly|Latin cautio (caution)|The cat stepped ______ onto the icy porch, testing each step.
+deliberately|adv|on purpose; slowly and carefully|intentionally, purposely, carefully|accidentally, hastily|Latin deliberare (to weigh)|{{NAME_1}} ______ left the door unlocked so that {{NAME_2}} could get in.
+diligently|adv|with careful, steady effort|carefully, industriously, conscientiously|lazily, carelessly|Latin diligere (to value)|The volunteers worked ______ all afternoon to clean the beach.
+emphatically|adv|in a forceful and clear way|forcefully, firmly, insistently|weakly, hesitantly|Greek emphasis (display)|The coach shook her head ______ when asked if the team would forfeit.
+explicitly|adv|clearly and directly|clearly, directly, plainly|implicitly, vaguely|Latin explicare (to unfold)|The rules ______ state that phones must be turned off during the exam.
+inadvertently|adv|without intending to; by accident|accidentally, unintentionally, mistakenly|deliberately, intentionally|Latin in- + advertere (not turning toward)|{{NAME_1}} ______ deleted the file while trying to rename it.
+intermittently|adv|at irregular intervals; not continuously|occasionally, sporadically, periodically|constantly, continuously|Latin intermittere (to leave off)|The old radio worked only ______, crackling to life and then falling silent.
+meticulously|adv|with great attention to detail|carefully, thoroughly, painstakingly|carelessly, sloppily|Latin metus (fear)|The archivist ______ labeled every photograph with the date and place it was taken.
+notably|adv|in a way that is remarkable or worth noting|remarkably, strikingly, particularly|ordinarily, unremarkably|Latin notare (to mark)|Several cities, ______ Chicago, reported record cold temperatures.
+ostensibly|adv|apparently or seemingly, but perhaps not actually|apparently, seemingly, supposedly|genuinely, actually|Latin ostendere (to show)|{{NAME_1}} came over ______ to borrow a book, but really wanted to see the new puppy.
+predominantly|adv|mainly; for the most part|mainly, mostly, largely|rarely, slightly|Latin prae + dominari|The neighborhood is ______ residential, with only a few small shops.
+reluctantly|adv|in an unwilling and hesitant way|unwillingly, hesitantly, grudgingly|eagerly, willingly|Latin reluctari (to struggle against)|{{NAME_1}} ______ handed over the phone after the teacher asked a third time.
+`);
+
+
+/* ===== js/vocab/bank-core-5.js ===== */
+// Vocab Vault bank: core words, S–Z. Format: see js/vocab/bank.js.
+window.SatWizzBank("core", `
+salient|adj|most noticeable or important|prominent, notable, striking|minor, inconspicuous|Latin salire (to leap)|The report's most ______ point was that the bridge needed repairs within a year.
+sanction|v|to give official permission or approval for|approve, authorize, permit|forbid, prohibit|Latin sanctio (decree)|The league refused to ______ the game because the field was flooded.
+scarce|adj|in short supply; not enough to meet demand|rare, sparse, insufficient|abundant, plentiful|Old French escars (scanty)|Fresh water became ______ during the long drought.
+scrutiny|n|close and critical examination|examination, inspection, analysis|neglect, disregard|Latin scrutari (to search)|The new policy came under intense ______ from parents and teachers.
+sedentary|adj|involving a lot of sitting and little exercise|inactive, stationary, seated|active, energetic|Latin sedere (to sit)|Doctors warn that ______ jobs can lead to health problems if people never take walking breaks.
+sentiment|n|a view or feeling about something|feeling, opinion, attitude|indifference, coldness|Latin sentire (to feel)|The general ______ among the players was that the new uniforms looked great.
+serene|adj|calm, peaceful, and untroubled|calm, peaceful, tranquil|agitated, stormy|Latin serenus (clear)|The garden was ______ in the early morning, with only birdsong breaking the silence.
+significant|adj|important or large enough to be noticed|important, notable, substantial|insignificant, trivial|Latin significare (to indicate)|Studying every night led to ______ improvement in {{NAME_1}}'s grades.
+skeptic|n|a person who questions or doubts accepted beliefs|doubter, questioner, cynic|believer, supporter|Greek skeptikos (inquiring)|Even the biggest ______ in the room was convinced after seeing the experiment work.
+solace|n|comfort in a time of sadness|comfort, consolation, relief|distress, sorrow|Latin solari (to console)|After the loss, {{NAME_1}} found ______ in long walks with the dog.
+solemn|adj|serious and formal|serious, grave, dignified|cheerful, frivolous|Latin sollemnis (ceremonial)|The ceremony was ______, with no music and no applause.
+solitary|adj|done or existing alone|alone, lone, single|social, accompanied|Latin solus (alone)|Leopards are ______ animals, living and hunting alone.
+sophisticated|adj|highly developed and complex; worldly and refined|advanced, complex, refined|simple, crude|Greek sophistes (wise man)|The new phone has ______ cameras that can photograph the night sky.
+sparse|adj|thinly scattered or spread out|scattered, thin, scant|dense, abundant|Latin sparsus (scattered)|Vegetation is ______ in the desert, with only a few shrubs here and there.
+speculate|v|to form a theory without firm evidence|guess, theorize, conjecture|know, prove|Latin speculari (to observe)|Fans began to ______ about which player would be traded next.
+spontaneous|adj|happening naturally without planning|unplanned, impulsive, natural|planned, deliberate|Latin sponte (of one's own accord)|The crowd broke into ______ applause when the injured runner crossed the finish line.
+sporadic|adj|occurring at irregular intervals; scattered|occasional, irregular, intermittent|constant, regular|Greek sporadikos (scattered)|There were only ______ showers, so the picnic went ahead.
+stagnant|adj|not flowing or developing; inactive|still, motionless, sluggish|flowing, thriving|Latin stagnum (pool)|Mosquitoes breed in ______ water, so the city drained the old pond.
+static|adj|lacking movement or change|unchanging, fixed, stable|dynamic, changing|Greek statikos (causing to stand)|The town's population has stayed ______ for decades, never rising or falling much.
+stringent|adj|strict and precise|strict, rigorous, demanding|lenient, lax|Latin stringere (to tighten)|The lab follows ______ safety rules, and anyone who breaks them is sent out.
+subjective|adj|based on personal feelings or opinions|personal, biased, individual|objective, impartial|Latin subjectivus (of the subject)|Whether a painting is beautiful is ______; people often disagree.
+subordinate|adj|lower in rank or importance|junior, secondary, lesser|superior, senior|Latin sub (under) + ordinare (to arrange)|In the novel, the captain treats every ______ officer with respect.
+subsequent|adj|coming after something in time|following, later, succeeding|previous, prior|Latin subsequi (to follow closely)|The first test was hard, but ______ tests were easier once {{NAME_1}} learned the format.
+subsidize|v|to support financially, especially with government money|fund, finance, support|tax, charge|Latin subsidium (support)|The city will ______ bus passes so that students can ride for free.
+subtle|adj|so slight that it is hard to notice|slight, faint, delicate|obvious, blatant|Latin subtilis (finely woven)|The hint of lemon in the cake was so ______ that most people did not notice it.
+succinct|adj|briefly and clearly expressed|brief, concise, to the point|wordy, rambling|Latin succinctus (girded up)|{{NAME_1}}'s answer was ______: "Yes, and I'll be there at noon."
+superficial|adj|on the surface only; not thorough or deep|shallow, surface, cursory|deep, thorough|Latin superficies (surface)|The scratch was ______ and healed in two days.
+superfluous|adj|more than is needed; unnecessary|unnecessary, extra, redundant|necessary, essential|Latin superfluus (overflowing)|The editor removed every ______ word, cutting the essay in half.
+supplement|v|to add something to complete or improve|add to, augment, enhance|deplete, reduce|Latin supplere (to fill up)|{{NAME_1}} reads library books to ______ the lessons from class.
+suppress|v|to forcibly stop or hold back|restrain, stifle, curb|release, encourage|Latin supprimere (to press down)|{{NAME_1}} tried to ______ a laugh during the serious speech.
+surpass|v|to be greater or better than|exceed, outdo, beat|trail, fall short|French sur (beyond) + passer (to pass)|The new skyscraper will ______ the old one as the tallest building in the city.
+susceptible|adj|likely to be influenced or harmed by something|vulnerable, prone, open|immune, resistant|Latin suscipere (to take up)|Young plants are ______ to frost, so gardeners cover them on cold nights.
+sustain|v|to keep something going over time; to support|maintain, support, continue|abandon, end|Latin sustinere (to hold up)|The runners ate energy bars to ______ their strength during the marathon.
+synthesize|v|to combine parts into a whole|combine, merge, integrate|separate, analyze|Greek syntithenai (to put together)|A strong research paper must ______ ideas from many different sources.
+tactful|adj|careful not to offend others; diplomatic|diplomatic, considerate, discreet|tactless, rude|Latin tactus (touch)|{{NAME_1}} was ______ when telling {{NAME_2}} about the mistake, choosing every word kindly.
+tangible|adj|real and able to be touched or measured|concrete, physical, real|intangible, abstract|Latin tangere (to touch)|The new library was ______ proof that the town's fundraising had worked.
+tedious|adj|too long, slow, or dull; boring|boring, monotonous, tiresome|exciting, interesting|Latin taedium (weariness)|Copying the entire dictionary by hand would be ______ beyond belief.
+temperate|adj|mild in climate; showing self-control|mild, moderate, calm|extreme, harsh|Latin temperare (to mix in proportion)|The island's ______ climate makes it pleasant to visit all year.
+tenacious|adj|holding firmly; very determined|persistent, determined, stubborn|irresolute, weak|Latin tenax (holding fast)|The ______ reporter kept investigating for years until the truth came out.
+tenuous|adj|very weak or slight|weak, flimsy, shaky|strong, solid|Latin tenuis (thin)|The link between the two crimes was ______, based on a single shared word.
+terse|adj|using few words; abrupt|brief, curt, concise|wordy, verbose|Latin tersus (wiped clean)|The coach's ______ reply, "No," ended the conversation.
+thrive|v|to grow or develop well|flourish, prosper, succeed|wither, decline|Old Norse thrifask (to grasp for oneself)|Cactuses ______ in hot, dry places where most plants would die.
+timid|adj|lacking courage or confidence; shy|shy, fearful, nervous|bold, confident|Latin timidus (fearful)|The ______ kitten hid under the bed for the first week in its new home.
+tolerate|v|to allow or endure something without complaint|endure, accept, put up with|reject, resist|Latin tolerare (to bear)|The teacher would not ______ talking during the exam.
+tranquil|adj|free from disturbance; calm|peaceful, calm, serene|turbulent, noisy|Latin tranquillus (quiet)|The ______ lake reflected the mountains like a mirror.
+transform|v|to change completely in form or character|change, convert, alter|preserve, maintain|Latin trans (across) + formare (to form)|Volunteers will ______ the empty lot into a community garden.
+transient|adj|lasting only a short time; temporary|temporary, fleeting, brief|permanent, lasting|Latin transire (to go across)|The town has a large ______ population of workers who stay only for the harvest season.
+transparent|adj|able to be seen through; open and honest|clear, see-through, open|opaque, secretive|Latin transparere (to show through)|The company promised to be ______ about how it spends donations.
+trivial|adj|of little importance|insignificant, minor, unimportant|important, significant|Latin trivialis (commonplace)|They argued for an hour, even though the detail was ______ and did not matter at all.
+turbulent|adj|full of disorder, conflict, or violent motion|stormy, chaotic, unstable|calm, peaceful|Latin turba (crowd, disturbance)|The flight was ______, and passengers held their drinks tightly.
+unanimous|adj|fully agreed on by everyone|united, agreed, undivided|divided, split|Latin unus (one) + animus (mind)|The vote was ______: all twelve members said yes.
+unprecedented|adj|never done or known before|unparalleled, new, unheard-of|common, familiar|un- + precedent|The storm caused ______ flooding; no one alive had seen the river so high.
+uphold|v|to support or maintain a law, decision, or principle|support, maintain, defend|oppose, overturn|up + hold|Judges swear to ______ the law fairly.
+utilitarian|adj|designed to be useful rather than attractive|practical, functional, useful|decorative, ornamental|Latin utilitas (usefulness)|The kitchen was ______, with plain cabinets and no decorations.
+utilize|v|to make practical use of|use, employ, apply|waste, neglect|French utiliser (to use)|The school plans to ______ the empty classroom as a study lounge.
+valid|adj|logically sound; officially acceptable|legitimate, sound, acceptable|invalid, unsound|Latin validus (strong)|{{NAME_1}}'s passport is ______ for another five years.
+venerate|v|to regard with great respect|revere, honor, worship|despise, scorn|Latin venerari (to worship)|Many cultures ______ their elders and seek their advice.
+verify|v|to make sure something is true or accurate|confirm, check, prove|disprove, refute|Latin verus (true)|Always ______ facts with a reliable source before sharing them.
+versatile|adj|able to adapt to many different functions or activities|adaptable, flexible, multipurpose|limited, inflexible|Latin versatilis (turning)|{{NAME_1}} is ______ on the field, able to play almost every position.
+viable|adj|capable of working successfully; feasible|feasible, workable, practical|unworkable, impractical|French vie (life)|Selling lemonade in winter was not ______, so {{NAME_1}} switched to hot cocoa.
+vigilant|adj|keeping careful watch for danger|watchful, alert, attentive|careless, inattentive|Latin vigilare (to keep awake)|Lifeguards must stay ______ even on quiet days.
+vindicate|v|to clear someone of blame or show they were right|clear, justify, exonerate|blame, accuse|Latin vindicare (to claim, avenge)|The final test results will ______ the scientist who had been mocked for years.
+vital|adj|absolutely necessary or important|essential, crucial, critical|unimportant, minor|Latin vita (life)|Regular exercise is ______ for long-term health.
+vivid|adj|producing strong, clear images in the mind|bright, colorful, striking|dull, faint|Latin vividus (lively)|{{NAME_1}} had ______ memories of the trip, down to the color of the hotel door.
+volatile|adj|liable to change rapidly and unpredictably|unstable, unpredictable, explosive|stable, calm|Latin volare (to fly)|The stock market was ______ that week, rising and falling by huge amounts each day.
+voluntary|adj|done by choice, without being forced|optional, willing, unpaid|mandatory, compulsory|Latin voluntas (will)|Joining the after-school club is ______, but many students sign up.
+vulnerable|adj|exposed to the possibility of harm|exposed, defenseless, susceptible|protected, safe|Latin vulnus (wound)|Without its shell, the crab is ______ to every predator in the tide pool.
+wary|adj|cautious about possible danger|cautious, careful, suspicious|trusting, careless|Old English waer (aware)|{{NAME_1}} was ______ of the email offering a free phone and did not click the link.
+whimsical|adj|playfully quaint or unpredictable|playful, fanciful, quirky|serious, practical|from whim (sudden desire)|The bookstore's ______ decorations included a dragon made of old library cards.
+yield|v|to produce or provide; to give way|produce, generate, surrender|withhold, resist|Old English gieldan (to pay)|The apple trees should ______ a large harvest this fall.
+zealous|adj|full of energy and enthusiasm for a cause|enthusiastic, passionate, eager|apathetic, indifferent|Greek zelos (zeal)|The ______ volunteers knocked on every door in town to register voters.
+benefactor|n|a person who gives money or help|patron, donor, supporter|beneficiary, recipient|Latin bene (well) + facere (to do)|A mysterious ______ paid off the school lunch debt for every student.
+boisterous|adj|noisy, energetic, and cheerful|rowdy, loud, lively|quiet, calm|Middle English boistous (rough)|The ______ fans cheered so loudly that the players could not hear the coach.
+callous|adj|showing cruel disregard for others|heartless, cold, insensitive|compassionate, caring|Latin callus (hard skin)|The ______ landlord evicted the family during a snowstorm.
+camaraderie|n|trust and friendship among people in a group|friendship, fellowship, companionship|hostility, rivalry|French camarade (comrade)|The ______ among the teammates was obvious; they laughed and joked through every practice.
+chronic|adj|lasting a long time or constantly recurring|persistent, long-term, constant|acute, temporary|Greek chronos (time)|{{NAME_1}}'s ______ back pain made long car rides difficult.
+coerce|v|to persuade someone by using force or threats|force, pressure, compel|persuade gently, coax|Latin coercere (to restrain)|The bully tried to ______ younger students into handing over their lunch money.
+cognitive|adj|relating to thinking, learning, and memory|mental, intellectual, cerebral|physical, emotional|Latin cognoscere (to know)|Puzzles and reading help keep ______ skills sharp as people age.
+compliant|adj|willing to obey rules or requests|obedient, cooperative, submissive|defiant, rebellious|Latin complere (to fulfill)|All new cars must be ______ with the latest safety standards.
+condescending|adj|acting as if one is better than others|patronizing, superior, snobbish|respectful, humble|Latin condescendere (to stoop)|The tour guide's ______ tone annoyed visitors who already knew the history.
+confound|v|to confuse or surprise someone by being unexpected|baffle, puzzle, bewilder|clarify, enlighten|Latin confundere (to mix up)|The magician's final trick continued to ______ the audience long after the show.
+conjecture|n|an opinion formed without proof|guess, speculation, theory|fact, certainty|Latin conjicere (to throw together)|Without more evidence, the detective's idea was only ______.
+connotation|n|a feeling or idea suggested by a word beyond its literal meaning|implication, association, nuance|denotation, literal meaning|Latin connotare (to mark along with)|The word "cheap" has a negative ______, while "affordable" sounds positive.
+contrite|adj|feeling sorry for having done wrong|remorseful, apologetic, regretful|unrepentant, defiant|Latin conterere (to grind down)|{{NAME_1}} was ______ after breaking the vase and offered to pay for it.
+copious|adj|abundant in supply or quantity|abundant, plentiful, ample|scarce, meager|Latin copia (plenty)|{{NAME_1}} took ______ notes during the lecture, filling twelve pages.
+covert|adj|not openly shown; secret|secret, hidden, undercover|overt, open|Old French covrir (to cover)|The spies' mission was ______; no one in the city noticed anything unusual.
+`);
 
 
 /* ===== js/vocab.js ===== */
@@ -5298,6 +6288,97 @@ window.SatWizz.avatars = [
     },
   ];
 
+  // ---------- The word bank (js/vocab/bank-*.js) ----------
+  // Hundreds more words, one compact line each, built into full Vault words:
+  // a format (60% "blank", 40% "meaning"), the passage, 4 choices with
+  // distractors of the same part of speech that aren't close in meaning, and
+  // a note for every choice. Deterministic, so ids and choices never shift.
+  const POS_CODES = { n: "noun", v: "verb", adj: "adjective", adv: "adverb" };
+  const hashStr = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const splitList = (x) => String(x || "").split(",").map((t) => t.trim()).filter(Boolean);
+  // Each word's own spelling, synonyms and antonyms, computed once (a bank
+  // word is compared with every other word, so this has to stay cheap).
+  const lexCache = new Map();
+  const lexOf = (w) => {
+    let set = lexCache.get(w.id);
+    if (!set) lexCache.set(w.id, (set = new Set([w.word, ...w.synonyms, ...w.antonyms].map((t) => t.toLowerCase()))));
+    return set;
+  };
+  const closeInMeaning = (a, b) => {
+    if (a.id === b.id) return true;
+    if (a.word.slice(0, 4).toLowerCase() === b.word.slice(0, 4).toLowerCase()) return true; // look-alikes ("affect"/"affection")
+    const la = lexOf(a);
+    for (const t of lexOf(b)) if (la.has(t)) return true;
+    // The Derby's hand-made clusters only hold original words.
+    return !a.bank && !b.bank && Boolean(SW.derby && SW.derby.related && SW.derby.related(a, b));
+  };
+
+  function buildBank(lines, existing) {
+    const have = new Set(existing.map((w) => w.id));
+    const made = [];
+    for (const [level, line] of lines) {
+      const f = line.split("|").map((t) => t.trim());
+      if (f.length !== 7) { console.warn("SatWizz vocab: skipped a malformed bank line:", line); continue; }
+      const [word, pos, definition, syn, ant, root, sentence] = f;
+      const id = word.toLowerCase().replace(/[^a-z]+/g, "-");
+      if (have.has(id)) continue; // already in the Vault
+      have.add(id);
+      made.push({ id, word, pos: POS_CODES[pos] || pos, level: level === "advanced" ? "advanced" : "core", definition, synonyms: splitList(syn), antonyms: splitList(ant), root, sentence, bank: true });
+    }
+    const all = [...existing, ...made];
+    // Each part of speech (and the whole list) in one fixed shuffled order;
+    // a word walks it from its own starting point and takes the first three
+    // words that aren't close in meaning. Cheap, and stable between visits.
+    const seeded = (list) => list.map((x) => [hashStr(`order|${x.id}`), x]).sort((a, b) => a[0] - b[0]).map((p) => p[1]);
+    const byPos = {};
+    for (const x of all) (byPos[x.pos] ||= []).push(x);
+    for (const k of Object.keys(byPos)) byPos[k] = seeded(byPos[k]);
+    const everyone = seeded(all);
+    for (const w of made) {
+      w.format = hashStr(w.id) % 5 < 3 ? "blank" : "meaning";
+      const pickFrom = (list) => {
+        const out = [];
+        const start = hashStr(w.id) % Math.max(1, list.length);
+        for (let k = 0; k < list.length && out.length < 3; k++) {
+          const x = list[(start + k) % list.length];
+          if (!closeInMeaning(w, x)) out.push(x);
+        }
+        return out;
+      };
+      let others = pickFrom(byPos[w.pos] || []);
+      // Too few words of this part of speech: definitions of any word work
+      // in the "most nearly means" format.
+      if (others.length < 3) {
+        w.format = "meaning";
+        others = pickFrom(everyone);
+      }
+      if (w.format === "blank") {
+        w.text = w.sentence;
+        w.choices = [w.word, ...others.map((x) => x.word)];
+        w.clue = `The sentence calls for a word meaning “${w.definition}.”`;
+        w.notes = [
+          `“${w.word}” means ${w.definition}, which is exactly what the sentence describes.`,
+          ...others.map((x) => `“${x.word}” means ${x.definition}. That doesn't fit what the sentence describes.`),
+        ];
+      } else {
+        w.text = w.sentence.replace("______", `[[${w.word}]]`);
+        w.choices = [w.definition, ...others.map((x) => x.definition)];
+        w.clue = `Here “${w.word}” means ${w.definition}.`;
+        w.notes = [
+          `In this sentence, “${w.word}” means ${w.definition}.`,
+          ...others.map((x) => `That's what “${x.word}” means, not “${w.word}.”`),
+        ];
+      }
+      w.answer = 0;
+      delete w.sentence;
+    }
+    return made;
+  }
+  if (SW.VOCAB_BANK && SW.VOCAB_BANK.length) {
+    for (const w of WORDS) if (!w.level) w.level = "core";
+    WORDS.push(...buildBank(SW.VOCAB_BANK, WORDS));
+  }
+
   const BY_ID = Object.fromEntries(WORDS.map((w) => [w.id, w]));
 
   // ---------- Pronunciation (Web Speech API) ----------
@@ -5523,6 +6604,54 @@ window.SatWizz.avatars = [
       mastered: ' <span class="fc-flag ok">✓ Mastered</span>',
     })[cardStatus(st)] || "";
 
+    // ---------- Word lists ----------
+    const SEEN_CAP = 60;
+    let showAllSeen = false;
+    let bankQuery = "";
+    let bankLevel = "all";
+    const BANK_CAP = 40;
+    function wordItem(w, p) {
+      const st = wordState(p, w.id);
+      return `
+              <li><details>
+                <summary>${st.seen || st.cards ? tierBadge(st.tier) : ""} <b>${esc(w.word)}</b> <small>${esc(w.pos)}${w.level === "advanced" ? " · advanced" : ""}</small>${speech.button(w.word, esc, "sm")}${cardChip(st)}</summary>
+                <p>${esc(w.definition)}</p>
+                <p class="muted small">≈ ${w.synonyms.map(esc).join(", ")}${w.antonyms.length ? ` · ≠ ${w.antonyms.map(esc).join(", ")}` : ""}</p>
+                <p class="muted small">🌱 Root: ${esc(w.root)}</p>
+              </details></li>`;
+    }
+    // Search the whole bank: word first, then meanings and synonyms.
+    function bankMatches(q, level) {
+      const t = q.trim().toLowerCase();
+      const pool = WORDS.filter((w) => level === "all" || (level === "advanced") === (w.level === "advanced"));
+      if (!t) return pool.slice().sort((a, b) => a.word.localeCompare(b.word));
+      const starts = pool.filter((w) => w.word.toLowerCase().startsWith(t));
+      const inWord = pool.filter((w) => !starts.includes(w) && w.word.toLowerCase().includes(t));
+      const inMeaning = pool.filter((w) => !starts.includes(w) && !inWord.includes(w)
+        && (w.definition.toLowerCase().includes(t) || w.synonyms.some((x) => x.toLowerCase().includes(t))));
+      return [...starts.sort((a, b) => a.word.localeCompare(b.word)), ...inWord, ...inMeaning];
+    }
+    function wireBank(p) {
+      const input = container.querySelector("#bank-q");
+      const list = container.querySelector("#bank-results");
+      const count = container.querySelector("#bank-count");
+      const paint = () => {
+        const found = bankMatches(bankQuery, bankLevel);
+        list.innerHTML = found.slice(0, BANK_CAP).map((w) => wordItem(w, p)).join("");
+        count.textContent = found.length
+          ? (found.length > BANK_CAP ? `Showing ${BANK_CAP} of ${found.length.toLocaleString("en-US")}. Keep typing to narrow it down.` : `${found.length} word${found.length === 1 ? "" : "s"}`)
+          : "No words match. Try a shorter search.";
+      };
+      input.addEventListener("input", () => { bankQuery = input.value; paint(); });
+      container.querySelectorAll("[data-bank-level]").forEach((b) => b.addEventListener("click", () => {
+        bankLevel = b.dataset.bankLevel;
+        container.querySelectorAll("[data-bank-level]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        ctx.sfx.play("tap");
+        paint();
+      }));
+      paint();
+    }
+
     function render() {
       if (sprint) return renderCard();
       if (deck) return renderDeck();
@@ -5534,6 +6663,7 @@ window.SatWizz.avatars = [
       const cardBonusLeft = WORDS.some((w) => wordState(p, w.id).cardDay !== today);
       const seenWords = WORDS.filter((w) => p.words[w.id] && (p.words[w.id].seen || p.words[w.id].cards))
         .sort((a, b) => wordState(p, b.id).tier - wordState(p, a.id).tier || a.word.localeCompare(b.word));
+      const shownSeen = showAllSeen ? seenWords : seenWords.slice(0, SEEN_CAP);
       container.innerHTML = `
         <div class="stack vault">
           <section class="panel vault-hero">
@@ -5563,17 +6693,25 @@ window.SatWizz.avatars = [
             <p class="muted small">+${RULES.sparksPerCorrect} ⚡ per correct sprint word · +${RULES.masterySparks} ⚡ when a word reaches 👑 Master</p>
           </section>
           <section class="panel">
-            <h2>Your words</h2>
-            ${seenWords.length ? `<ul class="word-list">${seenWords.map((w) => `
-              <li><details>
-                <summary>${tierBadge(wordState(p, w.id).tier)} <b>${esc(w.word)}</b> <small>${esc(w.pos)}</small>${speech.button(w.word, esc, "sm")}${cardChip(wordState(p, w.id))}</summary>
-                <p>${esc(w.definition)}</p>
-                <p class="muted small">≈ ${w.synonyms.map(esc).join(", ")} · ≠ ${w.antonyms.map(esc).join(", ")}</p>
-                <p class="muted small">🌱 Root: ${esc(w.root)}</p>
-              </details></li>`).join("")}</ul>`
+            <h2>Your words <small class="muted">${seenWords.length}</small></h2>
+            ${seenWords.length ? `<ul class="word-list">${shownSeen.map((w) => wordItem(w, p)).join("")}</ul>
+              ${seenWords.length > SEEN_CAP ? `<button class="linkbtn" type="button" id="seen-toggle">${showAllSeen ? "Show fewer" : `Show all ${seenWords.length} words`}</button>` : ""}`
               : '<p class="muted">Words you practice show up here with their tier. Open the flashcards or start a sprint to discover your first words.</p>'}
           </section>
+          <section class="panel word-bank" id="word-bank">
+            <h2>📖 Word bank <small class="muted">${WORDS.length.toLocaleString("en-US")} words</small></h2>
+            <p class="muted small">Every Vocab Vault word: ${WORDS.filter((w) => w.level !== "advanced").length} core, ${WORDS.filter((w) => w.level === "advanced").length} advanced. Search by word, meaning or synonym.</p>
+            <label class="sr-only" for="bank-q">Search the word bank</label>
+            <input class="input" id="bank-q" type="search" placeholder="🔎 Search words or meanings" autocomplete="off" spellcheck="false" value="${esc(bankQuery)}">
+            <div class="seg bank-levels" role="group" aria-label="Level">
+              ${[["all", "All"], ["core", "Core"], ["advanced", "Advanced"]].map(([id, label]) => `<button type="button" data-bank-level="${id}" aria-pressed="${bankLevel === id}">${label}</button>`).join("")}
+            </div>
+            <ul class="word-list" id="bank-results"></ul>
+            <p class="muted small" id="bank-count"></p>
+          </section>
         </div>`;
+      container.querySelector("#seen-toggle")?.addEventListener("click", () => { showAllSeen = !showAllSeen; render(); });
+      wireBank(p);
       container.querySelector("#sprint-start").addEventListener("click", startSprint);
       container.querySelector("#deck-start").addEventListener("click", startDeck);
       container.querySelector("#fish-start-mode").addEventListener("click", () => { sprint = null; deck = null; closeDrawer(); fishing.open(); });

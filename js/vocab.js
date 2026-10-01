@@ -939,6 +939,97 @@
     },
   ];
 
+  // ---------- The word bank (js/vocab/bank-*.js) ----------
+  // Hundreds more words, one compact line each, built into full Vault words:
+  // a format (60% "blank", 40% "meaning"), the passage, 4 choices with
+  // distractors of the same part of speech that aren't close in meaning, and
+  // a note for every choice. Deterministic, so ids and choices never shift.
+  const POS_CODES = { n: "noun", v: "verb", adj: "adjective", adv: "adverb" };
+  const hashStr = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const splitList = (x) => String(x || "").split(",").map((t) => t.trim()).filter(Boolean);
+  // Each word's own spelling, synonyms and antonyms, computed once (a bank
+  // word is compared with every other word, so this has to stay cheap).
+  const lexCache = new Map();
+  const lexOf = (w) => {
+    let set = lexCache.get(w.id);
+    if (!set) lexCache.set(w.id, (set = new Set([w.word, ...w.synonyms, ...w.antonyms].map((t) => t.toLowerCase()))));
+    return set;
+  };
+  const closeInMeaning = (a, b) => {
+    if (a.id === b.id) return true;
+    if (a.word.slice(0, 4).toLowerCase() === b.word.slice(0, 4).toLowerCase()) return true; // look-alikes ("affect"/"affection")
+    const la = lexOf(a);
+    for (const t of lexOf(b)) if (la.has(t)) return true;
+    // The Derby's hand-made clusters only hold original words.
+    return !a.bank && !b.bank && Boolean(SW.derby && SW.derby.related && SW.derby.related(a, b));
+  };
+
+  function buildBank(lines, existing) {
+    const have = new Set(existing.map((w) => w.id));
+    const made = [];
+    for (const [level, line] of lines) {
+      const f = line.split("|").map((t) => t.trim());
+      if (f.length !== 7) { console.warn("SatWizz vocab: skipped a malformed bank line:", line); continue; }
+      const [word, pos, definition, syn, ant, root, sentence] = f;
+      const id = word.toLowerCase().replace(/[^a-z]+/g, "-");
+      if (have.has(id)) continue; // already in the Vault
+      have.add(id);
+      made.push({ id, word, pos: POS_CODES[pos] || pos, level: level === "advanced" ? "advanced" : "core", definition, synonyms: splitList(syn), antonyms: splitList(ant), root, sentence, bank: true });
+    }
+    const all = [...existing, ...made];
+    // Each part of speech (and the whole list) in one fixed shuffled order;
+    // a word walks it from its own starting point and takes the first three
+    // words that aren't close in meaning. Cheap, and stable between visits.
+    const seeded = (list) => list.map((x) => [hashStr(`order|${x.id}`), x]).sort((a, b) => a[0] - b[0]).map((p) => p[1]);
+    const byPos = {};
+    for (const x of all) (byPos[x.pos] ||= []).push(x);
+    for (const k of Object.keys(byPos)) byPos[k] = seeded(byPos[k]);
+    const everyone = seeded(all);
+    for (const w of made) {
+      w.format = hashStr(w.id) % 5 < 3 ? "blank" : "meaning";
+      const pickFrom = (list) => {
+        const out = [];
+        const start = hashStr(w.id) % Math.max(1, list.length);
+        for (let k = 0; k < list.length && out.length < 3; k++) {
+          const x = list[(start + k) % list.length];
+          if (!closeInMeaning(w, x)) out.push(x);
+        }
+        return out;
+      };
+      let others = pickFrom(byPos[w.pos] || []);
+      // Too few words of this part of speech: definitions of any word work
+      // in the "most nearly means" format.
+      if (others.length < 3) {
+        w.format = "meaning";
+        others = pickFrom(everyone);
+      }
+      if (w.format === "blank") {
+        w.text = w.sentence;
+        w.choices = [w.word, ...others.map((x) => x.word)];
+        w.clue = `The sentence calls for a word meaning “${w.definition}.”`;
+        w.notes = [
+          `“${w.word}” means ${w.definition}, which is exactly what the sentence describes.`,
+          ...others.map((x) => `“${x.word}” means ${x.definition}. That doesn't fit what the sentence describes.`),
+        ];
+      } else {
+        w.text = w.sentence.replace("______", `[[${w.word}]]`);
+        w.choices = [w.definition, ...others.map((x) => x.definition)];
+        w.clue = `Here “${w.word}” means ${w.definition}.`;
+        w.notes = [
+          `In this sentence, “${w.word}” means ${w.definition}.`,
+          ...others.map((x) => `That's what “${x.word}” means, not “${w.word}.”`),
+        ];
+      }
+      w.answer = 0;
+      delete w.sentence;
+    }
+    return made;
+  }
+  if (SW.VOCAB_BANK && SW.VOCAB_BANK.length) {
+    for (const w of WORDS) if (!w.level) w.level = "core";
+    WORDS.push(...buildBank(SW.VOCAB_BANK, WORDS));
+  }
+
   const BY_ID = Object.fromEntries(WORDS.map((w) => [w.id, w]));
 
   // ---------- Pronunciation (Web Speech API) ----------
@@ -1164,6 +1255,54 @@
       mastered: ' <span class="fc-flag ok">✓ Mastered</span>',
     })[cardStatus(st)] || "";
 
+    // ---------- Word lists ----------
+    const SEEN_CAP = 60;
+    let showAllSeen = false;
+    let bankQuery = "";
+    let bankLevel = "all";
+    const BANK_CAP = 40;
+    function wordItem(w, p) {
+      const st = wordState(p, w.id);
+      return `
+              <li><details>
+                <summary>${st.seen || st.cards ? tierBadge(st.tier) : ""} <b>${esc(w.word)}</b> <small>${esc(w.pos)}${w.level === "advanced" ? " · advanced" : ""}</small>${speech.button(w.word, esc, "sm")}${cardChip(st)}</summary>
+                <p>${esc(w.definition)}</p>
+                <p class="muted small">≈ ${w.synonyms.map(esc).join(", ")}${w.antonyms.length ? ` · ≠ ${w.antonyms.map(esc).join(", ")}` : ""}</p>
+                <p class="muted small">🌱 Root: ${esc(w.root)}</p>
+              </details></li>`;
+    }
+    // Search the whole bank: word first, then meanings and synonyms.
+    function bankMatches(q, level) {
+      const t = q.trim().toLowerCase();
+      const pool = WORDS.filter((w) => level === "all" || (level === "advanced") === (w.level === "advanced"));
+      if (!t) return pool.slice().sort((a, b) => a.word.localeCompare(b.word));
+      const starts = pool.filter((w) => w.word.toLowerCase().startsWith(t));
+      const inWord = pool.filter((w) => !starts.includes(w) && w.word.toLowerCase().includes(t));
+      const inMeaning = pool.filter((w) => !starts.includes(w) && !inWord.includes(w)
+        && (w.definition.toLowerCase().includes(t) || w.synonyms.some((x) => x.toLowerCase().includes(t))));
+      return [...starts.sort((a, b) => a.word.localeCompare(b.word)), ...inWord, ...inMeaning];
+    }
+    function wireBank(p) {
+      const input = container.querySelector("#bank-q");
+      const list = container.querySelector("#bank-results");
+      const count = container.querySelector("#bank-count");
+      const paint = () => {
+        const found = bankMatches(bankQuery, bankLevel);
+        list.innerHTML = found.slice(0, BANK_CAP).map((w) => wordItem(w, p)).join("");
+        count.textContent = found.length
+          ? (found.length > BANK_CAP ? `Showing ${BANK_CAP} of ${found.length.toLocaleString("en-US")}. Keep typing to narrow it down.` : `${found.length} word${found.length === 1 ? "" : "s"}`)
+          : "No words match. Try a shorter search.";
+      };
+      input.addEventListener("input", () => { bankQuery = input.value; paint(); });
+      container.querySelectorAll("[data-bank-level]").forEach((b) => b.addEventListener("click", () => {
+        bankLevel = b.dataset.bankLevel;
+        container.querySelectorAll("[data-bank-level]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        ctx.sfx.play("tap");
+        paint();
+      }));
+      paint();
+    }
+
     function render() {
       if (sprint) return renderCard();
       if (deck) return renderDeck();
@@ -1175,6 +1314,7 @@
       const cardBonusLeft = WORDS.some((w) => wordState(p, w.id).cardDay !== today);
       const seenWords = WORDS.filter((w) => p.words[w.id] && (p.words[w.id].seen || p.words[w.id].cards))
         .sort((a, b) => wordState(p, b.id).tier - wordState(p, a.id).tier || a.word.localeCompare(b.word));
+      const shownSeen = showAllSeen ? seenWords : seenWords.slice(0, SEEN_CAP);
       container.innerHTML = `
         <div class="stack vault">
           <section class="panel vault-hero">
@@ -1204,17 +1344,25 @@
             <p class="muted small">+${RULES.sparksPerCorrect} ⚡ per correct sprint word · +${RULES.masterySparks} ⚡ when a word reaches 👑 Master</p>
           </section>
           <section class="panel">
-            <h2>Your words</h2>
-            ${seenWords.length ? `<ul class="word-list">${seenWords.map((w) => `
-              <li><details>
-                <summary>${tierBadge(wordState(p, w.id).tier)} <b>${esc(w.word)}</b> <small>${esc(w.pos)}</small>${speech.button(w.word, esc, "sm")}${cardChip(wordState(p, w.id))}</summary>
-                <p>${esc(w.definition)}</p>
-                <p class="muted small">≈ ${w.synonyms.map(esc).join(", ")} · ≠ ${w.antonyms.map(esc).join(", ")}</p>
-                <p class="muted small">🌱 Root: ${esc(w.root)}</p>
-              </details></li>`).join("")}</ul>`
+            <h2>Your words <small class="muted">${seenWords.length}</small></h2>
+            ${seenWords.length ? `<ul class="word-list">${shownSeen.map((w) => wordItem(w, p)).join("")}</ul>
+              ${seenWords.length > SEEN_CAP ? `<button class="linkbtn" type="button" id="seen-toggle">${showAllSeen ? "Show fewer" : `Show all ${seenWords.length} words`}</button>` : ""}`
               : '<p class="muted">Words you practice show up here with their tier. Open the flashcards or start a sprint to discover your first words.</p>'}
           </section>
+          <section class="panel word-bank" id="word-bank">
+            <h2>📖 Word bank <small class="muted">${WORDS.length.toLocaleString("en-US")} words</small></h2>
+            <p class="muted small">Every Vocab Vault word: ${WORDS.filter((w) => w.level !== "advanced").length} core, ${WORDS.filter((w) => w.level === "advanced").length} advanced. Search by word, meaning or synonym.</p>
+            <label class="sr-only" for="bank-q">Search the word bank</label>
+            <input class="input" id="bank-q" type="search" placeholder="🔎 Search words or meanings" autocomplete="off" spellcheck="false" value="${esc(bankQuery)}">
+            <div class="seg bank-levels" role="group" aria-label="Level">
+              ${[["all", "All"], ["core", "Core"], ["advanced", "Advanced"]].map(([id, label]) => `<button type="button" data-bank-level="${id}" aria-pressed="${bankLevel === id}">${label}</button>`).join("")}
+            </div>
+            <ul class="word-list" id="bank-results"></ul>
+            <p class="muted small" id="bank-count"></p>
+          </section>
         </div>`;
+      container.querySelector("#seen-toggle")?.addEventListener("click", () => { showAllSeen = !showAllSeen; render(); });
+      wireBank(p);
       container.querySelector("#sprint-start").addEventListener("click", startSprint);
       container.querySelector("#deck-start").addEventListener("click", startDeck);
       container.querySelector("#fish-start-mode").addEventListener("click", () => { sprint = null; deck = null; closeDrawer(); fishing.open(); });
