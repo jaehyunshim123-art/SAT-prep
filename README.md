@@ -318,7 +318,7 @@ node scripts/build-clause-derby.js     # → clause-derby/index.html
 
 The **whole SatWizz app** is also available as **one self-contained HTML file**: the header, all five tabs, the 345-question curriculum, the Vault (with Vocab Fishing), the Grammar Derby, the Shop and Profile (with Settings and the Leaderboard), with every style, script and icon inline.
 - **Run locally:** double-click `dist/index.html`.
-- **Host it:** upload it to any static host.
+- **Host it:** upload it to any static host, together with `dist/privacy.html` and `dist/terms.html` (the build writes those too).
 
 Progress saves in `localStorage` (`satwizz.v1`), as in the regular build: Sparks, Focus, unlocked chapters, purchases, streak and Vault progress. With storage blocked, the app still plays; it just doesn't save.
 
@@ -392,6 +392,22 @@ node scripts/build-derby.js
 - **❓ Help overlay** (header button or <kbd>?</kbd>): How to Play (Focus, Sparks, chapter unlocks, streaks, Vault, Trophy Case), a Keyboard Controls cheat sheet, and an SAT Grammar Rules cheat sheet (an accordion with each chapter's rules, filled in with your cast). <kbd>Esc</kbd> or ✕ closes it.
 - **Suggest a Feature / Report a Bug:** a form in Help (also reachable from Profile → Settings → Help & feedback). Pick 💡 Feature idea or 🐞 Bug report, type, and Submit Feedback. Each entry is saved first to `localStorage` under `satwizz.feedback` (an array of `{ id, at, kind, text, view, sent }`). With Supabase set up, it's then sent to your `feedback` table ("Thanks! Your suggestion was sent to the SatWizz team."); offline, it waits and sends later. On a guest-only copy of the site it stays in the browser ("Thanks! Your suggestion has been saved locally.").
 
+## Privacy Policy, Terms and account deletion
+
+- **The documents:** [`js/legal.js`](js/legal.js) holds the Privacy Policy and Terms of Service (owner **SatWizz**, contact **jshim7892@gmail.com**, Indian law, last updated 1 October 2026). Edit the text there and change `UPDATED` when you do.
+  - The Privacy Policy covers guests, account data, what other players see, the services used (Supabase in Tokyo, Google, Netlify, jsDelivr), retention, rights under India's DPDP Act, and the rule for under-18s.
+  - The Terms cover parent permission, play money with no cash value, acceptable use, and the College Board trademark note.
+- **Where they open:** both open in an overlay inside the site. Links are in the Dashboard footer, at the bottom of ❓ Help, in Profile → Settings → **Privacy & terms**, and in the sign-in box. `index.html#privacy` and `index.html#terms` open them directly.
+- **Standalone pages:** `node scripts/build-single.js` also writes `dist/privacy.html` and `dist/terms.html`. Upload them next to `index.html`; these are the addresses to give Google's sign-in consent screen.
+- **Consent at sign-up:** Continue with Google and email Sign Up need a ticked box: "I agree to the Terms of Service and Privacy Policy, and I'm 18 or older or have my parent's or guardian's permission." Log In for an existing account doesn't need it.
+  - The choice is remembered per document version in `localStorage` (`satwizz.consent`). Changing `UPDATED` asks everyone again.
+- **Delete my account:** Profile → Settings → Privacy & terms, for signed-in players. A second tap confirms.
+  - It calls the SQL function `delete_my_account()`, which removes the sign-in record. Every SatWizz table cascades; feedback keeps its text but loses the user id.
+  - Progress on the device stays as a guest's.
+  - If the function is missing (the schema hasn't been re-run), the player is still signed in and is told to email the contact address.
+
+These are plain-English starting documents for a free student project, not legal advice.
+
 ## Social
 
 - **Leaderboard** (Profile → 🏆 Leaderboard). **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.
@@ -421,9 +437,10 @@ Without Supabase settings it runs in guest mode, and progress stays in `localSto
    - It adds `lock_ins` to Supabase Realtime.
    - It adds the columns that sync the Dashboard and Trophy Case between devices: `chapter_tests`, `practice_sets`, `badge_times`, `flawless_runs`, `practice_progress` (right answers, missed questions and the no-repeat question order) and `focus_state`.
    - It creates the write-only **`feedback`** table (see below).
+   - It adds `delete_my_account()`, used by Settings → Delete my account.
 3. Put the **Project URL** and **anon public key** (from **Project Settings → API**) in [`js/config.js`](js/config.js).
 4. In **Authentication → URL Configuration**, add your site's URL to **Redirect URLs**.
-5. For Google sign-in, enable **Authentication → Providers → Google** with an OAuth client from Google Cloud.
+5. For Google sign-in, enable **Authentication → Providers → Google** with an OAuth client from Google Cloud. On Google's consent screen, use `https://<your-site>/privacy.html` and `https://<your-site>/terms.html` as the privacy policy and terms links.
 
 **Reading feedback.** Suggestions and bug reports from the Help overlay go to **Table Editor → feedback** (`kind` is `feature` or `bug`, plus the text, the screen it was sent from, the time, and the user id for signed-in visitors). Anyone can add a row, guests included, but nobody can read the table from the website; only you can, in the dashboard. Entries written offline are kept in the browser and sent on the next visit or when the connection returns, never twice.
 
@@ -475,7 +492,8 @@ js/badges.js                the 50 Trophy Case accomplishments: categories, prog
 js/rewards.js               Sparks, shop, Focus Elixir, Aura Shields, wager, badge checks (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push
-js/onboarding.js            sign-up / log-in modal
+js/onboarding.js            sign-up / log-in modal (with the Terms / Privacy consent box)
+js/legal.js                 Privacy Policy + Terms of Service text and their in-site overlay
 js/social-view.js           Leaderboard & Friends: leaderboards, friend streaks, requests, invites
 js/app.js                   header, 5-tab shell, Dashboard, tests + Diagnostic, chapter feed, drawers, Focus Break, streaks, shop, profile, demo mode
 scripts/validate-content.js content checks for the curriculum and vocab
@@ -485,6 +503,7 @@ scripts/validate-clause-bank.js checks the Clause Derby question bank
 clause-derby/               SAT Wizz: Clause Derby (src/ + generated index.html)
 scripts/build-derby.js      builds the standalone derby/index.html
 dist/index.html             the whole app in a single file (generated)
+dist/privacy.html, terms.html standalone legal pages (generated from js/legal.js)
 derby/index.html            standalone SAT Vocabulary Derby (generated, single file)
 supabase/schema.sql         tables, row-level security, social functions
 supabase/functions/lock-in  Edge Function that sends Lock In pushes

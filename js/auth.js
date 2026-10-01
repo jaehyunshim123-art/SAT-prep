@@ -101,6 +101,23 @@
     setStatus("idle");
   }
 
+  // Deletes the signed-in account and all its cloud data (supabase/schema.sql:
+  // delete_my_account), then signs out on this device. Local progress stays.
+  async function deleteAccount() {
+    requireClient();
+    if (!session) throw new Error("not_signed_in");
+    clearTimeout(pushTimer); // nothing may re-upload in between
+    const { error } = await client.rpc("delete_my_account");
+    if (error) {
+      if (/delete_my_account/.test(error.message || "")) {
+        console.warn("SatWizz: re-run supabase/schema.sql to enable account deletion.");
+      }
+      throw error;
+    }
+    await client.auth.signOut({ scope: "local" }).catch(() => {});
+    setStatus("idle");
+  }
+
   // ---------- Cloud sync ----------
   function setStatus(next) {
     status = next;
@@ -681,6 +698,7 @@
     signIn,
     signInWithGoogle,
     signOut,
+    deleteAccount,
     pull,
     push,
     schedulePush,

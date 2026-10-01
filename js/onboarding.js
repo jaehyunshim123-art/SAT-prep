@@ -29,6 +29,25 @@
     '<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>' +
     "</svg>";
 
+  // Consent to the Terms / Privacy Policy, remembered per version so a
+  // returning player isn't asked again until the documents change.
+  const CONSENT_KEY = "satwizz.consent";
+  const version = () => (SW.legal && SW.legal.UPDATED) || "1";
+  function agreed() {
+    try { return localStorage.getItem(CONSENT_KEY) === version(); } catch (e) { return false; }
+  }
+  // True when the box is ticked; otherwise points the player at it.
+  function checkConsent() {
+    const box = root.querySelector("#auth-consent");
+    if (box.checked) {
+      try { localStorage.setItem(CONSENT_KEY, version()); } catch (e) { /* storage blocked */ }
+      return true;
+    }
+    message("Tick the box to agree to the Terms and Privacy Policy first.");
+    box.focus();
+    return false;
+  }
+
   let root = null;
   let opts = {};
   let mode = "signup";
@@ -74,6 +93,8 @@
             ? "The sign-in service didn't load. Check your connection and reload, or keep playing as a guest."
             : "Cloud accounts aren't set up on this copy of SatWizz yet. You can keep playing as a guest."
         }</p>`}
+        <label class="consent"><input type="checkbox" id="auth-consent"${agreed() ? " checked" : ""}>
+          <span>I agree to the <a href="#terms" data-legal="terms">Terms of Service</a> and <a href="#privacy" data-legal="privacy">Privacy Policy</a>, and I'm 18 or older or have my parent's or guardian's permission.</span></label>
         <button class="btn google wide" type="button" id="auth-google">${GOOGLE_G}<span>Continue with Google</span></button>
         <div class="divider" role="separator"><span>or use email</span></div>
         <div class="seg auth-tabs" role="tablist" aria-label="Account">
@@ -143,6 +164,7 @@
 
   async function google() {
     message("");
+    if (!checkConsent()) return;
     try {
       busy(true);
       await auth().signInWithGoogle();
@@ -160,6 +182,7 @@
     if (password.length < 6) return message("Use a password with at least 6 characters.");
 
     const signup = mode === "signup";
+    if (signup && !checkConsent()) return;
     busy(true, signup ? "Creating account…" : "Logging in…");
     try {
       if (signup) {
@@ -189,7 +212,7 @@
       return;
     }
     if (e.key === "Tab") {
-      const items = [...root.querySelectorAll("button:not(:disabled), input")];
+      const items = [...root.querySelectorAll("button:not(:disabled), input, a")];
       const first = items[0];
       const last = items[items.length - 1];
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }

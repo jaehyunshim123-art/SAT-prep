@@ -1631,6 +1631,7 @@
               : '<p class="lock-note">🔒 Finish every question in any chapter first.</p>'}
           </article>
         </div>
+        <p class="legal-links muted">${SW.legal.links()}<br>SAT® is a trademark of the College Board, which isn't affiliated with SatWizz.</p>
       </div>`;
     dash.querySelector("#theme-toggle").addEventListener("click", () => setAppearance(effectiveTheme() === "dark" ? "light" : "dark"));
     dash.querySelectorAll("[data-learn]").forEach((b) => b.addEventListener("click", () => {
@@ -2048,7 +2049,8 @@
             <button class="btn" type="submit" id="fb-submit">Submit Feedback</button>
           </div>
         </form>
-      </section>`;
+      </section>
+      <p class="legal-links muted">${SW.legal.links()}</p>`;
     box.querySelector("[data-close]").addEventListener("click", closeHelp);
     box.querySelectorAll(".help-jump a").forEach((a) => a.addEventListener("click", (e) => {
       e.preventDefault();
@@ -2597,6 +2599,15 @@
             <p class="muted">How to play, keyboard shortcuts and a grammar rules cheat sheet. Got an idea or found a bug? Tell us.</p>
             <div class="row"><button class="btn ghost" type="button" id="open-help">❓ Help</button><button class="btn ghost" type="button" id="open-feedback">💡 Suggest a feature / report a bug</button></div>
           </section>
+          <section class="panel" id="legal-panel">
+            <h2>Privacy &amp; terms</h2>
+            <p class="muted">What SatWizz stores, who can see it, and the rules for using the site.</p>
+            <div class="row"><button class="btn ghost" type="button" data-legal="privacy">🔒 Privacy Policy</button><button class="btn ghost" type="button" data-legal="terms">📄 Terms of Service</button></div>
+            ${auth.user() ? `
+            <h3 class="label-sm">Delete my account</h3>
+            <p class="muted">Permanently deletes your SatWizz account and everything saved in the cloud: progress, profile, friends and Lock In messages. Progress on this device stays here as a guest.</p>
+            <div class="row" id="delete-row"><button class="btn ghost" type="button" id="delete-account-btn">Delete my account</button></div>` : ""}
+          </section>
           <section class="panel">
             <h2>Start over</h2>
             <p class="muted">Clears your streak, XP, Sparks, purchases and stats on this device${auth.user() ? " and in your account" : ""}.</p>
@@ -2619,6 +2630,27 @@
       v.querySelectorAll("[data-theme-opt]").forEach((b) => b.addEventListener("click", () => setAppearance(b.dataset.themeOpt)));
       $("#open-help", v).addEventListener("click", () => openHelp());
       $("#open-feedback", v).addEventListener("click", () => openHelp("feedback"));
+      $("#delete-account-btn", v)?.addEventListener("click", () => {
+        const row = $("#delete-row", v);
+        row.innerHTML = '<button class="btn danger" type="button" id="delete-yes">Yes, delete my account</button><button class="btn ghost" type="button" id="delete-no">Cancel</button>';
+        $("#delete-no", v).addEventListener("click", renderYou);
+        $("#delete-yes", v).addEventListener("click", async (e) => {
+          e.target.disabled = true;
+          e.target.textContent = "Deleting…";
+          try {
+            await auth.deleteAccount();
+            S.syncedUserId = null; // this device's progress is a guest's again
+            save(false);
+            toast("Your account and cloud data are deleted. Progress on this device stays here.");
+            renderYou();
+          } catch (err) {
+            toast(/fetch|network/i.test(err.message || "")
+              ? "Couldn't reach the server. Check your connection and try again."
+              : `Couldn't delete your account. Email ${SW.legal.EMAIL} and we'll do it for you.`);
+            renderYou();
+          }
+        });
+      });
       $("#reset-btn", v).addEventListener("click", () => {
         const row = $("#reset-row", v);
         row.innerHTML = '<button class="btn danger" type="button" id="reset-yes">Yes, erase everything</button><button class="btn ghost" type="button" id="reset-no">Keep my progress</button>';
