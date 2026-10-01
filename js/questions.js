@@ -93,6 +93,36 @@
     return SW.UNDERLINE_RE.test(q.text) ? SW.STEMS.conventionsUnderlined : SW.STEMS.conventions;
   };
 
+  // Seeded randomness (stable per user): question casts and the no-repeat
+  // order of generated questions.
+  SW.rng = {
+    hash(str) {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+      return h >>> 0;
+    },
+    // mulberry32
+    make(seed) {
+      let a = seed >>> 0;
+      return () => {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    },
+    shuffle(arr, seed) {
+      const r = SW.rng.make(seed);
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(r() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    },
+  };
+
   const registered = [];
 
   SW.curriculum = {
@@ -123,7 +153,10 @@
         .map((p) => byId.get(p.id) || { ...p, pause: null, questions: [] })
         .concat(registered.filter((c) => !SW.CURRICULUM_PLAN.some((p) => p.id === c.id)))
         .sort((a, b) => a.id - b.id);
-      SW.questions = SW.chapters.flatMap((ch) => ch.questions.map((q) => Object.assign(q, { chapterId: ch.id })));
+      // Generated pools (js/curriculum/gen/): thousands of extra questions per
+      // chapter, served after the core set and never repeated (see app.js).
+      for (const ch of SW.chapters) ch.pool = SW.gen ? SW.gen.pool(ch.id).map((q) => Object.assign(q, { chapterId: ch.id })) : [];
+      SW.questions = SW.chapters.flatMap((ch) => [...ch.questions.map((q) => Object.assign(q, { chapterId: ch.id })), ...ch.pool]);
       SW.chapterById = (id) => SW.chapters.find((c) => c.id === id);
       SW.CORE_CHAPTERS = SW.chapters.filter((c) => !c.bonus).length;
       return SW.chapters;

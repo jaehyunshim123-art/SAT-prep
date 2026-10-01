@@ -76,6 +76,8 @@
     lbScope: "global", // leaderboard tab: "global" | "friends"
     lbMetric: "xp", // rank by "xp" | "sparks"
     derbyChapter: null, // unit the Derby races on (defaults to the current chapter)
+    genSeed: 0, // per-player seed: question casts and the no-repeat order of generated questions
+    genCursor: {}, // chapterId -> how many generated questions you've been served
     // settings
     muted: false,
     haptics: true,
@@ -87,6 +89,7 @@
   };
 
   let S = load();
+  if (!S.genSeed) S.genSeed = (Math.floor(Math.random() * 2 ** 31) || 1);
 
   function normalize(saved) {
     const s = { ...structuredClone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
@@ -209,6 +212,15 @@
     return t && rewards.isThemeUnlocked(S, t.id) ? t : THEMES[0];
   }
 
+  // Casts have 8 people; each question uses 3 of them for its NAME_1..3 slots,
+  // picked by a seeded shuffle so the same question always shows the same 3.
+  function castFor(key) {
+    const base = castOf();
+    if (!key || base.people.length <= 3) return base;
+    const people = SW.rng.shuffle(base.people, SW.rng.hash(String(key)) ^ (S.genSeed >>> 0)).slice(0, 3);
+    return { ...base, people };
+  }
+
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 
   // Swaps {{NAME_1}}, {{NAME_2_POSS}}, {{LOCATION}} etc. for the chosen cast.
@@ -226,13 +238,15 @@
     });
   }
 
+  const castNames = (t) => `${t.people.slice(0, 3).map((p) => p.name).join(", ")} + ${t.people.length - 3} more`;
+
   // Free casts first, then packs by price.
   const themesForPicker = () => THEMES.slice().sort((a, b) => (a.price || 0) - (b.price || 0));
 
   // A cast button for the welcome card and the Personalize view.
   function castButton(t, onPick) {
     const locked = !rewards.isThemeUnlocked(S, t.id);
-    const sub = t.id === "custom" ? "Type any names you like" : t.people.map((p) => p.name).join(", ");
+    const sub = t.id === "custom" ? "Type any names you like" : castNames(t);
     const b = h("button", {
       class: `cast-btn${locked ? " locked" : ""}`,
       type: "button",
@@ -266,6 +280,23 @@
   // into the queue, so the chapter is complete once every question has been
   // answered correctly. Mixed review never runs out.
   let queue = []; // { id, isRetry }
+  // After the core set (or when you reopen a finished chapter), the feed keeps
+  // going with generated questions (js/curriculum/gen/) in a per-player
+  // shuffled order. S.genCursor counts what's been served, so nothing repeats
+  // until the chapter's whole pool has been seen; then a new lap starts in a
+  // fresh order.
+  let streaming = false;
+  const genOrders = {};
+  function nextGenId(chId) {
+    const ch = chapterById(chId);
+    if (!ch || !ch.pool || !ch.pool.length) return null;
+    const n = S.genCursor[chId] || 0;
+    const lap = Math.floor(n / ch.pool.length);
+    const key = `${chId}:${lap}`;
+    const order = (genOrders[key] ||= SW.rng.shuffle(ch.pool.map((q) => q.id), ((S.genSeed >>> 0) ^ Math.imul(chId + 1, 2654435761) ^ lap) >>> 0));
+    S.genCursor[chId] = n + 1;
+    return order[n % order.length];
+  }
   let served = 0;
   let lastId = null;
   let completeShown = false;
@@ -285,7 +316,10 @@
       // In progress: only what's left. Replay of a finished chapter: everything.
       // The pop-culture set (questions with a rule line) comes first, then the
       // extra practice, each shuffled.
-      const left = ch.questions.filter((q) => isComplete(ch.id) || !done.has(q.id));
+      // A finished chapter skips straight to fresh generated questions.
+      // (Bonus chapters have no generated pool, so they replay their core set.)
+      const stream = isComplete(ch.id) && ch.pool.length > 0;
+      const left = stream ? [] : ch.questions.filter((q) => isComplete(ch.id) || !done.has(q.id));
       queue = [...shuffle(left.filter((q) => q.rule)), ...shuffle(left.filter((q) => !q.rule))]
         .map((q) => ({ id: q.id, isRetry: false }));
     } else {
@@ -304,7 +338,11 @@
 
   function nextQuestion() {
     if (inReview() && !queue.length) refillReview();
-    const next = queue.shift();
+    let next = queue.shift();
+    if (!next && streaming && currentChapter()) {
+      const id = nextGenId(S.chapterId);
+      if (id) next = { id, isRetry: false };
+    }
     if (!next) return null;
     served++;
     lastId = next.id;
@@ -471,18 +509,27 @@
       banner: "=== 🐎 SATWIZZ GRAMMAR DERBY 🐎 ===",
       tagline: "Where clean sentences win photo finishes.",
       intro: "Answer Digital SAT grammar questions from your unit as fast and as accurately as you can.",
-      // Grammar passages take longer to read than vocab cards, so the CPUs read
-      // longer too (tuned by simulation; see README).
-      read: [20, 26],
-      // Questions you missed come first, then ones you haven't got right yet, then the rest.
+      // CPU reading time per question, tuned by simulation so that breaking
+      // even at ×1.5 takes about 11.5s per question at 85% (see README).
+      read: [13, 17],
+      // Questions you missed come first, then core ones you haven't got right
+      // yet, then fresh generated questions (never repeated; see nextGenId).
       draw() {
         const ch = derbyChapter();
         const got = new Set(correctIn(ch.id));
-        const ids = ch.questions.map((q) => q.id);
-        const missed = shuffle(ids.filter((id) => S.missed.includes(id)));
-        const fresh = shuffle(ids.filter((id) => !got.has(id) && !missed.includes(id)));
-        const rest = shuffle(ids.filter((id) => got.has(id) && !missed.includes(id)));
-        return [...missed, ...fresh, ...rest];
+        const missed = shuffle(S.missed.filter((id) => BY_ID[id] && BY_ID[id].chapterId === ch.id));
+        const fresh = shuffle(ch.questions.map((q) => q.id).filter((id) => !got.has(id) && !missed.includes(id)));
+        return [...missed, ...fresh, ...this.more()];
+      },
+      more() {
+        const ch = derbyChapter();
+        const ids = [];
+        for (let i = 0; i < 20; i++) {
+          const id = nextGenId(ch.id);
+          if (id) ids.push(id);
+        }
+        // Chapters without a generated pool (the bonus ones) reuse their core set.
+        return ids.length ? ids : shuffle(ch.questions.map((q) => q.id));
       },
       question(id) {
         const q = BY_ID[id];
@@ -490,6 +537,7 @@
         const ch = chapterById(q.chapterId);
         return {
           id,
+          cast: castFor(id),
           meta: `${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${ch.short}`,
           passage: q.text,
           stem: SW.stemFor(q),
@@ -510,20 +558,22 @@
           sk.right++;
           S.totalCorrect++;
           S.missed = S.missed.filter((id) => id !== q.id);
-          const got = correctIn(q.chapterId);
-          if (!got.includes(q.id)) got.push(q.id);
-          unlockNextAt60(chapterById(q.chapterId));
+          if (!q.gen) {
+            const got = correctIn(q.chapterId);
+            if (!got.includes(q.id)) got.push(q.id);
+            unlockNextAt60(chapterById(q.chapterId));
+          }
         } else if (!S.missed.includes(q.id)) S.missed.push(q.id);
         renderChapterBar();
       },
       missNote: () => "↺ Saved to your missed questions: it comes back first next race and in mixed review.",
-      lateNote: (dq) => `Answer: ${renderPassage(BY_ID[dq.id].text, castOf(), fill(BY_ID[dq.id].choices[BY_ID[dq.id].answer], castOf(), false))}`,
+      lateNote: (dq) => `Answer: ${renderPassage(BY_ID[dq.id].text, dq.cast, fill(BY_ID[dq.id].choices[BY_ID[dq.id].answer], dq.cast, false))}`,
       review: {
         title: "Grammar review",
         head: ["Question", "Why"],
         row(dq) {
           const q = BY_ID[dq.id];
-          const cast = castOf();
+          const cast = dq.cast;
           return [
             `<small class="muted">${esc(q.skill)}</small><br>${renderPassage(q.text, cast, fill(q.choices[q.answer], cast, false))}`,
             q.rule ? fill(q.rule, cast, false) : fill(q.notes[q.answer], cast, false),
@@ -700,6 +750,7 @@
     cardCount = 0;
     lastId = null;
     completeShown = false;
+    streaming = id !== REVIEW_ID && isComplete(id) && chapterById(id).pool.length > 0;
     buildQueue();
     if (!S.castChosen) feed.append(welcomeCard());
     const ch = currentChapter();
@@ -733,7 +784,7 @@
   // once the queue is empty and every card on screen has been answered.
   function afterFeedAnswer() {
     const pending = [...feed.querySelectorAll(".card[data-qid]")].filter((c) => !c._answered).length;
-    if (pending < 2 && queue.length) appendCards(2 - pending);
+    if (pending < 2 && (queue.length || streaming)) appendCards(2 - pending);
     const ch = currentChapter();
     if (ch) unlockNextAt60(ch);
     if (!ch || completeShown || queue.length || pending) return;
@@ -816,13 +867,20 @@
         <span class="complete-star" aria-hidden="true">⭐</span>
         <h2>${heading}</h2>
         <p>${firstTime ? `+${RULES.chapterSparks} ⚡ Sparks earned. ` : "Replay finished. "}${body}</p>
-        <div class="stack">${actions}<button class="btn ghost wide" type="button" data-go="${ch.id}">Replay this chapter</button></div>
+        <div class="stack">${actions}${ch.pool.length
+          ? `<button class="btn ghost wide" type="button" data-stream>Keep practicing: ${fmt(ch.pool.length)} fresh questions ↓</button>`
+          : `<button class="btn ghost wide" type="button" data-go="${ch.id}">Replay this chapter</button>`}</div>
       </div>`;
     card.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
       const go = b.dataset.go === REVIEW_ID ? REVIEW_ID : Number(b.dataset.go);
       startChapter(go);
     }));
     card.querySelector("[data-drawer]")?.addEventListener("click", openChapters);
+    card.querySelector("[data-stream]")?.addEventListener("click", () => {
+      streaming = true;
+      appendCards(3);
+      scrollToNext(card);
+    });
     return card;
   }
 
@@ -882,7 +940,7 @@
   // stem, then choices A–D.
   function paintCard(card) {
     const q = card._q;
-    const cast = castOf();
+    const cast = castFor(q.id);
     const ch = chapterById(q.chapterId);
     card.innerHTML = `
       <div class="card-inner bb">
@@ -945,7 +1003,7 @@
     card.classList.add("answered");
     const q = card._q;
     const correct = ci === q.answer;
-    const cast = castOf();
+    const cast = castFor(q.id);
     const thinkMs = Date.now() - (card._seenAt || card._madeAt || Date.now());
 
     card.querySelectorAll(".choice").forEach((b) => {
@@ -984,8 +1042,11 @@
       sparks = rewards.sparksForCorrect(S.combo);
       rewards.earn(S, sparks.total);
       S.missed = S.missed.filter((id) => id !== q.id);
-      const got = correctIn(q.chapterId);
-      if (!got.includes(q.id)) got.push(q.id);
+      // Chapter progress counts the core set; generated questions are extra practice.
+      if (!q.gen) {
+        const got = correctIn(q.chapterId);
+        if (!got.includes(q.id)) got.push(q.id);
+      }
     } else {
       savedCombo = rewards.useComboSaver(S) ? S.combo : 0;
       S.combo = savedCombo;
@@ -1103,7 +1164,7 @@
     if (explainSheet) closeExplain(false);
     explainAfter = after;
     const q = card._q;
-    const cast = castOf();
+    const cast = castFor(q.id);
     const correct = picked === q.answer;
     const filled = renderPassage(q.text, cast, fill(q.choices[q.answer], cast, false));
     const rows = card._order.map((ci, pos) => {
@@ -1614,7 +1675,7 @@
       `<span class="shop-icon" aria-hidden="true">${m.emoji}</span>`, esc(m.name), "Derby mount: runs in your lane",
       derbySt.mounts.includes(m.id) ? useBtn(derbySt.mount === m.id, `data-mount="${m.id}"`) : buyBtn(`mount:${m.id}`, m.price))).join("");
     const packRows = packs.map((t) => row(
-      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), esc(t.people.map((p) => p.name).join(", ")),
+      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), esc(castNames(t)),
       rewards.isThemeUnlocked(S, t.id) ? useBtn(S.themeId === t.id, `data-use="${t.id}"`) : buyBtn(`theme:${t.id}`, t.price))).join("");
     const avatarRows = SW.avatars.filter((a) => a.price > 0).map((a) => row(
       `<span class="avatar md" aria-hidden="true">${a.emoji}</span>`, esc(a.label), "Profile picture",

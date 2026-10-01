@@ -26,13 +26,13 @@ The stems live in `SatWizz.STEMS` in `js/questions.js`. `SatWizz.stemFor(q)` pic
 
 ## Curriculum
 
-Seven chapters, in this order, plus two bonus chapters. Each core chapter starts with **25 questions in the user's passage style** (shared with Clause Derby in `clause-derby/src/chN.js`). Then come **20 extra-practice questions** (`js/curriculum/chN.js`). That makes **345 questions** in all.
+Seven chapters, in this order, plus two bonus chapters. Each core chapter starts with **25 questions in the user's passage style** (shared with Clause Derby in `clause-derby/src/chN.js`). Then come **20 extra-practice questions** (`js/curriculum/chN.js`). That's **345 core questions**. On top of them, a **question generator** adds about **3,600 more** (see below), for over **3,900**.
 
 **Names come from your cast.** Every person in a question is a cast slot:
 - `{{NAME_1}}`–`{{NAME_3}}` for names;
 - `{{NAME_n_POSS}}` / `{{NAME_n_OBJ}}` for his/her/their and him/her/them.
 
-Without a purchased pack, questions use the free generic **Everyday** cast (John, Jane, Sam). Unlocking a **Character Cast** in the Shop swaps in that pack's names. For example, Football Legends makes the first question "In 2010, Ronaldo was scoring many goals in China… With the help of Messi…".
+**Every cast has 8 people**, and each question uses 3 of them in its slots. The pick is seeded per player and per question, so a given question always shows the same people, but different questions bring in different characters. Without a purchased pack, questions use the free generic **Everyday** cast (John, Jane, Sam, Maya, Leo, Priya, Diego, Alex). Unlocking a **Character Cast** in the Shop swaps in that pack's names. For example, Football Legends makes the first question "In 2010, Ronaldo was scoring many goals in China… With the help of Messi…".
 
 Facts tied to real historical people (radium, penicillin) were reworded to stay accurate with any name. Novel and album titles are invented.
 
@@ -62,6 +62,28 @@ Each chapter opens with an **Explanation Pause** lesson card: the chapter's expl
 Every question where a shortcut applies is tagged, and `scripts/validate-content.js` checks the shortcut really leads to the right answer. The drawer shows a shortcut chip on those questions.
 
 **Chapter drawer.** Tap the chapter bar above the feed to see every chapter's status (✓ done, ▶ current, 🔒 locked with how many you need to unlock it) and progress. You can jump to any unlocked chapter. Mixed review (missed questions first) opens once you finish a chapter.
+
+## Question generator (`js/curriculum/gen/`)
+
+Each of the 7 chapters has a generator that builds hundreds of questions in the style of the hand-written set. They are short narrative passages with cast slots for names and the pack's scenery (`{{LOCATION}}`, `{{EVENT}}`, `{{SKILL}}`), and every question has a rule line and a note for each choice.
+
+| Ch | Questions | How they're built |
+|---|---|---|
+| 1 | ~380 | 32 hand-written clause pairs (contrast, result, addition, reason) × every legal joint (period, semicolon, comma + FANBOYS) × trap sets; mix-and-match practice scenes; DC, IC openers |
+| 2 | ~540 | Subjects with prepositional-phrase traps; "along with" parentheticals; Each/One of; either/or and neither/nor; There is/are; compound subjects |
+| 3 | ~580 | "Name, -ing…, verb" modifiers; "Title ______" appositive openers (the Stephen Curry pattern); long subjects that need their main verb |
+| 4 | ~440 | Time clues (last summer, since…, by the time…, next spring, by next June) × 25 verbs with all their forms |
+| 5 | ~410 | 62 sentence pairs tagged contrast / result / example / addition / similarity × every fitting transition, with distractors only from relationships that don't fit |
+| 6 | ~430 | Colon + list or explanation; no colon after a verb, "such as" or a preposition; dash pairs; semicolons between clauses and in lists with commas; closing commas |
+| 7 | ~790 | "Name, a/an…," appositives; "The role Name" (essential); "Name, who…,"; "The students who…" (essential); one-of-a-kind nouns ("best friend, a…,") |
+
+- **No repeats:**
+  - Practice serves the core set first. After that, or whenever you reopen a finished chapter, the feed keeps going with generated questions ("Keep practicing: N fresh questions").
+  - The Derby races on missed questions, then core ones you haven't gotten right, then generated ones.
+  - Both step through the chapter's pool in your own shuffled order (`S.genCursor`), so nothing repeats until you've seen the whole pool.
+- **Progress:** chapter progress and the 60% unlock count the core set only.
+- **Stable ids:** each id is a hash of the question's content, so missed-question lists survive updates.
+- **Checks:** `node scripts/validate-content.js` runs the full checks on every generated question: one blank, 4 distinct choices, notes, the rule line, known placeholders, no duplicates and no template leftovers.
 
 ## Focus Meter (0–100%)
 
@@ -149,7 +171,7 @@ The **Derby** tab (`js/derby.js`) is a wager-based horse race on **grammar quest
   - Leaving mid-race forfeits the bet, after a confirm tap.
 - **Field:** eight horses on a 5-step track. You are Galloping Lexicon. The seven rivals are **independent CPU players**.
   - **The race clock never pauses**: not while you read feedback, not if you switch tabs.
-  - Each rival reads a question (20–26s for grammar passages), answers in its own time range at its own accuracy, and moves **live whether or not you answer**.
+  - Each rival reads a question (13–17s), answers in its own time range at its own accuracy, and moves **live whether or not you answer**.
   - If you never answer, a rival wins in about 90 seconds. A rival that crosses the line while you're thinking wins.
 
   | Rival | Style | Answer time | Accuracy |
@@ -173,15 +195,16 @@ The **Derby** tab (`js/derby.js`) is a wager-based horse race on **grammar quest
   - A miss costs 25% and **locks your next question for 4s**; a rushed answer (under 1.5s) costs 10%.
   - Missing Focus locks every question for up to **9s** (at 0%) while the rivals keep running.
   - Two right answers in a row restore 25%. A **Focus Elixir** (500 ⚡) refills Focus and lifts the current lock.
-- **Balance:** CPU reading time (20–26s for grammar, set by the source) is tuned by simulating the real-time race, including locks and about 2s spent reading feedback:
+- **Balance:** the rivals are tuned so you **break even at about 11.5s per question** (at 85% accuracy). CPU reading time is 13–17s, set by the source, and tuned by simulating the real-time race, including locks and about 2s spent reading feedback:
 
   | Your pace | Races won | At ×1.5 |
   |---|---|---|
-  | 13s/question at 85% | ~88% | |
-  | 15s at 85% | ~83% | |
-  | ~17s at 82% | | break-even |
-  | 18s at 80% | ~50% | |
-  | 25s at 75% | ~10% | |
+  | 8s/question at 90% | ~95% | |
+  | 10s at 85% | ~76% | |
+  | 11.5s at 85% | ~63–67% | break-even |
+  | 13s at 85% | ~56% | |
+  | 15s at 80% | ~27% | |
+  | 20s at 80% | ~3% | |
 
 - **Results:** winner, payout, balance, Focus, race time, your average think time, final standings, and a **grammar review table** (each sentence with the right answer filled in, the rule, and ✓/✗, or — for a question you didn't answer before a rival won).
 - **🛍️ Gear:** jockey silks, mounts, Focus Elixirs and Starting Bursts are sold in the Shop (and on the Derby's own Stable screen). Your silks color your lane and the field list, and your mount runs in your lane.
@@ -293,7 +316,7 @@ node scripts/build-derby.js
   |---|---|
   | 🏇 Jockey Skins | 4 Derby silks |
   | 🦄 Derby Mounts | 4 mounts |
-  | 🎭 Character Casts (first) | 6 casts. Questions use generic names until you unlock one |
+  | 🎭 Character Casts (first) | 6 casts of 8 people each. Questions use generic names until you unlock one |
   | 🙂 Avatars | 6 rare profile pictures |
   | 🎣 Fishing Rods | 3 rods with perks |
   | 🌊 Fishing Spots | 3 spots with their own word pools |
@@ -371,6 +394,7 @@ js/themes.js                casts and avatars
 js/questions.js             curriculum framework: 7+2 chapter plan, official stems, addChapter (merging)/build API
 js/curriculum/clause.js     registers the pop-culture sets (clause-derby/src/ch1-7.js) as chapters 1-7
 js/curriculum/ch1-ch9.js    extra practice per chapter: lesson patterns + questions with per-choice notes
+js/curriculum/gen/          question generator: core.js + one builder per chapter (~3,600 questions)
 js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row restore, Elixir, locks, blur/shake
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
 js/fishing.js               Vocab Fishing (Vault): casts, rods, spots, view

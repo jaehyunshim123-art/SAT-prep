@@ -753,7 +753,7 @@
     }
 
     function nextQuestion() {
-      if (race.turn >= race.words.length) race.words = race.words.concat(shuffle(race.words, Math.random));
+      if (race.turn >= race.words.length) race.words = race.words.concat(src.more ? src.more() : shuffle(race.words, Math.random));
       race.q = src.question(race.words[race.turn]);
       race.picked = null;
       race.qClock = 0;
@@ -831,8 +831,8 @@
       const locked = !answered && !over && race.lockLeft > 0;
       race.lockShown = locked;
       const passage = q.passage
-        ? ctx.fill(q.passage)
-          .replace("______", answered ? `<mark class="fill-in">${ctx.fill(q.choices[q.answer], undefined, false)}</mark>` : '<span class="blank" role="img" aria-label="blank"></span>')
+        ? ctx.fill(q.passage, q.cast)
+          .replace("______", answered ? `<mark class="fill-in">${ctx.fill(q.choices[q.answer], q.cast, false)}</mark>` : '<span class="blank" role="img" aria-label="blank"></span>')
           .replace(SW.UNDERLINE_RE, '<u class="target">$1</u>')
         : "";
       const kindLabel = esc(q.meta || "");
@@ -852,7 +852,7 @@
           ${q.choices.map((c, i) => {
             let cls = "";
             if (answered) cls = i === q.answer ? "right" : i === race.picked ? "wrong" : "dim";
-            const txt = ctx.fill(c, undefined, false);
+            const txt = ctx.fill(c, q.cast, false);
             return `<li><button class="choice ${cls}" type="button" data-ci="${i}" ${answered || over || locked ? "disabled" : ""} aria-label="(${"ABCD"[i]}) ${txt.replace(/<[^>]+>/g, "")}">
               <span class="letter" aria-hidden="true">${"ABCD"[i]}</span><span class="txt">${txt}</span>
             </button></li>`;
@@ -861,9 +861,9 @@
         ${answered ? `
           <div class="feedback ${right ? "ok" : "no"}">
             <h3>${right ? "Correct!" : `Not quite. You're held back, and your next question locks for ${PENALTY.stumble}s+.`}</h3>
-            ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${ctx.fill(q.rule, undefined, false)}</p>` : ""}
-            ${!right && q.notes ? `<p><b>Your pick:</b> ${ctx.fill(q.notes[race.picked], undefined, false)}</p>` : ""}
-            <p>${ctx.fill(q.explain, undefined, false)}</p>
+            ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${ctx.fill(q.rule, q.cast, false)}</p>` : ""}
+            ${!right && q.notes ? `<p><b>Your pick:</b> ${ctx.fill(q.notes[race.picked], q.cast, false)}</p>` : ""}
+            <p>${ctx.fill(q.explain, q.cast, false)}</p>
             ${right || !src.missNote(q) ? "" : `<p class="muted small">${src.missNote(q)}</p>`}
           </div>` : over ? `<div class="feedback no"><h3>Too late!</h3><p>${esc(HORSE[race.winner].name)} finished before you answered. ${src.lateNote(q)}</p></div>` : ""}`;
       container.querySelector("#derby-next-slot").innerHTML = over

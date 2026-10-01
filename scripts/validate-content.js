@@ -18,6 +18,8 @@ require(`${repo}/clause-derby/src/bank.js`);
 for (let i = 1; i <= 7; i++) require(`${repo}/clause-derby/src/ch${i}.js`);
 require(`${repo}/js/curriculum/clause.js`);
 for (let i = 1; i <= 9; i++) require(`${repo}/js/curriculum/ch${i}.js`);
+require(`${repo}/js/curriculum/gen/core.js`);
+for (let i = 1; i <= 7; i++) require(`${repo}/js/curriculum/gen/ch${i}.js`);
 require(`${repo}/js/focus.js`);
 require(`${repo}/js/derby.js`);
 require(`${repo}/js/fishing.js`);
@@ -129,6 +131,26 @@ for (const w of SW.vocab.WORDS) {
   }
   console.log("derby questions generated", made);
 }
+
+// ---------- Generated pools (js/curriculum/gen/) ----------
+// Same checks as hand-written questions, plus: a rule line, no duplicate text,
+// and every choice/note free of leftover template markers.
+let generated = 0;
+for (const ch of SW.chapters) {
+  const texts = new Set();
+  for (const q of ch.pool || []) {
+    generated++;
+    checkCommon(q.id, q, [q.rule]);
+    if (!q.rule || q.rule.length < 10) bad.push(`${q.id}: needs a rule line`);
+    if (!q.notes[q.answer].startsWith("Correct")) bad.push(`${q.id}: the answer's note should start with "Correct"`);
+    const key = q.text + "|" + q.choices.join("|");
+    if (texts.has(key)) bad.push(`${q.id}: duplicate`);
+    texts.add(key);
+    if (/undefined|NaN|\$\{/.test([q.text, ...q.choices, ...q.notes, q.rule].join(" "))) bad.push(`${q.id}: template leftover`);
+    if (/\s{2,}|\s[,.;:]/.test(q.text.replace("______", "BLANK"))) bad.push(`${q.id}: spacing "${q.text}"`);
+  }
+}
+console.log("generated questions", generated);
 
 // ---------- Vocab Fishing ----------
 // Every cast: 4 fish with distinct definitions, exactly one right, no near-synonym distractors.

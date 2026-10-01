@@ -1972,7 +1972,8 @@ window.SatWizz.config = {
 <script>
 /* ===== js/themes.js ===== */
 // SatWizz casts that get swapped into every question.
-// Placeholders map to cast fields: {{NAME_1..3}} -> people, {{LOCATION}} -> place,
+// Each cast has 8 people; every question picks 3 of them (stable per question)
+// for its {{NAME_1..3}} slots. Placeholders map to cast fields: {{NAME_1..3}} -> people, {{LOCATION}} -> place,
 // {{SKILL}} -> craft, {{EVENT}} -> event. Flavor is always used mid-sentence.
 // `price` is in Sparks; 0 means free. Paid packs are Character Casts in the Shop (500 ⚡).
 //
@@ -1997,6 +1998,11 @@ window.SatWizz.themes = [
       { name: "John", pro: "he" },
       { name: "Jane", pro: "she" },
       { name: "Sam", pro: "they" },
+      { name: "Maya", pro: "she" },
+      { name: "Leo", pro: "he" },
+      { name: "Priya", pro: "she" },
+      { name: "Diego", pro: "he" },
+      { name: "Alex", pro: "they" },
     ],
     place: "the library",
     craft: "public speaking",
@@ -2012,6 +2018,11 @@ window.SatWizz.themes = [
       { name: "Harry", pro: "he" },
       { name: "Hermione", pro: "she" },
       { name: "Ron", pro: "he" },
+      { name: "Luna", pro: "she" },
+      { name: "Neville", pro: "he" },
+      { name: "Ginny", pro: "she" },
+      { name: "Draco", pro: "he" },
+      { name: "Cedric", pro: "he" },
     ],
     place: "the Great Hall",
     craft: "potion-making",
@@ -2027,6 +2038,11 @@ window.SatWizz.themes = [
       { name: "Ronaldo", pro: "he" },
       { name: "Messi", pro: "he" },
       { name: "Aitana", pro: "she" },
+      { name: "Mbappé", pro: "he" },
+      { name: "Haaland", pro: "he" },
+      { name: "Alexia", pro: "she" },
+      { name: "Kerr", pro: "she" },
+      { name: "Neymar", pro: "he" },
     ],
     place: "the training ground",
     craft: "free kicks",
@@ -2042,6 +2058,11 @@ window.SatWizz.themes = [
       { name: "LeBron", pro: "he" },
       { name: "Steph", pro: "he" },
       { name: "Caitlin", pro: "she" },
+      { name: "Giannis", pro: "he" },
+      { name: "Luka", pro: "he" },
+      { name: "A'ja", pro: "she" },
+      { name: "Sabrina", pro: "she" },
+      { name: "Kobe", pro: "he" },
     ],
     place: "the practice gym",
     craft: "fadeaway jumpers",
@@ -2057,6 +2078,11 @@ window.SatWizz.themes = [
       { name: "Naruto", pro: "he" },
       { name: "Mikasa", pro: "she" },
       { name: "Goku", pro: "he" },
+      { name: "Luffy", pro: "he" },
+      { name: "Sakura", pro: "she" },
+      { name: "Tanjiro", pro: "he" },
+      { name: "Nezuko", pro: "she" },
+      { name: "Vegeta", pro: "he" },
     ],
     place: "the training dojo",
     craft: "energy blasts",
@@ -2072,6 +2098,11 @@ window.SatWizz.themes = [
       { name: "Peter", pro: "he" },
       { name: "Wanda", pro: "she" },
       { name: "Tony", pro: "he" },
+      { name: "Bruce", pro: "he" },
+      { name: "Diana", pro: "she" },
+      { name: "Clark", pro: "he" },
+      { name: "Natasha", pro: "she" },
+      { name: "Miles", pro: "he" },
     ],
     place: "the hero tower",
     craft: "web-slinging",
@@ -2087,6 +2118,11 @@ window.SatWizz.themes = [
       { name: "Taylor", pro: "she" },
       { name: "Beyoncé", pro: "she" },
       { name: "Olivia", pro: "she" },
+      { name: "Ariana", pro: "she" },
+      { name: "Rihanna", pro: "she" },
+      { name: "Dua", pro: "she" },
+      { name: "Bruno", pro: "he" },
+      { name: "Billie", pro: "she" },
     ],
     place: "the recording studio",
     craft: "songwriting",
@@ -2224,6 +2260,36 @@ window.SatWizz.avatars = [
     return SW.UNDERLINE_RE.test(q.text) ? SW.STEMS.conventionsUnderlined : SW.STEMS.conventions;
   };
 
+  // Seeded randomness (stable per user): question casts and the no-repeat
+  // order of generated questions.
+  SW.rng = {
+    hash(str) {
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+      return h >>> 0;
+    },
+    // mulberry32
+    make(seed) {
+      let a = seed >>> 0;
+      return () => {
+        a = (a + 0x6d2b79f5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    },
+    shuffle(arr, seed) {
+      const r = SW.rng.make(seed);
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(r() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    },
+  };
+
   const registered = [];
 
   SW.curriculum = {
@@ -2254,7 +2320,10 @@ window.SatWizz.avatars = [
         .map((p) => byId.get(p.id) || { ...p, pause: null, questions: [] })
         .concat(registered.filter((c) => !SW.CURRICULUM_PLAN.some((p) => p.id === c.id)))
         .sort((a, b) => a.id - b.id);
-      SW.questions = SW.chapters.flatMap((ch) => ch.questions.map((q) => Object.assign(q, { chapterId: ch.id })));
+      // Generated pools (js/curriculum/gen/): thousands of extra questions per
+      // chapter, served after the core set and never repeated (see app.js).
+      for (const ch of SW.chapters) ch.pool = SW.gen ? SW.gen.pool(ch.id).map((q) => Object.assign(q, { chapterId: ch.id })) : [];
+      SW.questions = SW.chapters.flatMap((ch) => [...ch.questions.map((q) => Object.assign(q, { chapterId: ch.id })), ...ch.pool]);
       SW.chapterById = (id) => SW.chapters.find((c) => c.id === id);
       SW.CORE_CHAPTERS = SW.chapters.filter((c) => !c.bonus).length;
       return SW.chapters;
@@ -5882,6 +5951,1106 @@ window.SatWizz.curriculum.addChapter({
 });
 
 </script>
+<!-- Question generator: thousands of extra questions per chapter, never repeated. -->
+<script>
+/* ===== js/curriculum/gen/core.js ===== */
+// SatWizz question generator: core.
+//
+// Each chapter file (gen/ch1.js … ch7.js) registers a function that builds
+// that chapter's pool of generated questions from interchangeable parts
+// (clause pairs, subjects, verbs, time clues…), written in the style of the
+// chapter's hand-written set: short narrative passages, people as cast slots
+// ({{NAME_1}}…), and the pack's scenery ({{LOCATION}}, {{EVENT}}, {{SKILL}}).
+//
+// Every generated question has the normal shape (text with one ______, 4
+// choices, answer, rule, a note per choice) plus `gen: true`. Its id is a hash
+// of its content ("g3-k2x9q"), so it stays the same across releases. Pools are
+// deduplicated. Practice and the Derby step through each pool in a per-player
+// shuffled order, so a question never repeats until the whole pool has been seen.
+(function () {
+  "use strict";
+  const SW = window.SatWizz;
+  const builders = {};
+
+  const G = {
+    // Registers a chapter's builder: () => array of question drafts.
+    add(chapterId, build) { builders[chapterId] = build; },
+
+    // Builds (once) and returns the chapter's pool.
+    pool(chapterId) {
+      G.cache = G.cache || {};
+      if (G.cache[chapterId]) return G.cache[chapterId];
+      const build = builders[chapterId];
+      const seen = new Set();
+      const out = [];
+      for (const d of build ? build() : []) {
+        const key = d.text + "|" + d.choices.join("|");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({
+          id: `g${chapterId}-${SW.rng.hash(key).toString(36)}`,
+          skill: d.skill,
+          kind: d.kind || (chapterId === 5 ? "transition" : undefined),
+          text: d.text,
+          choices: d.choices,
+          answer: d.answer || 0,
+          notes: d.notes,
+          rule: d.rule,
+          gen: true,
+        });
+      }
+      G.cache[chapterId] = out;
+      return out;
+    },
+
+    // ---------- helpers for chapter builders ----------
+    cap: (s) => (s.startsWith("{{") ? s : s.charAt(0).toUpperCase() + s.slice(1)),
+    lastWord(s) {
+      const i = s.lastIndexOf(" ");
+      return [s.slice(0, i), s.slice(i + 1)];
+    },
+    firstWord(s) {
+      const i = s.indexOf(" ");
+      return [s.slice(0, i), s.slice(i + 1)];
+    },
+    // Every combination of the given lists (cartesian product).
+    *product(...lists) {
+      if (!lists.length) { yield []; return; }
+      const [head, ...rest] = lists;
+      for (const x of head) for (const r of G.product(...rest)) yield [x, ...r];
+    },
+    // Deterministic pick so the same inputs always give the same question.
+    pick(list, seedStr) { return list[SW.rng.hash(seedStr) % list.length]; },
+  };
+
+  SW.gen = G;
+})();
+
+</script>
+<script>
+/* ===== js/curriculum/gen/ch1.js ===== */
+// Generated questions, Chapter 1: Independent Clause Connectors & Sentence Boundaries.
+// Two independent clauses meet at the blank; the choices are the legal joints
+// (period, semicolon, comma + FANBOYS) and the classic traps (comma splice,
+// run-on, FANBOYS without a comma, "however" with only commas…).
+(function () {
+  "use strict";
+  const G = window.SatWizz.gen;
+  const RULE = "Two independent clauses need a period, a semicolon, or a comma + FANBOYS between them.";
+
+  // [first IC, second IC, relationship]
+  const PAIRS = [
+    ["{{NAME_1}} practiced {{SKILL}} for three straight hours", "the coach still asked for one more round", "contrast"],
+    ["{{NAME_1}} arrived at {{LOCATION}} an hour early", "the doors stayed locked until noon", "contrast"],
+    ["the forecast promised clear skies for {{EVENT}}", "a storm rolled in just before the opening ceremony", "contrast"],
+    ["{{NAME_2}} memorized every line of the speech", "the microphone cut out halfway through", "contrast"],
+    ["the crowd at {{LOCATION}} chanted {{NAME_1_POSS}} name", "{{NAME_1}} never once looked up from the notebook", "contrast"],
+    ["{{NAME_3}} had never lost a match at {{EVENT}}", "the newcomer from the north looked dangerous", "contrast"],
+    ["the tickets sold out in four minutes", "half the seats were empty when the lights went down", "contrast"],
+    ["{{NAME_1}} wanted to rest after the long trip", "{{NAME_2}} insisted on one last practice at {{LOCATION}}", "contrast"],
+    ["{{NAME_2}} trained at {{LOCATION}} all summer", "the first game of the season still went badly", "contrast"],
+    ["the review panel loved the first draft", "{{NAME_1}} rewrote the ending anyway", "contrast"],
+    ["{{NAME_1}} forgot to charge the camera", "nobody filmed the winning moment at {{EVENT}}", "result"],
+    ["the bus broke down outside {{LOCATION}}", "{{NAME_2}} walked the last two miles", "result"],
+    ["{{NAME_1}} studied {{SKILL}} every night for a month", "the final test felt surprisingly easy", "result"],
+    ["the power went out across the whole block", "the band rehearsed by flashlight", "result"],
+    ["{{NAME_3}} lost the only copy of the playbook", "the coach rewrote every play from memory", "result"],
+    ["the rain flooded the field before {{EVENT}}", "the organizers moved everything indoors", "result"],
+    ["{{NAME_2}} trained harder than anyone at {{LOCATION}}", "the captain chose {{NAME_2}} to lead the warm-up", "result"],
+    ["the old scoreboard kept freezing", "the referees tracked points on a whiteboard", "result"],
+    ["{{NAME_1}} missed the early train", "the opening speech started without {{NAME_1_OBJ}}", "result"],
+    ["the new stadium lights were twice as bright", "night games felt like noon", "result"],
+    ["{{NAME_1}} designed the poster for {{EVENT}}", "{{NAME_2}} wrote every word of the program", "addition"],
+    ["the museum near {{LOCATION}} opened a new wing", "the café downstairs started serving breakfast", "addition"],
+    ["{{NAME_3}} fixed the broken speakers", "{{NAME_1}} tuned every guitar backstage", "addition"],
+    ["the students painted a mural on the gym wall", "the teachers planted a garden by the entrance", "addition"],
+    ["{{NAME_2}} led the morning warm-up", "{{NAME_3}} ran the afternoon drills", "addition"],
+    ["the library extended its hours for exam week", "the cafeteria added a late-night snack bar", "addition"],
+    ["{{NAME_1}} packed an extra jacket", "the nights at {{LOCATION}} can be bitterly cold", "reason"],
+    ["the crowd went silent", "{{NAME_2}} was about to attempt the final shot", "reason"],
+    ["{{NAME_3}} skipped dessert at the party", "the first round of {{EVENT}} started early the next morning", "reason"],
+    ["the coach grinned at the scoreboard", "the team had finally broken the school record", "reason"],
+    ["{{NAME_1}} kept the old notebook", "every page held a memory from {{EVENT}}", "reason"],
+    ["the volunteers worked straight through lunch", "the stage had to be ready by sunset", "reason"],
+  ];
+  const CONJ = { contrast: ["but", "yet"], result: ["so"], addition: ["and"], reason: ["for"] };
+  const ADVERB = { contrast: "however", result: "therefore", addition: "moreover", reason: "after all" };
+  const REL_WORD = { contrast: "contrast", result: "result", addition: "added point", reason: "reason" };
+
+  // Mix-and-match scenes: any action + any second action read as "and" (addition).
+  const ACTIONS = [
+    "{{NAME_1}} practiced {{SKILL}} at {{LOCATION}} after school",
+    "{{NAME_1}} reviewed the game film twice before {{EVENT}}",
+    "{{NAME_1}} set up the folding chairs in the main hall",
+    "{{NAME_1}} printed the schedules for {{EVENT}}",
+    "{{NAME_1}} swept the stage before the dress rehearsal",
+    "{{NAME_1}} wrote a thank-you note to every volunteer",
+    "{{NAME_1}} tested the sound system one last time",
+    "{{NAME_1}} carried the trophies up from the basement",
+    "{{NAME_1}} stretched for twenty minutes before the warm-up",
+    "{{NAME_1}} mapped the fastest route to {{LOCATION}}",
+  ];
+  const SECONDS = [
+    "{{NAME_2}} timed every attempt with a stopwatch",
+    "{{NAME_2}} took careful notes in the front row",
+    "{{NAME_3}} handed out water bottles to the team",
+    "{{NAME_3}} filmed the whole session on a phone",
+    "the rest of the team cheered from the bleachers",
+    "the coach marked each mistake on a clipboard",
+    "{{NAME_2}} hung the banners above the entrance",
+    "{{NAME_3}} checked the lights over the stage",
+  ];
+
+  // Dependent clause first: DC, IC.
+  const DCS = [
+    ["Because {{NAME_1}} had stayed up late studying {{SKILL}}", "{{NAME_1}} nearly slept through the alarm"],
+    ["Although the gym at {{LOCATION}} was freezing", "the team practiced in short sleeves"],
+    ["When {{NAME_2}} finally reached the stage", "the crowd rose to its feet"],
+    ["Because the bus arrived twenty minutes late", "the parade before {{EVENT}} started without the drummer"],
+    ["Although {{NAME_3}} had never played chess before", "{{NAME_3}} won the first two games"],
+    ["Since the lights at {{LOCATION}} kept flickering", "the coach ended practice early"],
+    ["When the final buzzer sounded", "{{NAME_1}} dropped to the floor in relief"],
+    ["Although the recipe looked simple", "the first batch burned in six minutes"],
+    ["Because {{NAME_2}} had trained at {{LOCATION}} all winter", "the spring season felt easy"],
+    ["While {{NAME_1}} rehearsed {{SKILL}} backstage", "the audience slowly filled the hall"],
+    ["After the storm knocked out the scoreboard", "the referees kept score on paper"],
+    ["If the weather clears by noon", "the first round of {{EVENT}} will start on time"],
+  ];
+
+  function boundary(a, b, rel, form, distractors, seed) {
+    const [aHead, aLast] = G.lastWord(a);
+    const [bFirst, bRest] = G.firstWord(b);
+    const conj = G.pick(CONJ[rel], seed);
+    const adv = ADVERB[rel];
+    const J = {
+      period: [`${aLast}. ${G.cap(bFirst)}`, "Correct. The period ends the first independent clause, and the second one starts a new sentence."],
+      semicolon: [`${aLast}; ${bFirst}`, "Correct. A semicolon joins two closely related independent clauses."],
+      conj: [`${aLast}, ${conj} ${bFirst}`, `Correct. A comma + "${conj}" joins the two independent clauses and shows the ${REL_WORD[rel]}.`],
+      splice: [`${aLast}, ${bFirst}`, "Comma splice: a comma alone can't join two independent clauses."],
+      runon: [`${aLast} ${bFirst}`, "Run-on: two independent clauses are fused with no punctuation at all."],
+      noComma: [`${aLast} ${conj} ${bFirst}`, `Two independent clauses joined by "${conj}" need a comma before the conjunction.`],
+      adverb: [`${aLast}, ${adv}, ${bFirst}`, `"${G.cap(adv)}" isn't a FANBOYS word, so with only commas this is a comma splice. It needs a semicolon or a period before it.`],
+      commaAfter: [`${aLast}, ${conj}, ${bFirst}`, `No comma follows a FANBOYS conjunction: write ", ${conj} ${bFirst}".`],
+      semiConj: [`${aLast}; ${conj}, ${bFirst}`, `A semicolon plus "${conj}" with a comma after it isn't a legal joint; write ", ${conj}".`],
+    };
+    const picked = [form, ...distractors];
+    return {
+      skill: form === "period" ? "IC. IC" : form === "semicolon" ? "IC; IC" : "IC, FANBOYS IC",
+      text: `${G.cap(aHead)} ______ ${bRest}.`,
+      choices: picked.map((k) => J[k][0]),
+      notes: picked.map((k) => J[k][1]),
+      rule: form === "conj" ? `IC, FANBOYS IC: a comma + "${conj}" joins two independent clauses.` : RULE,
+    };
+  }
+
+  const WRONG_SETS = [
+    ["splice", "runon", "noComma"],
+    ["splice", "adverb", "commaAfter"],
+    ["runon", "adverb", "semiConj"],
+  ];
+
+  G.add(1, () => {
+    const out = [];
+    PAIRS.forEach(([a, b, rel], i) => {
+      for (const form of ["period", "semicolon", "conj"]) {
+        WRONG_SETS.forEach((ws, k) => {
+          // Skip combos where a "wrong" joint would equal the right one.
+          out.push(boundary(a, b, rel, form, ws, `${i}${form}${k}`));
+        });
+      }
+    });
+    let n = 0;
+    for (const [a, b] of G.product(ACTIONS, SECONDS)) {
+      const form = ["period", "semicolon", "conj"][n % 3];
+      out.push(boundary(a, b, "addition", form, WRONG_SETS[n % WRONG_SETS.length], `s${n}`));
+      n++;
+    }
+    for (const [dc, ic] of DCS) {
+      const [dcHead, dcLast] = G.lastWord(dc);
+      const [icFirst, icRest] = G.firstWord(ic);
+      out.push({
+        skill: "DC, IC",
+        text: `${dcHead} ______ ${icRest}.`,
+        choices: [`${dcLast}, ${icFirst}`, `${dcLast}; ${icFirst}`, `${dcLast}. ${G.cap(icFirst)}`, `${dcLast}, and ${icFirst}`],
+        notes: [
+          `Correct. "${G.firstWord(dc)[0]}…" opens a dependent clause, so a comma connects it to the independent clause.`,
+          "A semicolon needs an independent clause on both sides; the opening clause is dependent.",
+          "A period would leave the opening dependent clause as a fragment.",
+          "The dependent clause already connects to the main clause; adding \"and\" uses two connectors.",
+        ],
+        rule: "DC, IC: a dependent clause that comes first is followed by a comma.",
+      });
+    }
+    return out;
+  });
+})();
+
+</script>
+<script>
+/* ===== js/curriculum/gen/ch2.js ===== */
+// Generated questions, Chapter 2: Subject-Verb Agreement.
+// The subject's number decides the verb; the traps are the nouns parked in
+// prepositional phrases, parentheticals and inverted sentences.
+(function () {
+  "use strict";
+  const G = window.SatWizz.gen;
+
+  const BE = {
+    sg: ["is", "are", "were", "have been"],
+    pl: ["are", "is", "was", "has been"],
+  };
+  const HAVE = {
+    sg: ["has", "have", "are", "were"],
+    pl: ["have", "has", "is", "was"],
+  };
+  const plural = (w) => `"${w}" is plural`;
+  const singular = (w) => `"${w}" is singular`;
+
+  // Subjects with interrupting phrases that hide a trap noun of the other number.
+  const SUBJECTS = [
+    { n: "sg", head: "The collection", ofs: ["of rare trading cards", "of signed jerseys", "of old concert posters"], where: ["in {{NAME_1_POSS}} closet", "under the stairs at {{LOCATION}}"], be: ["worth more than {{NAME_1_POSS}} first car", "older than anyone at {{EVENT}} realized"], have: ["grown every year since middle school"] },
+    { n: "sg", head: "The box", ofs: ["of old medals", "of handwritten letters", "of spare batteries"], where: ["behind the lockers", "in the back of {{NAME_2_POSS}} van"], be: ["heavier than it looks", "labeled in {{NAME_2_POSS}} neat handwriting"], have: ["sat untouched since last spring"] },
+    { n: "sg", head: "The list", ofs: ["of songs for the encore", "of drills for {{EVENT}}", "of volunteers"], where: ["taped to the door", "on the coach's clipboard"], be: ["longer than last year's", "written in bright red marker"], have: ["changed three times this week"] },
+    { n: "sg", head: "The stack", ofs: ["of practice tests", "of library books", "of fan letters"], where: ["on {{NAME_3_POSS}} desk", "beside the printer at {{LOCATION}}"], be: ["almost a foot tall", "ready for {{NAME_3}} to sort"], have: ["doubled since Monday"] },
+    { n: "sg", head: "The schedule", ofs: ["of rehearsals", "of away games", "of guest speakers"], where: ["for {{EVENT}}", "pinned outside the main office"], be: ["packed from morning to night", "posted online every Sunday"], have: ["kept the whole team busy"] },
+    { n: "sg", head: "The pair", ofs: ["of lucky sneakers", "of cleats", "of headphones"], where: ["that {{NAME_1}} wore at {{EVENT}}", "in the trophy case"], be: ["worn out at the toes", "now on display at {{LOCATION}}"], have: ["survived four seasons of practice"] },
+    { n: "sg", head: "The recipe", ofs: ["for the team's famous cookies", "for {{NAME_2_POSS}} grandmother's dumplings"], where: ["that several bakeries have tried to copy", "in the old binder"], be: ["still a closely guarded secret", "simpler than most people think"], have: ["stayed in the family for decades"] },
+    { n: "sg", head: "The goal", ofs: ["of the new training drills", "of the weekend workshops"], where: ["at {{LOCATION}}", "led by {{NAME_3}}"], be: ["to build speed under pressure", "to prepare everyone for {{EVENT}}"], have: ["shifted toward teamwork this year"] },
+    { n: "sg", head: "The noise", ofs: ["of the cheering fans", "of the drums"], where: ["outside the arena", "in the hallway near {{LOCATION}}"], be: ["loud enough to rattle the windows", "the reason {{NAME_1}} wore earplugs"], have: ["kept the neighbors awake"] },
+    { n: "sg", head: "The number", ofs: ["of fans waiting for autographs", "of students signed up for {{SKILL}}"], where: ["outside the gate", "at {{LOCATION}}"], be: ["larger than anyone expected", "higher than last year"], have: ["grown every hour"] },
+    { n: "pl", head: "The trophies", ofs: ["in the glass case", "on the top shelf"], where: ["beside the coach's desk", "at the front of {{LOCATION}}"], be: ["covered in a thin layer of dust", "older than the gym itself"], have: ["moved twice since the remodel"] },
+    { n: "pl", head: "The posters", ofs: ["on the wall", "above the stage"], where: ["of the music room", "in {{NAME_1_POSS}} bedroom"], be: ["signed by every member of the cast", "starting to curl at the edges"], have: ["hung there since {{EVENT}}"] },
+    { n: "pl", head: "The notes", ofs: ["in the margin", "on the back page"], where: ["of {{NAME_2_POSS}} playbook", "of the old script"], be: ["more useful than the book itself", "written in tiny blue print"], have: ["helped every new player"] },
+    { n: "pl", head: "The players", ofs: ["on the team", "from the visiting school"], where: ["that won the regional title", "at {{LOCATION}}"], be: ["ready for {{EVENT}}", "staying an extra hour tonight"], have: ["practiced {{SKILL}} all week"] },
+    { n: "pl", head: "The tickets", ofs: ["for the final", "for the opening night"], where: ["of the season", "at {{LOCATION}}"], be: ["sold out within minutes", "taped to {{NAME_3_POSS}} fridge"], have: ["become nearly impossible to find"] },
+    { n: "pl", head: "The lights", ofs: ["above the court", "in the main hall"], where: ["of the old building", "at {{LOCATION}}"], be: ["brighter than they need to be", "on a timer this week"], have: ["flickered since the storm"] },
+    { n: "pl", head: "The instructions", ofs: ["in the manual", "on the whiteboard"], where: ["for the new equipment", "beside the door to {{LOCATION}}"], be: ["clearer than last year's", "written for beginners"], have: ["saved {{NAME_1}} hours of guessing"] },
+    { n: "pl", head: "The results", ofs: ["of the survey", "of the final round"], where: ["at {{EVENT}}", "posted by the judges"], be: ["surprising to almost everyone", "available on the school website"], have: ["changed how the coaches plan practice"] },
+  ];
+
+  // Parenthetical phrases: Name, along with…, verb.
+  const LINKERS = ["along with", "as well as", "together with", "in addition to"];
+  const GROUPS = ["{{NAME_1_POSS}} teammates", "{{NAME_1_POSS}} two best friends", "{{NAME_1_POSS}} cousins", "the rest of the crew", "{{NAME_1_POSS}} bandmates"];
+  const ACTS = [
+    { s: "holds", base: "hold", ing: "holding", pp: "held", obj: "a full rehearsal before every show at {{LOCATION}}" },
+    { s: "practices", base: "practice", ing: "practicing", pp: "practiced", obj: "{{SKILL}} every morning before school" },
+    { s: "arrives", base: "arrive", ing: "arriving", pp: "arrived", obj: "at {{LOCATION}} an hour before {{EVENT}}" },
+    { s: "eats", base: "eat", ing: "eating", pp: "eaten", obj: "a huge breakfast on game days" },
+    { s: "studies", base: "study", ing: "studying", pp: "studied", obj: "the playbook on the long bus rides" },
+    { s: "writes", base: "write", ing: "writing", pp: "written", obj: "a goal for the week on the whiteboard" },
+    { s: "reviews", base: "review", ing: "reviewing", pp: "reviewed", obj: "the game film every Sunday night" },
+    { s: "stretches", base: "stretch", ing: "stretching", pp: "stretched", obj: "for twenty minutes before every practice" },
+  ];
+  const PL_NOUNS = ["players", "singers", "volunteers", "coaches", "drummers", "judges", "students", "dancers"];
+
+  G.add(2, () => {
+    const out = [];
+    // 1) Interrupting phrases.
+    for (const s of SUBJECTS) {
+      const noun = s.head.replace(/^The /, "").toLowerCase();
+      for (const [of, where] of G.product(s.ofs, s.where)) {
+        const sub = `${s.head} ${of} ${where}`;
+        const forms = [...s.be.map((p) => ["be", p]), ...s.have.map((p) => ["have", p])];
+        for (const [kind, pred] of forms) {
+          const set = (kind === "be" ? BE : HAVE)[s.n];
+          const num = s.n === "sg" ? "singular" : "plural";
+          out.push({
+            skill: "Prepositional traps",
+            text: `${sub} ______ ${pred}.`,
+            choices: set,
+            notes: [
+              `Correct. The subject is "${noun}" (${num}), so "${set[0]}" agrees with it.`,
+              ...set.slice(1).map((w) => `${s.n === "sg" ? plural(w) : singular(w)}, but the subject "${noun}" is ${num}. The nouns inside "${of} ${where}" are a trap.`),
+            ],
+            rule: `Cross out "${of} ${where}": the subject is "${noun}" (${num}).`,
+          });
+        }
+      }
+    }
+    // 2) Parentheticals: Name, along with…, verb.
+    for (const [linker, group, a] of G.product(LINKERS, GROUPS, ACTS)) {
+      out.push({
+        skill: "Parenthetical phrases",
+        text: `{{NAME_1}}, ${linker} ${group}, ______ ${a.obj}.`,
+        choices: [a.s, a.base, `are ${a.ing}`, `have ${a.pp}`],
+        notes: [
+          `Correct. "${linker} ${group}" is set off by commas, so the subject is just {{NAME_1}}: one person, singular verb "${a.s}".`,
+          `"${a.base}" is plural; the group in the commas isn't part of the subject.`,
+          `"Are ${a.ing}" is plural.`,
+          `"Have ${a.pp}" is plural.`,
+        ],
+        rule: `"${G.cap(linker)}…" is parenthetical; the subject is {{NAME_1}} (singular).`,
+      });
+    }
+    // 3) Each of / One of / Every one of → singular.
+    const STARTS = [["Each of the", "Each"], ["One of the", "One"], ["Every one of the", "Every one"]];
+    for (const [[start, word], noun] of G.product(STARTS, PL_NOUNS)) {
+      for (const [set, pred] of [[BE.sg, "ready for {{EVENT}}"], [HAVE.sg, "signed up for extra practice at {{LOCATION}}"]]) {
+        out.push({
+          skill: "Each / one of",
+          text: `${start} ${noun} working with {{NAME_1}} ______ ${pred}.`,
+          choices: set,
+          notes: [
+            `Correct. The subject is "${word}", which is singular.`,
+            ...set.slice(1).map((w) => `${plural(w)}; it agrees with "${noun}", but the subject is "${word}".`),
+          ],
+          rule: `"${word} of the…" is singular, even when a plural noun follows.`,
+        });
+      }
+    }
+    // 4) Neither/nor and either/or: the verb agrees with the closer subject.
+    for (const noun of PL_NOUNS) {
+      for (const [lead, tail] of [["Neither", "nor"], ["Either", "or"]]) {
+        out.push({
+          skill: "Either/or, neither/nor",
+          text: `${lead} {{NAME_1}} ${tail} the ${noun} ______ ready when the curtain rose at {{EVENT}}.`,
+          choices: ["were", "was", "is", "has been"],
+          notes: [
+            `Correct. With ${lead.toLowerCase()}/${tail}, the verb agrees with the closer subject: "the ${noun}" (plural).`,
+            `"Was" agrees with {{NAME_1}}, but the closer subject is "the ${noun}".`,
+            `"Is" is singular and the wrong tense for a past event.`,
+            `"Has been" is singular.`,
+          ],
+          rule: `${lead}/${tail}: the verb agrees with the subject closer to it.`,
+        });
+        out.push({
+          skill: "Either/or, neither/nor",
+          text: `${lead} the ${noun} ${tail} {{NAME_1}} ______ ready when the curtain rose at {{EVENT}}.`,
+          choices: ["was", "were", "are", "have been"],
+          notes: [
+            `Correct. The closer subject is {{NAME_1}}, one person, so the verb is singular.`,
+            `"Were" agrees with "the ${noun}", but the closer subject is {{NAME_1}}.`,
+            `"Are" is plural and the wrong tense for a past event.`,
+            `"Have been" is plural.`,
+          ],
+          rule: `${lead}/${tail}: the verb agrees with the subject closer to it.`,
+        });
+      }
+    }
+    // 5) There is / there are: the subject comes after the verb.
+    const THINGS = [["three hidden passages", "pl"], ["a hidden passage", "sg"], ["several spare jerseys", "pl"], ["a spare jersey", "sg"], ["dozens of signed programs", "pl"], ["a signed program", "sg"], ["two extra tickets", "pl"], ["an extra ticket", "sg"]];
+    const SPOTS = ["beneath the stage at {{LOCATION}}", "in the van, according to {{NAME_2}}", "behind the scoreboard, says {{NAME_3}}"];
+    for (const [[thing, n], spot] of G.product(THINGS, SPOTS)) {
+      const set = n === "pl" ? ["are", "is", "was", "has been"] : ["is", "are", "were", "have been"];
+      out.push({
+        skill: "There is / there are",
+        text: `There ______ ${thing} ${spot}.`,
+        choices: set,
+        notes: [
+          `Correct. In "There is/are" sentences the subject comes after the verb: "${thing}" (${n === "pl" ? "plural" : "singular"}).`,
+          ...set.slice(1).map((w) => `"${w}" doesn't agree with "${thing}".`),
+        ],
+        rule: "In \"There is/are\" sentences, the subject comes after the verb.",
+      });
+    }
+    // 6) Compound subjects: A and B → plural.
+    for (const [pair, a] of G.product([["{{NAME_1}}", "{{NAME_2}}"], ["{{NAME_2}}", "{{NAME_3}}"], ["{{NAME_1}}", "the coach"]], ACTS)) {
+      out.push({
+        skill: "Compound subjects",
+        text: `${pair[0]} and ${pair[1]} ______ ${a.obj}.`,
+        choices: [a.base, a.s, `is ${a.ing}`, `has ${a.pp}`],
+        notes: [
+          `Correct. Two subjects joined by "and" are plural: "${a.base}".`,
+          `"${a.s}" is singular, but "A and B" is plural.`,
+          `"Is ${a.ing}" is singular.`,
+          `"Has ${a.pp}" is singular.`,
+        ],
+        rule: "A and B make a plural subject.",
+      });
+    }
+    return out;
+  });
+})();
+
+</script>
+<script>
+/* ===== js/curriculum/gen/ch3.js ===== */
+// Generated questions, Chapter 3: Verb vs. Non-Verb Identification (Appositives).
+// Does the blank need a conjugated main verb, or a non-verb (participle)
+// because the sentence already has its main verb?
+(function () {
+  "use strict";
+  const G = window.SatWizz.gen;
+  const TWO_VERBS = "The sentence already has its main verb later on, so a second conjugated verb here creates two verbs with no conjunction.";
+  const FRAGMENT = "Without a conjugated verb, the sentence has no main verb, so it becomes a fragment.";
+
+  // Participle phrases (verb forms + what follows the blank).
+  const PARTS = [
+    { ing: "gathering", s: "gathers", past: "gathered", rest: "{{NAME_1_POSS}} notes for one last review" },
+    { ing: "clutching", s: "clutches", past: "clutched", rest: "the trophy with both hands" },
+    { ing: "hoping", s: "hopes", past: "hoped", rest: "to impress the judges at {{EVENT}}" },
+    { ing: "realizing", s: "realizes", past: "realized", rest: "that the clock was about to run out" },
+    { ing: "balancing", s: "balances", past: "balanced", rest: "a tray of water bottles on one arm" },
+    { ing: "humming", s: "hums", past: "hummed", rest: "the team's fight song under {{NAME_1_POSS}} breath" },
+    { ing: "squinting", s: "squints", past: "squinted", rest: "at the scoreboard across {{LOCATION}}" },
+    { ing: "ignoring", s: "ignores", past: "ignored", rest: "the rain pouring down on the bleachers" },
+    { ing: "counting", s: "counts", past: "counted", rest: "the seconds left on the clock" },
+    { ing: "carrying", s: "carries", past: "carried", rest: "a stack of programs for {{EVENT}}" },
+    { ing: "remembering", s: "remembers", past: "remembered", rest: "every tip from {{NAME_1_POSS}} coach" },
+    { ing: "practicing", s: "practices", past: "practiced", rest: "{{SKILL}} in {{NAME_1_POSS}} head" },
+    { ing: "adjusting", s: "adjusts", past: "adjusted", rest: "the strap of {{NAME_1_POSS}} helmet" },
+    { ing: "waving", s: "waves", past: "waved", rest: "to the fans in the upper deck" },
+    { ing: "tapping", s: "taps", past: "tapped", rest: "a pencil against the desk" },
+    { ing: "dodging", s: "dodges", past: "dodged", rest: "two defenders near the sideline" },
+    { ing: "whispering", s: "whispers", past: "whispered", rest: "a quick thank-you to the stage crew" },
+    { ing: "shielding", s: "shields", past: "shielded", rest: "{{NAME_1_POSS}} eyes from the stage lights" },
+    { ing: "rereading", s: "rereads", past: "reread", rest: "the final page of the script" },
+    { ing: "tightening", s: "tightens", past: "tightened", rest: "the laces on {{NAME_1_POSS}} shoes" },
+  ];
+  const MAINS = [
+    "walked confidently onto the stage at {{LOCATION}}",
+    "took a deep breath and stepped forward",
+    "finally broke into a wide grin",
+    "nodded once at the coach",
+    "won the loudest applause of the night",
+    "sprinted toward the finish line",
+    "answered the reporter's question without hesitating",
+    "set a new record at {{EVENT}}",
+    "pushed open the heavy doors of {{LOCATION}}",
+    "slipped quietly into the front row",
+    "waited for the referee's whistle",
+    "glanced at the crowd for a split second",
+    "climbed the steps to the podium",
+    "raised one hand to signal the band",
+    "stepped up to the microphone",
+    "jogged back to the starting line",
+    "smiled for the cameras at {{EVENT}}",
+    "handed the medal to the youngest fan",
+    "refused to give up on the final round",
+    "earned a standing ovation from the judges",
+  ];
+  const TITLES = ["Team captain", "Star student", "Lead singer", "Head chef", "Rookie striker", "Debate champion", "Chess prodigy", "Festival director"];
+
+  // Main-verb-needed sentences: the subject is long, and the blank is its verb.
+  const MAIN_VERB = [
+    { subj: "The notes that {{NAME_1}} wrote at {{LOCATION}}", forms: ["explain", "explaining", "to explain", "having explained"], rest: "every rule for {{EVENT}}" },
+    { subj: "The players who stayed late after practice", forms: ["deserve", "deserving", "to deserve", "having deserved"], rest: "a spot in the starting lineup" },
+    { subj: "Every spring, the volunteers at {{LOCATION}}", forms: ["repaint", "repainting", "to repaint", "having repainted"], rest: "the bleachers before {{EVENT}}" },
+    { subj: "The letters that {{NAME_2}} saved from {{EVENT}}", forms: ["reveal", "revealing", "to reveal", "having revealed"], rest: "how nervous everyone really was" },
+    { subj: "The coaches who designed the new drills", forms: ["believe", "believing", "to believe", "having believed"], rest: "that speed matters more than size" },
+    { subj: "The photos hanging in the hallway of {{LOCATION}}", forms: ["show", "showing", "to show", "having shown"], rest: "every champion since the school opened" },
+    { subj: "Twice a week, {{NAME_1}} and {{NAME_3}}", forms: ["practice", "practicing", "to practice", "having practiced"], rest: "{{SKILL}} before sunrise" },
+    { subj: "The judges at {{EVENT}}", forms: ["award", "awarding", "to award", "having awarded"], rest: "extra points for creativity" },
+    { subj: "In {{NAME_2_POSS}} latest interview, the reporter", forms: ["argues", "arguing", "to argue", "having argued"], rest: "that the rookies changed the season" },
+    { subj: "The students who joined the club last fall", forms: ["run", "running", "to run", "having run"], rest: "the snack stand at every home game" },
+    { subj: "The jersey that {{NAME_3}} wore at {{EVENT}}", forms: ["hangs", "hanging", "to hang", "having hung"], rest: "in a frame above the front desk" },
+    { subj: "The drills that the new coach brought to {{LOCATION}}", forms: ["focus", "focusing", "to focus", "having focused"], rest: "on footwork and patience" },
+    { subj: "The fans waiting outside the arena", forms: ["chant", "chanting", "to chant", "having chanted"], rest: "{{NAME_1_POSS}} name every few minutes" },
+    { subj: "The playlist that {{NAME_2}} made for the bus ride", forms: ["includes", "including", "to include", "having included"], rest: "forty songs and one very long speech" },
+    { subj: "Each morning, the groundskeepers at {{LOCATION}}", forms: ["mow", "mowing", "to mow", "having mowed"], rest: "the field in perfect stripes" },
+    { subj: "The reporter who covered {{EVENT}}", forms: ["describes", "describing", "to describe", "having described"], rest: "the final minute as pure chaos" },
+  ];
+
+  G.add(3, () => {
+    const out = [];
+    // 1) Name, ______ (participle)…, main verb.
+    for (const [p, main] of G.product(PARTS, MAINS)) {
+      out.push({
+        skill: "Participle modifiers",
+        text: `{{NAME_1}}, ______ ${p.rest}, ${main}.`,
+        choices: [p.ing, p.past, p.s, `was ${p.ing}`],
+        notes: [
+          `Correct. "${G.cap(p.ing)} ${p.rest}" is a non-verb modifier set off by commas; the main verb comes later.`,
+          `"${G.cap(p.past)}" acts as a second main verb next to the real one.`,
+          TWO_VERBS,
+          TWO_VERBS,
+        ],
+        rule: `The main verb comes after the second comma. The blank opens a modifier, so it needs a non-verb (-ing) form.`,
+      });
+    }
+    // 2) Title ______ …, verb (the sample's "player Stephen Curry, intending…" pattern).
+    for (const [t, p] of G.product(TITLES, PARTS)) {
+      const main = G.pick(MAINS, t + p.ing);
+      out.push({
+        skill: "Appositive + modifier",
+        text: `${t} ______ ${p.rest}, ${main}.`,
+        choices: [`{{NAME_1}}, ${p.ing}`, `{{NAME_1}}, ${p.s}`, `{{NAME_1}} ${p.s}`, `{{NAME_1}} is ${p.ing}`],
+        notes: [
+          `Correct. "${t} {{NAME_1}}" is the subject, "${p.ing} ${p.rest}" is a modifier set off by commas, and "${G.firstWord(main)[0]}" is the only main verb.`,
+          "A comma between the subject and a conjugated verb, plus two main verbs.",
+          `${TWO_VERBS} It's also missing the comma that pairs with the one before "${G.firstWord(main)[0]}."`,
+          TWO_VERBS,
+        ],
+        rule: `Main verb: "${G.firstWord(main)[0]}." The blank opens a non-essential modifier: Name, -ing…, verb.`,
+      });
+    }
+    // 3) The subject is long and needs its main verb.
+    for (const m of MAIN_VERB) {
+      for (let k = 0; k < 1; k++) {
+        out.push({
+          skill: "Finding the main verb",
+          text: `${m.subj} ______ ${m.rest}.`,
+          choices: m.forms,
+          notes: [`Correct. "${m.forms[0]}" is the conjugated main verb the subject needs.`, FRAGMENT, FRAGMENT, FRAGMENT],
+          rule: "Everything before the blank is the subject (with its describing phrases); the sentence still needs a main verb.",
+        });
+      }
+    }
+    return out;
+  });
+})();
+
+</script>
+<script>
+/* ===== js/curriculum/gen/ch4.js ===== */
+// Generated questions, Chapter 4: Verb Tenses & Aspect.
+// An explicit time clue decides the tense: past (happened), present perfect
+// (until now), past perfect (had happened, before another past event),
+// future (will happen) and future perfect (by a future deadline).
+(function () {
+  "use strict";
+  const G = window.SatWizz.gen;
+
+  // base, s, past, past participle, what follows, durative (works with "for three years")
+  const VERBS = [
+    ["practice", "practices", "practiced", "practiced", "{{SKILL}} at {{LOCATION}}", true],
+    ["coach", "coaches", "coached", "coached", "the youngest players at {{LOCATION}}", true],
+    ["write", "writes", "wrote", "written", "a new song for {{EVENT}}", false],
+    ["lead", "leads", "led", "led", "the morning warm-up", true],
+    ["study", "studies", "studied", "studied", "the playbook on every bus ride", true],
+    ["train", "trains", "trained", "trained", "with the varsity squad", true],
+    ["perform", "performs", "performed", "performed", "at {{EVENT}}", false],
+    ["volunteer", "volunteers", "volunteered", "volunteered", "at the food bank near {{LOCATION}}", true],
+    ["teach", "teaches", "taught", "taught", "{{SKILL}} to beginners", true],
+    ["run", "runs", "ran", "run", "the snack stand at home games", true],
+    ["build", "builds", "built", "built", "a robot for the science fair", false],
+    ["sing", "sings", "sang", "sung", "the anthem at {{EVENT}}", false],
+    ["draw", "draws", "drew", "drawn", "the posters for {{EVENT}}", false],
+    ["win", "wins", "won", "won", "the opening round", false],
+    ["organize", "organizes", "organized", "organized", "the fundraiser for the new scoreboard", false],
+    ["record", "records", "recorded", "recorded", "a podcast about {{SKILL}}", true],
+    ["mentor", "mentors", "mentored", "mentored", "two first-year students", true],
+    ["direct", "directs", "directed", "directed", "the spring play", false],
+    ["captain", "captains", "captained", "captained", "the debate team", true],
+    ["design", "designs", "designed", "designed", "the jerseys for {{EVENT}}", false],
+    ["photograph", "photographs", "photographed", "photographed", "every home game", true],
+    ["edit", "edits", "edited", "edited", "the school newspaper", true],
+    ["host", "hosts", "hosted", "hosted", "the talent show", false],
+    ["rebuild", "rebuilds", "rebuilt", "rebuilt", "the old bleachers", false],
+    ["climb", "climbs", "climbed", "climbed", "the rock wall at {{LOCATION}}", false],
+  ];
+
+  const T = {
+    past: {
+      clues: ["Last summer", "Two years ago", "Yesterday afternoon", "In 2019", "During last year's season"],
+      answer: (v) => v[2],
+      wrong: (v) => [[v[1], "The present doesn't match a finished past time."], [`will ${v[0]}`, "The future can't happen in the past."], [`has ${v[3]}`, "The present perfect can't be used with a finished past time."]],
+      rule: (c) => `"${c}" marks a finished past time, so use the simple past.`,
+      skill: "Past",
+    },
+    presPerf: {
+      clues: ["Since the start of the season", "So far this year", "Since last fall", "Over the past three months"],
+      answer: (v) => `has ${v[3]}`,
+      wrong: (v) => [[v[2], `The simple past ignores the "until now" time frame.`], [`had ${v[3]}`, "The past perfect needs a past reference point."], [`will ${v[0]}`, "The future contradicts a time frame that runs up to now."]],
+      rule: (c) => `"${c}" means from then until now: the present perfect.`,
+      skill: "Present perfect",
+    },
+    pastPerf: {
+      clues: ["By the time {{NAME_2}} showed up", "By the time the reporters arrived", "By the time the final bell rang"],
+      answer: (v) => `had ${v[3]}`,
+      wrong: (v) => [[v[1], "The present doesn't fit a past story."], [`will ${v[0]}`, "The future doesn't fit a past story."], [`has ${v[3]}`, "The present perfect doesn't sit inside a past narrative."]],
+      rule: () => "One past event happened before another past event: the earlier one takes the past perfect (had + past participle).",
+      skill: "Past perfect",
+    },
+    future: {
+      clues: ["Next spring", "Tomorrow morning", "Later this week", "Next month"],
+      answer: (v) => `will ${v[0]}`,
+      wrong: (v) => [[v[2], "The past contradicts a future time."], [`has ${v[3]}`, "The present perfect points back to now, not ahead."], [`had ${v[3]}`, "The past perfect is for the past."]],
+      rule: (c) => `"${c}" is in the future: will + verb.`,
+      skill: "Future",
+    },
+    futPerf: {
+      clues: ["By the end of next season", "By next June", "By the time {{NAME_2}} graduates"],
+      answer: (v) => `will have ${v[3]}`,
+      wrong: (v) => [[v[2], "The past contradicts a future deadline."], [`has ${v[3]}`, "The present perfect stops at now, not at the future deadline."], [`had ${v[3]}`, "The past perfect is for the past."]],
+      rule: (c) => `"${c}" is a future deadline: the future perfect (will have + past participle).`,
+      skill: "Future perfect",
+      tail: " for three straight years",
+      durativeOnly: true,
+    },
+  };
+
+  G.add(4, () => {
+    const out = [];
+    for (const [key, t] of Object.entries(T)) {
+      for (const [clue, v] of G.product(t.clues, VERBS)) {
+        if (t.durativeOnly && !v[5]) continue;
+        // Don't name the same place or event twice in one sentence.
+        if ((/LOCATION/.test(clue) && /LOCATION/.test(v[4])) || (/EVENT/.test(clue) && /EVENT/.test(v[4]))) continue;
+        const wrong = t.wrong(v);
+        out.push({
+          skill: t.skill,
+          text: `${clue}, {{NAME_1}} ______ ${v[4]}${t.tail || ""}.`,
+          choices: [t.answer(v), ...wrong.map((w) => w[0])],
+          notes: [`Correct. "${clue}" calls for "${t.answer(v)}".`, ...wrong.map((w) => w[1])],
+          rule: t.rule(clue),
+        });
+      }
+    }
+    return out;
+  });
+})();
+
+</script>
+<script>
+/* ===== js/curriculum/gen/ch5.js ===== */
+// Generated questions, Chapter 5: Logical Transitions.
+// Two sentences with a clear relationship; the right transition matches it,
+// the distractors come from relationships that clearly don't fit.
+(function () {
+  "use strict";
+  const G = window.SatWizz.gen;
+
+  const WORDS = {
+    contrast: ["However", "Nevertheless", "Even so", "Still"],
+    result: ["Therefore", "As a result", "Consequently", "Thus"],
+    example: ["For example", "For instance"],
+    addition: ["Moreover", "In addition", "Furthermore", "Additionally"],
+    similarity: ["Similarly", "Likewise"],
+  };
+  const WHY = {
+    contrast: "Contrast words (However, Nevertheless, Even so) need the second idea to oppose or surprise you after the first.",
+    result: "Cause/effect words (Therefore, As a result, Consequently) need the second idea to be caused by the first.",
+    example: "Example words (For example, For instance) need the second sentence to be a specific case of the first.",
+    addition: "Addition words (Moreover, In addition, Furthermore) need a second point in the same direction.",
+    similarity: "Similarity words (Similarly, Likewise) need two things that match.",
+  };
+  const RIGHT = {
+    contrast: "signals that the second idea goes against what the first one leads you to expect.",
+    result: "shows that the second idea is caused by the first.",
+    example: "introduces a specific case of the first idea.",
+    addition: "adds a second point in the same direction.",
+    similarity: "shows that the second idea matches the first.",
+  };
+  const RULE = {
+    contrast: "The second sentence goes against what the first leads you to expect: a contrast.",
+    result: "The first sentence causes the second: cause and effect.",
+    example: "The second sentence is a specific case of the first: an example.",
+    addition: "The second sentence adds another point in the same direction: addition.",
+    similarity: "The two sentences describe matching things: similarity.",
+  };
+  // Distractors come from relationships that clearly don't fit.
+  const OFF = {
+    contrast: ["result", "example", "similarity"],
+    result: ["contrast", "example", "similarity"],
+    example: ["contrast", "result", "similarity"],
+    addition: ["contrast", "example", "result"],
+    similarity: ["contrast", "result", "example"],
+  };
+
+  const PAIRS = {
+    contrast: [
+      ["{{NAME_1}} trained at {{LOCATION}} every day for a month.", "{{NAME_1}} still lost the first match of {{EVENT}}."],
+      ["The forecast called for sunshine all weekend.", "heavy rain canceled the opening ceremony."],
+      ["{{NAME_2}} rarely speaks up in class.", "{{NAME_2}} gave the most memorable speech at {{EVENT}}."],
+      ["The new stadium cost millions to build.", "most fans still prefer the old one downtown."],
+      ["{{NAME_3}} had never tried {{SKILL}} before this year.", "{{NAME_3}} won the beginners' trophy in the spring."],
+      ["The first draft of the script was nearly perfect.", "the director asked for a complete rewrite."],
+      ["Tickets for the final sold out in minutes.", "dozens of seats sat empty when the game began."],
+      ["{{NAME_1}} insisted on practicing alone.", "{{NAME_1}} spent the whole afternoon asking {{NAME_2}} for tips."],
+      ["The recipe looked simple on paper.", "the first three batches came out burned."],
+      ["The museum near {{LOCATION}} is small.", "it holds one of the best collections in the state."],
+      ["The rookies had very little experience.", "they played like veterans in the second half."],
+      ["Most of the team wanted to rest after {{EVENT}}.", "{{NAME_3}} went straight back to {{LOCATION}} to practice."],
+      ["The old team bus breaks down almost every month.", "the players refuse to let it be replaced."],
+      ["{{NAME_2}} was the smallest player on the court.", "{{NAME_2}} grabbed more rebounds than anyone."],
+    ],
+    result: [
+      ["{{NAME_1}} sprained an ankle during warm-ups.", "the coach kept {{NAME_1_OBJ}} on the bench for the first half."],
+      ["The power went out across the whole neighborhood.", "the concert at {{LOCATION}} moved to the next night."],
+      ["{{NAME_2}} studied {{SKILL}} for three hours every night.", "the final exam felt easy."],
+      ["The bridge on the main road was closed for repairs.", "the team bus took a long detour to {{EVENT}}."],
+      ["Thousands of fans signed the petition.", "the city agreed to keep the old arena open."],
+      ["{{NAME_3}} forgot to set an alarm.", "{{NAME_3}} missed the first half of practice."],
+      ["The museum's coin collection is extremely fragile.", "visitors are not allowed to touch the cases."],
+      ["The field at {{LOCATION}} flooded overnight.", "the game was moved indoors."],
+      ["{{NAME_1}} saved every paycheck from a summer job.", "{{NAME_1}} could finally afford new cleats."],
+      ["The lead singer caught a cold the night before.", "{{NAME_2}} sang the solo instead."],
+      ["The team lost its first three games.", "the coach changed the entire lineup."],
+      ["The desert receives almost no rain.", "many plants there store water in thick leaves."],
+      ["{{NAME_3}} rehearsed the speech in front of a mirror all week.", "{{NAME_3}} delivered it at {{EVENT}} without a single note."],
+      ["Tickets were half price this year.", "more families came to {{EVENT}} than ever before."],
+    ],
+    example: [
+      ["Many athletes have strange pre-game rituals.", "{{NAME_1}} always ties the left shoe first and taps the doorframe twice."],
+      ["Some animals use tools to find food.", "sea otters crack open shellfish with rocks."],
+      ["The school offers several unusual clubs.", "students can join a beekeeping group that meets at {{LOCATION}}."],
+      ["{{NAME_2}} brings home an odd souvenir from every trip.", "a jar of black sand from a volcanic beach sits on {{NAME_2_POSS}} desk."],
+      ["Many famous songs were written very quickly.", "one hit single was finished in a single afternoon."],
+      ["The coach uses creative drills at practice.", "players sometimes dribble while reciting multiplication tables."],
+      ["Some plants survive in extreme places.", "certain mosses grow on bare rock near the Arctic."],
+      ["Many inventions began as accidents.", "one scientist discovered a new material after spilling a chemical."],
+      ["{{NAME_3}} finds ways to practice {{SKILL}} anywhere.", "{{NAME_3}} once rehearsed on a crowded train."],
+      ["Many animals communicate without sound.", "honeybees share directions through a waggle dance."],
+      ["The festival at {{LOCATION}} features food from around the world.", "visitors can try Ethiopian injera next to Korean bibimbap."],
+      ["Several players on the team speak more than one language.", "{{NAME_1}} switches between Spanish and English during huddles."],
+    ],
+    addition: [
+      ["The new library app tracks every book a student borrows.", "it recommends new titles based on past checkouts."],
+      ["{{NAME_1}} designed all the costumes for the spring show.", "{{NAME_1}} painted most of the scenery."],
+      ["The new subway line cut commute times in half.", "it reduced traffic on the busiest roads."],
+      ["The summer camp at {{LOCATION}} teaches {{SKILL}}.", "it offers free meals to every camper."],
+      ["{{NAME_2}} captains the swim team.", "{{NAME_2}} tutors younger students twice a week."],
+      ["The renovated gym has brighter lights.", "its new floor absorbs shock better."],
+      ["The documentary won the audience award.", "it earned a nomination for best editing."],
+      ["Volunteers repainted the bleachers before {{EVENT}}.", "they installed new railings along the stairs."],
+      ["{{NAME_3}} speaks three languages.", "{{NAME_3}} plays the cello in the city orchestra."],
+      ["The museum extended its weekend hours.", "it added free guided tours on Sundays."],
+      ["The team bus now has charging outlets.", "it has a small refrigerator for snacks."],
+      ["Regular exercise improves sleep.", "it helps students focus in class."],
+    ],
+    similarity: [
+      ["Elephants can recognize themselves in a mirror.", "dolphins have passed similar self-recognition tests."],
+      ["{{NAME_1}} warms up with the same playlist before every game.", "{{NAME_2}} listens to one song on repeat before each match."],
+      ["Bees communicate through movement.", "some birds signal danger with special wing flaps."],
+      ["The first film in the series was shot in only thirty days.", "the sequel was finished on an equally tight schedule."],
+      ["{{NAME_3}} keeps a journal of every practice.", "the coach writes down notes after each session."],
+      ["Ancient Roman engineers built roads that are still used today.", "Incan engineers built mountain paths that people still walk."],
+      ["The north campus banned phones during class.", "the south campus now collects phones at the door."],
+      ["Ravens can solve multi-step puzzles.", "crows have been seen using sticks as tools."],
+      ["{{NAME_2}} rewrites every essay at least twice.", "{{NAME_1}} revises each speech until it feels natural."],
+      ["The city added bike lanes downtown last year.", "the suburbs painted new lanes along their main roads."],
+    ],
+  };
+
+  G.add(5, () => {
+    const out = [];
+    for (const [rel, pairs] of Object.entries(PAIRS)) {
+      pairs.forEach(([s1, s2], i) => {
+        WORDS[rel].forEach((word, w) => {
+          for (let v = 0; v < 2; v++) {
+            const wrong = OFF[rel].map((r, k) => [r, WORDS[r][(i + w + v + k) % WORDS[r].length]]);
+            out.push({
+              skill: G.cap(rel),
+              kind: "transition",
+              text: `${s1} ______ ${s2}`,
+              choices: [`${word},`, ...wrong.map(([, x]) => `${x},`)],
+              notes: [`Correct. "${word}" ${RIGHT[rel]}`, ...wrong.map(([r]) => WHY[r])],
+              rule: RULE[rel],
+            });
+          }
+        });
+      });
+    }
+    return out;
+  });
+})();
+
+</script>
+<script>
+/* ===== js/curriculum/gen/ch6.js ===== */
+// Generated questions, Chapter 6: Punctuation Fundamentals (Semicolon, Dash, Colon).
+(function () {
+  "use strict";
+  const G = window.SatWizz.gen;
+  const SEMI_IC = "A semicolon needs a complete independent clause on BOTH sides.";
+  const DASH_PAIR = "Dashes come in pairs around non-essential information: if one dash opens it, another must close it.";
+
+  // Lists for colon questions: [plural noun, three items]
+  const LISTS = [
+    ["snacks", "a banana, a granola bar, and a bottle of water"],
+    ["tools", "a hammer, a tape measure, and a box of nails"],
+    ["songs", "a ballad, a dance track, and the school anthem"],
+    ["rules", "arrive early, stay hydrated, and never argue with the referee"],
+    ["souvenirs", "a pennant, a signed program, and a ticket stub"],
+    ["drills", "sprints, passing patterns, and penalty kicks"],
+    ["supplies", "poster board, glitter glue, and three thick markers"],
+    ["costumes", "a cape, a crown, and a pair of silver boots"],
+    ["books", "a mystery, a biography, and a book of poems"],
+    ["goals", "win the opener, beat the rival school, and reach {{EVENT}}"],
+    ["instruments", "a violin, a snare drum, and a borrowed trumpet"],
+    ["ingredients", "flour, butter, and a pinch of cinnamon"],
+  ];
+  const INTROS = [
+    (n) => `{{NAME_1}} packed only three ${n} for {{EVENT}}`,
+    (n) => `The coach at {{LOCATION}} asked for three ${n}`,
+    (n) => `{{NAME_2}} needed just three ${n} before the trip`,
+    (n) => `The checklist on {{NAME_3_POSS}} door named three ${n}`,
+  ];
+
+  // Dash-pair appositives: [noun, appositive, rest of the sentence]
+  const DASHES = [
+    ["secret weapon", "an hour of extra sprints after every practice", "explains the speed in the final minutes"],
+    ["newest invention", "a backpack that charges a phone while you walk", "won first prize at the science fair"],
+    ["favorite spot", "a bench behind the bleachers at {{LOCATION}}", "is where every big decision gets made"],
+    ["lucky charm", "a frayed red wristband from {{EVENT}}", "never leaves the equipment bag"],
+    ["biggest fear", "forgetting the words in front of a crowd", "never came true"],
+    ["first coach", "a retired champion who still runs every morning", "taught the basics of {{SKILL}}"],
+    ["morning routine", "twenty push-ups, a cold shower, and oatmeal", "hasn't changed in three years"],
+    ["proudest moment", "a buzzer-beater in the regional semifinal", "is still replayed on the school website"],
+    ["oldest friend", "a neighbor who moved away in fifth grade", "flew in to watch {{EVENT}}"],
+    ["best idea", "a car wash to pay for new uniforms", "raised twice the money anyone expected"],
+    ["strangest habit", "talking to the ball before every free throw", "always makes the crowd laugh"],
+    ["favorite book", "a battered paperback about a lost explorer", "sits on the nightstand"],
+  ];
+  const OWNERS = ["{{NAME_1}}'s", "{{NAME_2}}'s", "The team's", "The coach's"];
+
+  // Two contrasting ICs: a semicolon (a colon would wrongly signal an explanation).
+  const SEMI_PAIRS = [
+    ["{{NAME_1}} writes most songs on guitar", "the ballads are composed on piano"],
+    ["the first half was slow and careful", "the second half was a sprint"],
+    ["{{NAME_2}} won the first title at seventeen", "the last one came at thirty-five"],
+    ["the morning session covered {{SKILL}}", "the afternoon focused on teamwork"],
+    ["penguins cannot fly", "they are, however, excellent swimmers"],
+    ["the home crowd was loud", "the visiting fans were even louder"],
+    ["{{NAME_3}} prefers early practices", "{{NAME_1}} does best at night"],
+    ["the old gym had no air conditioning", "the new one has too much"],
+    ["the rookies made every easy shot", "the veterans missed most of theirs"],
+    ["the bus left {{LOCATION}} at dawn", "the first fans arrived at noon"],
+    ["the debate team won the trophy", "the robotics club took home the cash prize"],
+    ["the opening act played for an hour", "the headliner played for twenty minutes"],
+  ];
+  // IC: explanation.
+  const EXPLAIN = [
+    ["{{NAME_1}} had one reason for staying up all night", "the final exam covered the entire year"],
+    ["The plan for {{EVENT}} was simple", "arrive early, warm up, and stay calm"],
+    ["Coach {{NAME_2}} gave the team one rule", "finish your homework before you touch the ball"],
+    ["The experiment failed for an obvious reason", "someone had unplugged the freezer overnight"],
+    ["The crowd went silent for a good reason", "{{NAME_3}} was attempting the final shot"],
+    ["{{NAME_1}} finally understood the problem", "the instructions had been printed upside down"],
+    ["The new schedule had one big flaw", "practice started before the buses arrived"],
+    ["The recipe needed one more thing", "a pinch of salt in the frosting"],
+    ["{{NAME_2}} learned a hard lesson at {{LOCATION}}", "talent never beats a team that works harder"],
+    ["The museum guard gave one warning", "no flash photography near the paintings"],
+    ["The band chose its name for a simple reason", "every member was born in June"],
+    ["The coach saw the real problem", "nobody was talking on defense"],
+  ];
+  // Non-essential "which" clauses that need their closing comma.
+  const THINGS = ["trophy", "jersey", "medal", "banner", "photograph"];
+  const WHICH = ["which {{NAME_1}} won at {{EVENT}}", "which {{NAME_2}} keeps behind glass", "which hung in the old gym for years", "which the coach signed last spring"];
+  const PREDS = ["now sits in the front office", "is older than most of the players", "will be auctioned for charity", "draws a crowd every time it comes out"];
+  // Semicolons in a list whose items have commas.
+  const CITIES = [["Tokyo", "Japan"], ["Seoul", "South Korea"], ["Sydney", "Australia"], ["Lima", "Peru"], ["Nairobi", "Kenya"], ["Toronto", "Canada"], ["Lisbon", "Portugal"], ["Cairo", "Egypt"]];
+
+  G.add(6, () => {
+    const out = [];
+    // 1) IC: list.
+    for (const [[n, items], intro, v] of G.product(LISTS, INTROS, [0, 1])) {
+      const ic = intro(n);
+      const [head, last] = G.lastWord(ic);
+      const wrong = v === 0
+        ? [[`${last};`, `${SEMI_IC} The list isn't an independent clause.`], [`${last}, such as:`, "Never put a colon after \"such as.\""], [`${last}, and`, "\"And\" makes the list read as extra items instead of the three just announced."]]
+        : [[`${last},`, "A comma can't introduce a list after a complete independent clause like this; use a colon."], [`${last}—such as`, "\"Such as\" adds nothing here, and the dash leaves an awkward fragment."], [last, "With no punctuation, the list runs straight into the clause."]];
+      out.push({
+        skill: "Colon + list",
+        text: `${head} ______ ${items}.`,
+        choices: [`${last}:`, ...wrong.map((w) => w[0])],
+        notes: ["Correct. The words before the colon form a complete independent clause, and the colon introduces the list.", ...wrong.map((w) => w[1])],
+        rule: "IC: list. A colon needs a complete independent clause before it.",
+      });
+    }
+    // 2) No colon after a verb, "such as", or a preposition (physical things only).
+    for (const [n, items] of LISTS.filter(([n]) => !["rules", "goals", "drills"].includes(n))) {
+      out.push({
+        skill: "No colon after a verb",
+        text: `The three ${n} {{NAME_1}} brought to {{LOCATION}} ______ ${items}.`,
+        choices: ["were", "were:", "were;", "were—"],
+        notes: ["Correct. Nothing separates a verb from its complement.", `"The three ${n} {{NAME_1}} brought were" isn't a complete clause, so no colon.`, SEMI_IC, "A dash would split the verb from its complement."],
+        rule: "Never put a colon or other break between a verb and its complement.",
+      });
+      out.push({
+        skill: "No colon after \"such as\"",
+        text: `{{NAME_2}} packed ${n} such ______ ${items}.`,
+        choices: ["as", "as:", "as;", "as—"],
+        notes: ["Correct. \"Such as\" already introduces the examples; no punctuation follows it.", "A colon can't follow \"such as\"; the words before it aren't a complete clause.", SEMI_IC, "A dash would cut \"such as\" off from its examples."],
+        rule: "No punctuation after \"such as\".",
+      });
+      out.push({
+        skill: "No colon after a preposition",
+        text: `The checklist for {{EVENT}} calls ______ ${items}.`,
+        choices: ["for", "for:", "for;", "for—"],
+        notes: ["Correct. A preposition runs straight into its objects.", "\"The checklist calls for\" isn't a complete clause, so no colon.", SEMI_IC, "A dash would split the preposition from its objects."],
+        rule: "No colon after a preposition.",
+      });
+    }
+    // 3) Dash pairs: open and close.
+    for (const [[noun, appos, rest], owner] of G.product(DASHES, OWNERS)) {
+      const [nHead, nLast] = G.lastWord(`${owner} ${noun}`);
+      out.push({
+        skill: "Dash pair (opening)",
+        text: `${nHead} ______ ${appos}—${rest}.`,
+        choices: [`${nLast}—`, `${nLast},`, `${nLast};`, `${nLast}:`],
+        notes: ["Correct. This dash opens the appositive, and the dash after it closes it.", "A comma can't pair with a dash.", SEMI_IC, `A colon would separate the subject from its verb "${G.firstWord(rest)[0]}."`],
+        rule: DASH_PAIR,
+      });
+      const [aHead, aLast] = G.lastWord(appos);
+      out.push({
+        skill: "Dash pair (closing)",
+        text: `${owner} ${noun}—${aHead} ______ ${rest}.`,
+        choices: [`${aLast}—`, `${aLast},`, `${aLast};`, aLast],
+        notes: ["Correct. The closing dash matches the one after the noun.", "A comma can't close what a dash opened.", SEMI_IC, "Without a closing dash, the appositive never ends."],
+        rule: DASH_PAIR,
+      });
+    }
+    // 4) IC; IC (contrast).
+    for (const [a, b] of SEMI_PAIRS) {
+      const [aHead, aLast] = G.lastWord(a);
+      const [bFirst, bRest] = G.firstWord(b);
+      out.push({
+        skill: "Semicolon",
+        text: `${G.cap(aHead)} ______ ${bRest}.`,
+        choices: [`${aLast}; ${bFirst}`, `${aLast}, ${bFirst}`, `${aLast}: ${bFirst}`, `${aLast} ${bFirst}`],
+        notes: ["Correct. Both halves are independent clauses, and a semicolon joins them.", "A comma alone between two independent clauses is a comma splice.", "A colon would mean the second half explains the first; it doesn't, it contrasts.", "Two independent clauses with no punctuation are a run-on."],
+        rule: "Two contrasting independent clauses: a semicolon.",
+      });
+    }
+    // 5) IC: explanation.
+    for (const [a, b] of EXPLAIN) {
+      const [aHead, aLast] = G.lastWord(a);
+      out.push({
+        skill: "Colon + explanation",
+        text: `${aHead} ______ ${b}.`,
+        choices: [`${aLast}:`, `${aLast},`, aLast, `${aLast}, which`],
+        notes: ["Correct. The colon introduces the explanation the first clause promises.", "A comma between two independent clauses is a comma splice.", "Two independent clauses with no punctuation are a run-on.", "\"Which\" doesn't fit; the second part is a full clause, not a description."],
+        rule: "IC: explanation. The colon introduces what the first clause sets up.",
+      });
+    }
+    // 6) Non-essential "which" clauses close with a comma.
+    for (const [thing, which, pred] of G.product(THINGS, WHICH, PREDS)) {
+      const [wHead, wLast] = G.lastWord(which);
+      out.push({
+        skill: "Matching commas",
+        text: `The ${thing}, ${wHead} ______ ${pred}.`,
+        choices: [`${wLast},`, `${wLast}—`, `${wLast};`, wLast],
+        notes: ["Correct. A non-essential clause opened with a comma closes with a comma.", "A dash can't close what a comma opened.", SEMI_IC, "Without the closing comma, the clause runs into the main verb."],
+        rule: "A non-essential clause opened with a comma must close with a comma.",
+      });
+    }
+    // 7) Semicolons separate list items that contain commas.
+    for (let i = 0; i < CITIES.length; i++) {
+      for (let j = 0; j < CITIES.length; j++) {
+        for (let k = 0; k < CITIES.length; k++) {
+          if (i === j || j === k || i === k || (i + j + k) % 3) continue;
+          const [c1, n1] = CITIES[i];
+          const [c2, n2] = CITIES[j];
+          const [c3, n3] = CITIES[k];
+          out.push({
+            skill: "Semicolons in a list",
+            text: `{{NAME_1}}'s tour stopped in ${c1}, ______ ${c2}, ${n2}; and ${c3}, ${n3}.`,
+            choices: [`${n1};`, `${n1},`, `${n1}:`, n1],
+            notes: [`Correct. It matches the semicolon before "and ${c3}."`, "A comma here blurs where one city's entry ends.", "A colon doesn't separate list items.", "A missing separator runs the entries together."],
+            rule: "When list items contain commas, separate the items with semicolons.",
+          });
+        }
+      }
+    }
+    return out;
+  });
+})();
+
+</script>
+<script>
+/* ===== js/curriculum/gen/ch7.js ===== */
+// Generated questions, Chapter 7: Appositives & Non-Essential Clauses.
+// "a/an" cues mark non-essential descriptions (commas or dashes on both
+// sides); a title right before a name, or a "who" clause that says WHICH
+// people, is essential (no commas).
+(function () {
+  "use strict";
+  const G = window.SatWizz.gen;
+  const SEMI = "A semicolon needs an independent clause on both sides.";
+
+  const DESCS = [
+    "a goalkeeper who rarely misses practice", "an exchange student from Brazil", "a self-taught pianist",
+    "a former track champion", "a rookie with a fearless streak", "a chess player with a famous memory",
+    "an artist who paints with coffee", "a quiet sophomore from the robotics club", "a drummer in the school jazz band",
+    "a volunteer at the animal shelter", "an expert in {{SKILL}}", "a fan of old science-fiction films",
+    "a sprinter who trains before sunrise", "a poet who writes on the bus", "a math whiz who loves puzzles",
+    "an early riser with endless energy", "a talented singer from the choir", "a former captain of the swim team",
+    "an amateur chef who hates recipes", "a skateboarder who never falls",
+  ];
+  const PREDS = [
+    "saved three penalty shots at {{EVENT}}", "won the loudest applause at {{LOCATION}}", "finished the race in record time",
+    "gave a speech that made the coach cry", "solved the puzzle in under a minute", "organized the bake sale for the new uniforms",
+    "carried the team to the semifinal", "wrote the winning essay this year", "taught the younger students {{SKILL}}",
+    "fixed the broken scoreboard before the game", "arrived first at {{LOCATION}} every morning", "led the warm-up before {{EVENT}}",
+    "designed the poster for the spring show", "kept everyone calm during the storm", "made the final catch of the season",
+    "found the missing trophy in the basement", "sang the anthem at {{EVENT}}", "painted the mural outside the gym",
+    "broke the school record for push-ups", "cooked dinner for the entire team",
+  ];
+  const ROLES = ["The goalkeeper", "The team captain", "The exchange student", "The lead singer", "The head coach", "The debate champion", "The rookie", "The tennis player", "The poet", "The chef", "The drummer", "The physicist"];
+  const WHO = [
+    "who grew up near {{LOCATION}}", "who joined the team last fall", "who practices {{SKILL}} every morning",
+    "who once forgot the words onstage", "who never misses a home game", "who moved here from overseas",
+    "who started the school podcast", "who trained with the varsity squad", "who broke an arm last season",
+    "who speaks three languages", "who designed the new jerseys", "who learned to swim at nine",
+  ];
+  const GROUPS = ["students", "players", "fans", "volunteers", "musicians"];
+  const GROUP_WHO = ["stayed after practice", "arrived before sunrise", "signed up first", "practiced {{SKILL}} all summer"];
+  const GROUP_PREDS = ["got the best seats at {{EVENT}}", "received a free T-shirt", "met {{NAME_1}} backstage"];
+  const RELATIONS = ["best friend", "older sister", "first coach", "only rival", "oldest cousin", "favorite teacher", "younger brother", "biggest fan"];
+
+  // Avoid naming the same flavor token twice in one sentence.
+  const clash = (a, b) => ["SKILL", "EVENT", "LOCATION"].some((t) => a.includes(t) && b.includes(t));
+
+  G.add(7, () => {
+    const out = [];
+    // 1) ______ a/an description, verb.
+    for (const [d, p] of G.product(DESCS, PREDS)) {
+      if (clash(d, p)) continue;
+      out.push({
+        skill: "a/an cue",
+        text: `______ ${d}, ${p}.`,
+        choices: ["{{NAME_1}},", "{{NAME_1}}", "{{NAME_1}}—", "{{NAME_1}};"],
+        notes: [`Correct. "${G.cap(d)}" is non-essential (the a/an cue), so it gets a comma on both sides.`, "There's no opening comma to match the closing one.", "A dash can't pair with a comma.", SEMI],
+        rule: `"A/an" before a description is a strong cue that it's non-essential: commas on both sides.`,
+      });
+    }
+    // 2) The role ______ verb: an essential name, no commas.
+    ROLES.forEach((role, r) => {
+      for (let k = 0; k < 10; k++) {
+        const p = PREDS[(r * 3 + k * 2) % PREDS.length];
+        out.push({
+          skill: "Essential names",
+          text: `${role} ______ ${p}.`,
+          choices: ["{{NAME_1}}", "{{NAME_1}},", ", {{NAME_1}},", "—{{NAME_1}}—"],
+          notes: [`Correct. "${role}" alone doesn't say which one, so the name is essential: no commas.`, "A single comma separates the subject from its verb.", "Commas would make the name non-essential, but the title needs it to say who.", "Dashes would also mark the name as non-essential."],
+          rule: `A title right before a name ("${role.toLowerCase()} {{NAME_1}}") is essential: no commas.`,
+        });
+      }
+    });
+    // 3) ______ who…, verb: a "who" clause after a specific name is non-essential.
+    WHO.forEach((w, i) => {
+      for (let k = 0; k < 10; k++) {
+        const p = PREDS[(i * 7 + k * 3) % PREDS.length];
+        if (clash(w, p)) continue;
+        out.push({
+          skill: "Non-essential \"who\"",
+          text: `______ ${w.replace(/^who /, "")}, ${p}.`,
+          choices: ["{{NAME_1}}, who", "{{NAME_1}} who", "{{NAME_1}}, that", "{{NAME_1}} who,"],
+          notes: ["Correct. After a specific name, the \"who\" clause adds extra detail, so commas go on both sides.", "The closing comma has no opening partner.", "\"That\" can't follow a comma, and it doesn't start a description of a named person.", "The comma after \"who\" splits the clause."],
+          rule: "After a specific name, a \"who\" clause is non-essential: commas on both sides.",
+        });
+      }
+    });
+    // 4) The group ______ (who…) verb: essential "who", no commas.
+    for (const [g, w, p] of G.product(GROUPS, GROUP_WHO, GROUP_PREDS)) {
+      if (clash(w, p)) continue;
+      out.push({
+        skill: "Essential \"who\"",
+        text: `The ${g} ______ ${w} ${p}.`,
+        choices: ["who", ", who", "—who", "who,"],
+        notes: [`Correct. "Who ${w}" tells WHICH ${g}: essential, so no commas.`, "A comma makes the clause non-essential, and there's no closing comma.", "A dash makes it non-essential, and it has no partner.", "A comma after \"who\" splits the clause."],
+        rule: "A \"who\" clause that identifies which people is essential: no commas.",
+      });
+    }
+    // 5) One-of-a-kind relations + a/an description.
+    for (const [rel, d] of G.product(RELATIONS, DESCS.slice(0, 12))) {
+      const p = G.pick(PREDS.filter((x) => !clash(d, x)), rel + d);
+      const [rHead, rLast] = G.lastWord(rel);
+      out.push({
+        skill: "One of a kind",
+        text: `{{NAME_1}}'s ${rHead ? rHead + " " : ""}______ ${d}, ${p}.`,
+        choices: [`${rLast},`, rLast, `${rLast}—`, `${rLast};`],
+        notes: [`Correct. {{NAME_1}} has only one ${rel}, so "${d}" is extra detail: commas on both sides.`, "The closing comma has no opening partner.", "A dash can't pair with a comma.", SEMI],
+        rule: `{{NAME_1}} has only one ${rel}, so the description is non-essential.`,
+      });
+    }
+    return out;
+  });
+})();
+
+</script>
 <script>
 /* ===== js/focus.js ===== */
 // SatWizz Focus Meter (0–100%), shared by Practice, the Vocab Derby and
@@ -6732,7 +7901,7 @@ window.SatWizz.curriculum.addChapter({
     }
 
     function nextQuestion() {
-      if (race.turn >= race.words.length) race.words = race.words.concat(shuffle(race.words, Math.random));
+      if (race.turn >= race.words.length) race.words = race.words.concat(src.more ? src.more() : shuffle(race.words, Math.random));
       race.q = src.question(race.words[race.turn]);
       race.picked = null;
       race.qClock = 0;
@@ -6810,8 +7979,8 @@ window.SatWizz.curriculum.addChapter({
       const locked = !answered && !over && race.lockLeft > 0;
       race.lockShown = locked;
       const passage = q.passage
-        ? ctx.fill(q.passage)
-          .replace("______", answered ? `<mark class="fill-in">${ctx.fill(q.choices[q.answer], undefined, false)}</mark>` : '<span class="blank" role="img" aria-label="blank"></span>')
+        ? ctx.fill(q.passage, q.cast)
+          .replace("______", answered ? `<mark class="fill-in">${ctx.fill(q.choices[q.answer], q.cast, false)}</mark>` : '<span class="blank" role="img" aria-label="blank"></span>')
           .replace(SW.UNDERLINE_RE, '<u class="target">$1</u>')
         : "";
       const kindLabel = esc(q.meta || "");
@@ -6831,7 +8000,7 @@ window.SatWizz.curriculum.addChapter({
           ${q.choices.map((c, i) => {
             let cls = "";
             if (answered) cls = i === q.answer ? "right" : i === race.picked ? "wrong" : "dim";
-            const txt = ctx.fill(c, undefined, false);
+            const txt = ctx.fill(c, q.cast, false);
             return `<li><button class="choice ${cls}" type="button" data-ci="${i}" ${answered || over || locked ? "disabled" : ""} aria-label="(${"ABCD"[i]}) ${txt.replace(/<[^>]+>/g, "")}">
               <span class="letter" aria-hidden="true">${"ABCD"[i]}</span><span class="txt">${txt}</span>
             </button></li>`;
@@ -6840,9 +8009,9 @@ window.SatWizz.curriculum.addChapter({
         ${answered ? `
           <div class="feedback ${right ? "ok" : "no"}">
             <h3>${right ? "Correct!" : `Not quite. You're held back, and your next question locks for ${PENALTY.stumble}s+.`}</h3>
-            ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${ctx.fill(q.rule, undefined, false)}</p>` : ""}
-            ${!right && q.notes ? `<p><b>Your pick:</b> ${ctx.fill(q.notes[race.picked], undefined, false)}</p>` : ""}
-            <p>${ctx.fill(q.explain, undefined, false)}</p>
+            ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${ctx.fill(q.rule, q.cast, false)}</p>` : ""}
+            ${!right && q.notes ? `<p><b>Your pick:</b> ${ctx.fill(q.notes[race.picked], q.cast, false)}</p>` : ""}
+            <p>${ctx.fill(q.explain, q.cast, false)}</p>
             ${right || !src.missNote(q) ? "" : `<p class="muted small">${src.missNote(q)}</p>`}
           </div>` : over ? `<div class="feedback no"><h3>Too late!</h3><p>${esc(HORSE[race.winner].name)} finished before you answered. ${src.lateNote(q)}</p></div>` : ""}`;
       container.querySelector("#derby-next-slot").innerHTML = over
@@ -10763,6 +11932,8 @@ window.SatWizz.curriculum.addChapter({
     lbScope: "global", // leaderboard tab: "global" | "friends"
     lbMetric: "xp", // rank by "xp" | "sparks"
     derbyChapter: null, // unit the Derby races on (defaults to the current chapter)
+    genSeed: 0, // per-player seed: question casts and the no-repeat order of generated questions
+    genCursor: {}, // chapterId -> how many generated questions you've been served
     // settings
     muted: false,
     haptics: true,
@@ -10774,6 +11945,7 @@ window.SatWizz.curriculum.addChapter({
   };
 
   let S = load();
+  if (!S.genSeed) S.genSeed = (Math.floor(Math.random() * 2 ** 31) || 1);
 
   function normalize(saved) {
     const s = { ...structuredClone(DEFAULTS), ...saved, custom: { ...DEFAULTS.custom, ...(saved.custom || {}) } };
@@ -10896,6 +12068,15 @@ window.SatWizz.curriculum.addChapter({
     return t && rewards.isThemeUnlocked(S, t.id) ? t : THEMES[0];
   }
 
+  // Casts have 8 people; each question uses 3 of them for its NAME_1..3 slots,
+  // picked by a seeded shuffle so the same question always shows the same 3.
+  function castFor(key) {
+    const base = castOf();
+    if (!key || base.people.length <= 3) return base;
+    const people = SW.rng.shuffle(base.people, SW.rng.hash(String(key)) ^ (S.genSeed >>> 0)).slice(0, 3);
+    return { ...base, people };
+  }
+
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 
   // Swaps {{NAME_1}}, {{NAME_2_POSS}}, {{LOCATION}} etc. for the chosen cast.
@@ -10913,13 +12094,15 @@ window.SatWizz.curriculum.addChapter({
     });
   }
 
+  const castNames = (t) => `${t.people.slice(0, 3).map((p) => p.name).join(", ")} + ${t.people.length - 3} more`;
+
   // Free casts first, then packs by price.
   const themesForPicker = () => THEMES.slice().sort((a, b) => (a.price || 0) - (b.price || 0));
 
   // A cast button for the welcome card and the Personalize view.
   function castButton(t, onPick) {
     const locked = !rewards.isThemeUnlocked(S, t.id);
-    const sub = t.id === "custom" ? "Type any names you like" : t.people.map((p) => p.name).join(", ");
+    const sub = t.id === "custom" ? "Type any names you like" : castNames(t);
     const b = h("button", {
       class: `cast-btn${locked ? " locked" : ""}`,
       type: "button",
@@ -10953,6 +12136,23 @@ window.SatWizz.curriculum.addChapter({
   // into the queue, so the chapter is complete once every question has been
   // answered correctly. Mixed review never runs out.
   let queue = []; // { id, isRetry }
+  // After the core set (or when you reopen a finished chapter), the feed keeps
+  // going with generated questions (js/curriculum/gen/) in a per-player
+  // shuffled order. S.genCursor counts what's been served, so nothing repeats
+  // until the chapter's whole pool has been seen; then a new lap starts in a
+  // fresh order.
+  let streaming = false;
+  const genOrders = {};
+  function nextGenId(chId) {
+    const ch = chapterById(chId);
+    if (!ch || !ch.pool || !ch.pool.length) return null;
+    const n = S.genCursor[chId] || 0;
+    const lap = Math.floor(n / ch.pool.length);
+    const key = `${chId}:${lap}`;
+    const order = (genOrders[key] ||= SW.rng.shuffle(ch.pool.map((q) => q.id), ((S.genSeed >>> 0) ^ Math.imul(chId + 1, 2654435761) ^ lap) >>> 0));
+    S.genCursor[chId] = n + 1;
+    return order[n % order.length];
+  }
   let served = 0;
   let lastId = null;
   let completeShown = false;
@@ -10972,7 +12172,10 @@ window.SatWizz.curriculum.addChapter({
       // In progress: only what's left. Replay of a finished chapter: everything.
       // The pop-culture set (questions with a rule line) comes first, then the
       // extra practice, each shuffled.
-      const left = ch.questions.filter((q) => isComplete(ch.id) || !done.has(q.id));
+      // A finished chapter skips straight to fresh generated questions.
+      // (Bonus chapters have no generated pool, so they replay their core set.)
+      const stream = isComplete(ch.id) && ch.pool.length > 0;
+      const left = stream ? [] : ch.questions.filter((q) => isComplete(ch.id) || !done.has(q.id));
       queue = [...shuffle(left.filter((q) => q.rule)), ...shuffle(left.filter((q) => !q.rule))]
         .map((q) => ({ id: q.id, isRetry: false }));
     } else {
@@ -10991,7 +12194,11 @@ window.SatWizz.curriculum.addChapter({
 
   function nextQuestion() {
     if (inReview() && !queue.length) refillReview();
-    const next = queue.shift();
+    let next = queue.shift();
+    if (!next && streaming && currentChapter()) {
+      const id = nextGenId(S.chapterId);
+      if (id) next = { id, isRetry: false };
+    }
     if (!next) return null;
     served++;
     lastId = next.id;
@@ -11158,18 +12365,27 @@ window.SatWizz.curriculum.addChapter({
       banner: "=== 🐎 SATWIZZ GRAMMAR DERBY 🐎 ===",
       tagline: "Where clean sentences win photo finishes.",
       intro: "Answer Digital SAT grammar questions from your unit as fast and as accurately as you can.",
-      // Grammar passages take longer to read than vocab cards, so the CPUs read
-      // longer too (tuned by simulation; see README).
-      read: [20, 26],
-      // Questions you missed come first, then ones you haven't got right yet, then the rest.
+      // CPU reading time per question, tuned by simulation so that breaking
+      // even at ×1.5 takes about 11.5s per question at 85% (see README).
+      read: [13, 17],
+      // Questions you missed come first, then core ones you haven't got right
+      // yet, then fresh generated questions (never repeated; see nextGenId).
       draw() {
         const ch = derbyChapter();
         const got = new Set(correctIn(ch.id));
-        const ids = ch.questions.map((q) => q.id);
-        const missed = shuffle(ids.filter((id) => S.missed.includes(id)));
-        const fresh = shuffle(ids.filter((id) => !got.has(id) && !missed.includes(id)));
-        const rest = shuffle(ids.filter((id) => got.has(id) && !missed.includes(id)));
-        return [...missed, ...fresh, ...rest];
+        const missed = shuffle(S.missed.filter((id) => BY_ID[id] && BY_ID[id].chapterId === ch.id));
+        const fresh = shuffle(ch.questions.map((q) => q.id).filter((id) => !got.has(id) && !missed.includes(id)));
+        return [...missed, ...fresh, ...this.more()];
+      },
+      more() {
+        const ch = derbyChapter();
+        const ids = [];
+        for (let i = 0; i < 20; i++) {
+          const id = nextGenId(ch.id);
+          if (id) ids.push(id);
+        }
+        // Chapters without a generated pool (the bonus ones) reuse their core set.
+        return ids.length ? ids : shuffle(ch.questions.map((q) => q.id));
       },
       question(id) {
         const q = BY_ID[id];
@@ -11177,6 +12393,7 @@ window.SatWizz.curriculum.addChapter({
         const ch = chapterById(q.chapterId);
         return {
           id,
+          cast: castFor(id),
           meta: `${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${ch.short}`,
           passage: q.text,
           stem: SW.stemFor(q),
@@ -11197,20 +12414,22 @@ window.SatWizz.curriculum.addChapter({
           sk.right++;
           S.totalCorrect++;
           S.missed = S.missed.filter((id) => id !== q.id);
-          const got = correctIn(q.chapterId);
-          if (!got.includes(q.id)) got.push(q.id);
-          unlockNextAt60(chapterById(q.chapterId));
+          if (!q.gen) {
+            const got = correctIn(q.chapterId);
+            if (!got.includes(q.id)) got.push(q.id);
+            unlockNextAt60(chapterById(q.chapterId));
+          }
         } else if (!S.missed.includes(q.id)) S.missed.push(q.id);
         renderChapterBar();
       },
       missNote: () => "↺ Saved to your missed questions: it comes back first next race and in mixed review.",
-      lateNote: (dq) => `Answer: ${renderPassage(BY_ID[dq.id].text, castOf(), fill(BY_ID[dq.id].choices[BY_ID[dq.id].answer], castOf(), false))}`,
+      lateNote: (dq) => `Answer: ${renderPassage(BY_ID[dq.id].text, dq.cast, fill(BY_ID[dq.id].choices[BY_ID[dq.id].answer], dq.cast, false))}`,
       review: {
         title: "Grammar review",
         head: ["Question", "Why"],
         row(dq) {
           const q = BY_ID[dq.id];
-          const cast = castOf();
+          const cast = dq.cast;
           return [
             `<small class="muted">${esc(q.skill)}</small><br>${renderPassage(q.text, cast, fill(q.choices[q.answer], cast, false))}`,
             q.rule ? fill(q.rule, cast, false) : fill(q.notes[q.answer], cast, false),
@@ -11387,6 +12606,7 @@ window.SatWizz.curriculum.addChapter({
     cardCount = 0;
     lastId = null;
     completeShown = false;
+    streaming = id !== REVIEW_ID && isComplete(id) && chapterById(id).pool.length > 0;
     buildQueue();
     if (!S.castChosen) feed.append(welcomeCard());
     const ch = currentChapter();
@@ -11420,7 +12640,7 @@ window.SatWizz.curriculum.addChapter({
   // once the queue is empty and every card on screen has been answered.
   function afterFeedAnswer() {
     const pending = [...feed.querySelectorAll(".card[data-qid]")].filter((c) => !c._answered).length;
-    if (pending < 2 && queue.length) appendCards(2 - pending);
+    if (pending < 2 && (queue.length || streaming)) appendCards(2 - pending);
     const ch = currentChapter();
     if (ch) unlockNextAt60(ch);
     if (!ch || completeShown || queue.length || pending) return;
@@ -11503,13 +12723,20 @@ window.SatWizz.curriculum.addChapter({
         <span class="complete-star" aria-hidden="true">⭐</span>
         <h2>${heading}</h2>
         <p>${firstTime ? `+${RULES.chapterSparks} ⚡ Sparks earned. ` : "Replay finished. "}${body}</p>
-        <div class="stack">${actions}<button class="btn ghost wide" type="button" data-go="${ch.id}">Replay this chapter</button></div>
+        <div class="stack">${actions}${ch.pool.length
+          ? `<button class="btn ghost wide" type="button" data-stream>Keep practicing: ${fmt(ch.pool.length)} fresh questions ↓</button>`
+          : `<button class="btn ghost wide" type="button" data-go="${ch.id}">Replay this chapter</button>`}</div>
       </div>`;
     card.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
       const go = b.dataset.go === REVIEW_ID ? REVIEW_ID : Number(b.dataset.go);
       startChapter(go);
     }));
     card.querySelector("[data-drawer]")?.addEventListener("click", openChapters);
+    card.querySelector("[data-stream]")?.addEventListener("click", () => {
+      streaming = true;
+      appendCards(3);
+      scrollToNext(card);
+    });
     return card;
   }
 
@@ -11569,7 +12796,7 @@ window.SatWizz.curriculum.addChapter({
   // stem, then choices A–D.
   function paintCard(card) {
     const q = card._q;
-    const cast = castOf();
+    const cast = castFor(q.id);
     const ch = chapterById(q.chapterId);
     card.innerHTML = `
       <div class="card-inner bb">
@@ -11632,7 +12859,7 @@ window.SatWizz.curriculum.addChapter({
     card.classList.add("answered");
     const q = card._q;
     const correct = ci === q.answer;
-    const cast = castOf();
+    const cast = castFor(q.id);
     const thinkMs = Date.now() - (card._seenAt || card._madeAt || Date.now());
 
     card.querySelectorAll(".choice").forEach((b) => {
@@ -11671,8 +12898,11 @@ window.SatWizz.curriculum.addChapter({
       sparks = rewards.sparksForCorrect(S.combo);
       rewards.earn(S, sparks.total);
       S.missed = S.missed.filter((id) => id !== q.id);
-      const got = correctIn(q.chapterId);
-      if (!got.includes(q.id)) got.push(q.id);
+      // Chapter progress counts the core set; generated questions are extra practice.
+      if (!q.gen) {
+        const got = correctIn(q.chapterId);
+        if (!got.includes(q.id)) got.push(q.id);
+      }
     } else {
       savedCombo = rewards.useComboSaver(S) ? S.combo : 0;
       S.combo = savedCombo;
@@ -11790,7 +13020,7 @@ window.SatWizz.curriculum.addChapter({
     if (explainSheet) closeExplain(false);
     explainAfter = after;
     const q = card._q;
-    const cast = castOf();
+    const cast = castFor(q.id);
     const correct = picked === q.answer;
     const filled = renderPassage(q.text, cast, fill(q.choices[q.answer], cast, false));
     const rows = card._order.map((ci, pos) => {
@@ -12301,7 +13531,7 @@ window.SatWizz.curriculum.addChapter({
       `<span class="shop-icon" aria-hidden="true">${m.emoji}</span>`, esc(m.name), "Derby mount: runs in your lane",
       derbySt.mounts.includes(m.id) ? useBtn(derbySt.mount === m.id, `data-mount="${m.id}"`) : buyBtn(`mount:${m.id}`, m.price))).join("");
     const packRows = packs.map((t) => row(
-      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), esc(t.people.map((p) => p.name).join(", ")),
+      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), esc(castNames(t)),
       rewards.isThemeUnlocked(S, t.id) ? useBtn(S.themeId === t.id, `data-use="${t.id}"`) : buyBtn(`theme:${t.id}`, t.price))).join("");
     const avatarRows = SW.avatars.filter((a) => a.price > 0).map((a) => row(
       `<span class="avatar md" aria-hidden="true">${a.emoji}</span>`, esc(a.label), "Profile picture",
