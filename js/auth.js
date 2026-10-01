@@ -355,7 +355,7 @@
             out.comboSavers = clampInt(p.combo_savers, 0, 3);
           }
         } else {
-          // A fresh device (nothing played yet, just the 2,500 ⚡ starting
+          // A fresh device (nothing played yet, just the 50 ⚡ starting
           // bankroll) signing in to an account that has played takes the
           // account's balance, so a new browser can't top an account up.
           const pristine = !(local.xp > 0) && !(local.totalCorrect > 0) && !(local.vocab && local.vocab.derby && local.vocab.derby.races > 0);

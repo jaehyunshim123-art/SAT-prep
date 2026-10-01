@@ -60,7 +60,7 @@
     completedChapters: [],
     chapterCorrect: {}, // chapterId -> question ids answered correctly
     // gamification
-    sparks: RULES.startSparks, // new players start with 2,500 ⚡
+    sparks: RULES.startSparks, // new players start with 50 ⚡
     focus: FOCUS.RULES.max, // Focus Meter 0-100%, kept between sessions (js/focus.js)
     focusStreak: 0, // right answers in a row toward the next +25%
     unlockedThemes: [],
@@ -2315,7 +2315,7 @@
   }
 
   // ---------- Shop ----------
-  // Every cosmetic is 500 ⚡: jockey skins, Derby mounts, character casts,
+  // Character Casts are 1,000 ⚡; every other cosmetic is 500 ⚡: jockey skins, Derby mounts,
   // avatars, fishing rods and fishing spots; the Focus Elixir is 500 too.
   // Derby and fishing gear live in the Vault progress, so they sync.
   const D = SW.derby;
@@ -2354,9 +2354,10 @@
 
     const fishSt = fishStats();
     const F = SW.fishing;
-    const section = (icon, title, sub, rows) => `
+    const CAST_PRICE = Math.max(...THEMES.map((t) => t.price || 0)); // 1,000 ⚡ (js/themes.js)
+    const section = (icon, title, sub, rows, price = 500) => `
         <section class="panel shop-tier">
-          <h2><span>${icon} ${title}</span> <span class="price-tag">500 ⚡ each</span></h2>
+          <h2><span>${icon} ${title}</span> <span class="price-tag">${fmt(price)} ⚡ each</span></h2>
           <p class="muted">${sub}</p>
           <div class="shop-list">${rows}</div>
         </section>`;
@@ -2393,7 +2394,7 @@
             <a href="#shop-casts">🎭 Casts</a><a href="#shop-silks">🏇 Jockey Skins</a><a href="#shop-mounts">🦄 Mounts</a><a href="#shop-avatars">🙂 Avatars</a><a href="#shop-rods">🎣 Rods</a><a href="#shop-spots">🌊 Spots</a><a href="#shop-elixir">🧪 Elixir</a>
           </nav>
         </section>
-        <div id="shop-casts">${section("🎭", "Character Casts", "Questions use generic names until you unlock a cast. Then every Practice and Derby question stars your cast.", packRows)}</div>
+        <div id="shop-casts">${section("🎭", "Character Casts", "Questions use generic names until you unlock a cast. Then every Practice and Derby question stars your cast.", packRows, CAST_PRICE)}</div>
         <div id="shop-silks">${section("🏇", "Jockey Skins", "Silks for your jockey in the Derby.", silkRows)}</div>
         <div id="shop-mounts">${section("🦄", "Derby Mounts", "Ride something rarer than a horse.", mountRows)}</div>
         <div id="shop-avatars">${section("🙂", "Avatars", "Rare profile pictures for the leaderboard.", avatarRows)}</div>

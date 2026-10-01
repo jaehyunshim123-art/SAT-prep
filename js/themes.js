@@ -2,7 +2,7 @@
 // Each cast has 8 people; every question picks 3 of them (stable per question)
 // for its {{NAME_1..3}} slots. Placeholders map to cast fields: {{NAME_1..3}} -> people, {{LOCATION}} -> place,
 // {{SKILL}} -> craft, {{EVENT}} -> event. Flavor is always used mid-sentence.
-// `price` is in Sparks; 0 means free. Paid packs are Character Casts in the Shop (500 ⚡).
+// `price` is in Sparks; 0 means free. Paid packs are Character Casts in the Shop (1,000 ⚡).
 //
 // Content rule: names are fine, but no franchise titles, brand names or coined
 // proprietary terms (no "Hogwarts", "Quidditch", "Avengers", league or award
@@ -38,7 +38,7 @@ window.SatWizz.themes = [
   {
     id: "wizard",
     icon: "🪄",
-    price: 500, // Character Cast (Shop)
+    price: 1000, // Character Cast (Shop)
     label: "Wizard School",
     tagline: "Harry, Hermione and Ron",
     people: [
@@ -58,7 +58,7 @@ window.SatWizz.themes = [
   {
     id: "football",
     icon: "⚽",
-    price: 500, // Character Cast (Shop)
+    price: 1000, // Character Cast (Shop)
     label: "Football Legends",
     tagline: "Ronaldo, Messi and Aitana",
     people: [
@@ -78,7 +78,7 @@ window.SatWizz.themes = [
   {
     id: "hoops",
     icon: "🏀",
-    price: 500, // Character Cast (Shop)
+    price: 1000, // Character Cast (Shop)
     label: "Hoops Legends",
     tagline: "LeBron, Steph and Caitlin",
     people: [
@@ -98,7 +98,7 @@ window.SatWizz.themes = [
   {
     id: "anime",
     icon: "🍥",
-    price: 500, // Character Cast (Shop)
+    price: 1000, // Character Cast (Shop)
     label: "Anime Pack",
     tagline: "Naruto, Mikasa and Goku",
     people: [
@@ -118,7 +118,7 @@ window.SatWizz.themes = [
   {
     id: "heroes",
     icon: "🦸",
-    price: 500, // Character Cast (Shop)
+    price: 1000, // Character Cast (Shop)
     label: "Superhero Pack",
     tagline: "Peter, Wanda and Tony",
     people: [
@@ -138,7 +138,7 @@ window.SatWizz.themes = [
   {
     id: "pop",
     icon: "🎤",
-    price: 500, // Character Cast (Shop)
+    price: 1000, // Character Cast (Shop)
     label: "Pop Icons",
     tagline: "Taylor, Beyoncé and Olivia",
     people: [

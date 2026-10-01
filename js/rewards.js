@@ -13,7 +13,7 @@
     comboEvery: 3,
     dailyGoalSparks: 50,
     chapterSparks: 50, // first completion of each chapter
-    startSparks: 2500, // new players' bankroll (Derby wagers, Shop)
+    startSparks: 50, // new players' bankroll: earn the rest by practicing
     maxAura: 5,
     auraPrice: 50,
     auraBundleSize: 3,

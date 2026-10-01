@@ -2,7 +2,7 @@
 
 A mobile-first, gamified Digital SAT grammar and vocabulary website. You work through a 7-chapter grammar curriculum from a Dashboard: learn each chapter in a snap-scrolling feed of Digital SAT-style questions, then pass its 10-question **Review for Understanding** (8/10) to unlock the next. The Vocab Vault has 3D flashcards, sprints and Vocab Fishing. You race your unit's grammar questions in the Derby and spend Sparks in the Shop. Daily and friend streaks and live leaderboards keep you coming back.
 
-- **Header (every screen):** ⚡ **Spark balance** (new players start with **2,500**), a **❓ Help** button next to it, 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%). On phones the wordmark shrinks to a "W" badge so everything fits; at 340px and below the cloud/Save button moves to Profile (tap the avatar).
+- **Header (every screen):** ⚡ **Spark balance** (new players start with **50**), a **❓ Help** button next to it, 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%). On phones the wordmark shrinks to a "W" badge so everything fits; at 340px and below the cloud/Save button moves to Profile (tap the avatar).
 - **Bottom nav, five tabs:**
   - 🏠 **Dashboard** ("Home" on phones): chapter select 1–7 plus the bonus chapters. Each chapter card opens **Learn & practice** (the lesson and question feed), a **Practice set** (10) or the **Review for Understanding** test (10). After every set the **Diagnostic** screen opens.
   - 📚 **Vocab Vault:** flashcards, sprints and 🎣 Vocab Fishing.
@@ -358,13 +358,13 @@ node scripts/build-derby.js
 - **Sparks ⚡.** You earn +10 per correct answer, +5 on every 3rd answer in a row, +50 per chapter (first time) and +50 for your daily goal.
 - **Focus Meter 🧠.** 0–100%; see [Focus Meter](#focus-meter-0100) above.
 - **Lock In Streak 🔥.** It grows each day you hit your goal (5, 10 or 20). **Aura Shields 💠** cover a missed day.
-- **Shop.** Every cosmetic costs **500 ⚡**, in separate sections (jump links at the top):
+- **Shop.** **Character Casts cost 1,000 ⚡**; every other cosmetic costs **500 ⚡**. Items are in separate sections (jump links at the top):
 
   | Section | Items |
   |---|---|
   | 🏇 Jockey Skins | 4 Derby silks |
   | 🦄 Derby Mounts | 4 mounts |
-  | 🎭 Character Casts (first) | 6 casts of 8 people each. Questions use generic names until you unlock one |
+  | 🎭 Character Casts (first) | 6 casts of 8 people each, **1,000 ⚡** each. Questions use generic names until you unlock one |
   | 🙂 Avatars | 6 rare profile pictures |
   | 🎣 Fishing Rods | 3 rods with perks |
   | 🌊 Fishing Spots | 3 spots with their own word pools |
@@ -372,7 +372,7 @@ node scripts/build-derby.js
   | Power-ups | Starting Burst (500), Aura Shields (50, or 3 for 120), Combo Saver, Double-Spark Wager |
 
   Purchases need two taps. Anything you already own stays owned. Derby wins pay your bet back ×1.5.
-- **Starting balance.** New players start with 2,500 ⚡. Existing saves keep their balance. A fresh device that signs in to an account that has played takes the account's balance, so a new browser can't top up an account.
+- **Starting balance.** New players start with **50 ⚡** and earn the rest by practicing (+10 per right answer, +50 for the daily goal, +50 per chapter). Existing saves keep their balance. A fresh device that signs in to an account that has played takes the account's balance, so a new browser can't top up an account.
 - **🏆 Trophy Case** (Profile → Trophy Case, `js/badges.js`). **50 accomplishments** in six categories: Curriculum (10), Volume (10), Streaks (7), Vocab (10), Derby (7) and Shop (6).
   - **Filters:** All, Curriculum, Volume, Streaks, Vocab, Derby, Shop, each with an earned/total count.
   - **Locked badges** show a progress bar and count ("7 / 10 flawless runs"); unlocked ones show the date.
