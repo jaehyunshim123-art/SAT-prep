@@ -145,7 +145,7 @@ The **Derby** tab (`js/derby.js`) is a wager-based horse race on **grammar quest
 - **The engine is generic:** a question source plugs in (`ctx.source`), and the standalone `derby/index.html` still races on vocabulary.
 - **Betting:** bet real ⚡ Sparks (50, 100, 250 or 500) or take a Fun run.
   - The bet is taken at the gate, and a win pays it back **×1.5**.
-  - Up to **3 betting races a day**; Fun runs are unlimited.
+  - No daily limit: bet on as many races as you can afford. Fun runs are always free.
   - Leaving mid-race forfeits the bet, after a confirm tap.
 - **Field:** eight horses on a 5-step track. You are Galloping Lexicon. The seven rivals are **independent CPU players**.
   - **The race clock never pauses**: not while you read feedback, not if you switch tabs.
@@ -271,7 +271,7 @@ It plays exactly like the in-app Derby:
 - the same 55 words, engine, tactics, Focus Meter and prices. It keeps its own Focus, separate from the app.
 
 What differs in the standalone file:
-- **Its own economy:** you start with **2,500 ⚡**. Wins pay ×1.5, and there are 3 betting races a day.
+- **Its own economy:** you start with **2,500 ⚡**. Wins pay ×1.5, with no daily betting limit.
   - If your balance drops below the minimum bet, the intro offers a **250 ⚡ stable stipend** once a day.
 - **Saving:** balance, Focus, gear, Bursts and stats are saved in the browser's `localStorage` under `satwizz-derby.v1`. In private mode, or with storage blocked, the game still plays; it just doesn't save.
 - **No sign-in, no network:** Google Fonts are optional, and the file falls back to system fonts offline.

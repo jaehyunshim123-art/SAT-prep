@@ -5,7 +5,7 @@
 // Focus Elixirs and Starting Bursts for real Sparks.
 //
 //   • Bet real Sparks (50 / 100 / 250 / 500) or race for fun. The bet is taken
-//     at the gate; a win pays it back ×1.5. Up to 3 betting races a day.
+//     at the gate; a win pays it back ×1.5. No daily limit.
 //   • Eight horses, 5 steps, one race clock that never pauses. Each right
 //     answer moves you +1.
 //   • The seven rivals are independent CPU players: on their own timers they
@@ -31,7 +31,6 @@
   const RULES = Object.freeze({
     trackLength: 5,
     wagers: [50, 100, 250, 500],
-    ratedPerDay: 3,
     focusMax: 100, // Focus Meter, 0-100% (js/focus.js)
     focusRestoreStreak: 2,
   });
@@ -456,8 +455,8 @@
       return p.derby;
     };
     const touch = () => { stats().at = Date.now(); };
-    const ratedLeft = () => Math.max(0, RULES.ratedPerDay - stats().rated);
-    const canBet = (amount) => amount === 0 || (ratedLeft() > 0 && (S().sparks || 0) >= amount);
+    // Bet any amount you can afford, as often as you like (no daily cap).
+    const canBet = (amount) => amount === 0 || (S().sparks || 0) >= amount;
     const fmt = (n) => Number(n).toLocaleString();
     const payoutFor = (wager) => Math.round(wager * mode.payout);
     const myEmoji = () => (STABLE.mounts.find((m) => m.id === stats().mount) || { emoji: "🏇" }).emoji;
@@ -523,7 +522,7 @@
             <p class="muted center">${esc(src.tagline)}</p>
             ${src.unitHtml ? `<div class="derby-unit">${src.unitHtml()}</div>` : ""}
             <ol class="rule-list">
-              <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. ${RULES.ratedPerDay} betting races a day.</li>
+              <li><b>Bet before every race:</b> ${RULES.wagers.join(", ")} ⚡ or a Fun run. A win pays your bet back <b>×${mode.payout}</b>; a loss forfeits it. Bet on as many races as you like.</li>
               <li><b>The race never pauses ⏱.</b> ${esc(src.intro)} Right → you gallop +1. Wrong → you're held back.</li>
               <li><b>Seven CPU rivals race on their own.</b> Each reads a question (${(src.read || CPU.read)[0]}–${(src.read || CPU.read)[1]}s), answers at its own speed and accuracy, and moves live whether or not you answer. They race to win: trailing rivals push the pace 🔥, leaders guard 🛡️, and anyone one step out kicks for home ⚡.</li>
               <li><b>🧠 Focus (0–100%):</b> a miss costs ${FOCUS().RULES.miss}% and locks your next question for ${PENALTY.stumble}s; rushing (under ${FOCUS().RULES.derbyRushMs / 1000}s) costs ${FOCUS().RULES.rush}%. Missing Focus locks every question for up to ${PENALTY.lockMax}s while the rivals keep running, and blurs the screen. Only 2 right in a row (+${FOCUS().RULES.restore}%) or a ${STABLE.elixir.name} (${fmt(STABLE.elixir.price)} ⚡) restore it. Focus carries between races${solo ? "" : " and is the same meter as Practice"}.</li>
@@ -573,7 +572,6 @@
     function renderSetup() {
       const sparks = S().sparks || 0;
       const st = stats();
-      const left = ratedLeft();
       if (!canBet(setup.wager)) setup.wager = RULES.wagers.find(canBet) || 0;
       if (!st.bursts) setup.burst = false;
       container.innerHTML = `
@@ -594,7 +592,7 @@
                   <small>${a ? `+${fmt(payoutFor(a) - a)}` : "no bet"}</small>
                 </button>`).join("")}
             </div>
-            <p class="muted small">${left ? `${left} of ${RULES.ratedPerDay} betting races left today.` : "No betting races left today. Fun runs are unlimited!"}
+            <p class="muted small">${setup.wager ? "" : "Fun runs don't touch your Sparks."}
               ${setup.wager ? ` Your ${fmt(setup.wager)} ⚡ goes in at the gate; a win pays back ${fmt(payoutFor(setup.wager))} ⚡.` : ""}</p>
             <div class="setup-row">
               <span>Focus ${focusBar(fst().focus, false)}${focusNote(fst().focus)}</span>
