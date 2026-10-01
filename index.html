@@ -12,8 +12,19 @@
 <meta property="og:title" content="SatWizz">
 <meta property="og:description" content="Snackable SAT grammar practice with daily streaks, friend streaks and leaderboards.">
 <meta property="og:type" content="website">
-<meta name="theme-color" content="#eaeef8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d1322" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" id="theme-color" content="#0d1322">
+<script>
+// Light / dark mode before the first paint (no white flash). Dark is the
+// default; Settings → Appearance switches to Light or Match device.
+(function () {
+  var t = "dark";
+  try { t = localStorage.getItem("satwizz.theme") || "dark"; } catch (e) { /* storage blocked */ }
+  var root = document.documentElement;
+  if (t === "dark" || t === "light") root.setAttribute("data-theme", t);
+  var dark = t === "dark" || (t === "system" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.getElementById("theme-color").setAttribute("content", dark ? "#0d1322" : "#eaeef8");
+})();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">

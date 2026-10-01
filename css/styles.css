@@ -1455,8 +1455,8 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
 .fc-hint { align-self: center; color: var(--muted); font-size: 0.8rem; font-weight: 700; }
 .fc-def { font-size: 1.1rem; font-weight: 600; line-height: 1.4; }
 .fc-row { display: grid; gap: 2px; font-size: 0.92rem; line-height: 1.4; }
-.fc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.fc-actions .btn { padding-inline: 10px; white-space: nowrap; }
+.fc-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.fc-actions .btn { padding-inline: 10px; min-width: 0; flex-wrap: wrap; line-height: 1.2; text-align: center; } /* labels wrap on narrow phones instead of widening the page */
 .fc-actions .btn small { font-weight: 700; opacity: 0.85; }
 .fc-help { text-align: center; }
 @media (hover: none) { .kbd-hint { display: none; } }
@@ -1940,7 +1940,7 @@ body[data-focus="critical"] #derby-q:not(.answered) { box-shadow: 0 0 0 3px var(
 .dash-hero .label-sm, .dash-hero .muted { color: rgba(255, 255, 255, 0.85); }
 .dash-hero p { margin: 0; }
 .dash-focus { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.dash-focus .fmeter { background: rgba(255, 255, 255, 0.92); border-radius: 999px; padding: 2px 8px; color: var(--ink); }
+.dash-focus .fmeter { background: rgba(255, 255, 255, 0.92); border-radius: 999px; padding: 2px 8px; color: #16213a; } /* fixed dark text: the pill stays white in both modes */
 .dash-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
 .ch-card {
   display: grid;
@@ -2286,3 +2286,21 @@ kbd {
 @supports not (color: color-mix(in srgb, red 50%, white)) {
   .trophy.recent { animation: none; box-shadow: 0 0 0 3px var(--flame-2); }
 }
+
+/* ---------- Appearance: light / dark toggle ---------- */
+.dash-hero { position: relative; }
+.theme-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.theme-toggle:hover { background: rgba(255, 255, 255, 0.28); }
+.dash-hero .label-sm { padding-right: 44px; }
+.appearance-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }

@@ -1540,6 +1540,40 @@
 
   $("#chapter-bar").addEventListener("click", openChapters);
 
+  // ---------- Appearance: dark (default) / light / match device ----------
+  // Saved per device in localStorage "satwizz.theme"; index.html applies it
+  // before the first paint. CSS switches on <html data-theme>.
+  const THEME_KEY = "satwizz.theme";
+  const THEME_COLORS = { dark: "#0d1322", light: "#eaeef8" };
+  const systemDark = () => Boolean(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+  function getAppearance() {
+    try {
+      const t = localStorage.getItem(THEME_KEY);
+      return ["dark", "light", "system"].includes(t) ? t : "dark";
+    } catch (e) {
+      return appearanceFallback;
+    }
+  }
+  let appearanceFallback = "dark"; // when storage is blocked, remember for this visit
+  const effectiveTheme = (a = getAppearance()) => (a === "system" ? (systemDark() ? "dark" : "light") : a);
+  function applyAppearance(a = getAppearance()) {
+    const root = document.documentElement;
+    if (a === "system") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", a);
+    $("#theme-color")?.setAttribute("content", THEME_COLORS[effectiveTheme(a)]);
+  }
+  function setAppearance(a) {
+    appearanceFallback = a;
+    try { localStorage.setItem(THEME_KEY, a); } catch (e) { /* storage blocked: this visit only */ }
+    applyAppearance(a);
+    sfx.play("tap");
+    rerenderCurrent();
+  }
+  // "Match device" follows the phone or computer when it switches.
+  window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change", () => {
+    if (getAppearance() === "system") applyAppearance("system");
+  });
+
   // ---------- Dashboard (chapter select) ----------
   // One card per chapter: core progress, best test score, and three ways in:
   // Learn & practice (the feed), a 10-question practice set, and the
@@ -1579,6 +1613,7 @@
     dash.innerHTML = `
       <div class="stack dash">
         <section class="dash-hero">
+          <button class="theme-toggle" type="button" id="theme-toggle" aria-label="${effectiveTheme() === "dark" ? "Switch to light mode" : "Switch to dark mode"}" title="${effectiveTheme() === "dark" ? "Light mode" : "Dark mode"}">${effectiveTheme() === "dark" ? "☀️" : "🌙"}</button>
           <span class="label-sm">Digital SAT grammar · ${passed} of ${core.length} chapters passed</span>
           <h2>${S.name ? `Welcome back, ${esc(S.name)}` : "Your chapters"}</h2>
           <p class="muted">Learn each rule, practice, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> or better on the chapter's <b>Review for Understanding</b> to unlock the next one.</p>
@@ -1597,6 +1632,7 @@
           </article>
         </div>
       </div>`;
+    dash.querySelector("#theme-toggle").addEventListener("click", () => setAppearance(effectiveTheme() === "dark" ? "light" : "dark"));
     dash.querySelectorAll("[data-learn]").forEach((b) => b.addEventListener("click", () => {
       sfx.play("tap");
       openPractice(b.dataset.learn === REVIEW_ID ? REVIEW_ID : Number(b.dataset.learn));
@@ -2545,6 +2581,12 @@
             <div id="set-push"></div>
           </section>
           <section class="panel">
+            <h2>Appearance</h2>
+            <div class="seg appearance-seg" id="appearance-seg" role="radiogroup" aria-label="Appearance">
+              ${[["dark", "🌙", "Dark"], ["light", "☀️", "Light"], ["system", "🖥️", "Match device"]].map(([id, ico, label]) => `<button type="button" role="radio" data-theme-opt="${id}" aria-checked="${getAppearance() === id}" aria-pressed="${getAppearance() === id}"><span aria-hidden="true">${ico}</span>${label}</button>`).join("")}
+            </div>
+          </section>
+          <section class="panel">
             <h2>Daily goal</h2>
             <p class="muted">Questions per day to keep your Lock In Streak alive.</p>
             <div class="seg" id="goal-seg">${GOALS.map((g) => `<button type="button" data-g="${g}" aria-pressed="${g === S.goal}">${g} / day</button>`).join("")}</div>
@@ -2573,6 +2615,7 @@
         if (goal) celebrateGoal(goal);
         announceBadges(newBadges);
       }));
+      v.querySelectorAll("[data-theme-opt]").forEach((b) => b.addEventListener("click", () => setAppearance(b.dataset.themeOpt)));
       $("#open-help", v).addEventListener("click", () => openHelp());
       $("#open-feedback", v).addEventListener("click", () => openHelp("feedback"));
       $("#reset-btn", v).addEventListener("click", () => {
@@ -3074,6 +3117,7 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { focusTick(); renderHud(); } });
 
   // ---------- Boot ----------
+  applyAppearance();
   sfx.setMuted(S.muted);
   sfx.setHaptics(S.haptics);
   captureInvite();
