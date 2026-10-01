@@ -119,6 +119,23 @@ The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
 - **Practice and sync:** answers count toward the daily goal (+5 XP each). Stats, Focus, owned gear and Bursts sync in `vocab_progress.derby`.
 - **Question checks:** `scripts/validate-content.js` builds 11,000 generated questions and checks each has 4 distinct choices and one defensible answer. Words close in meaning, or near-opposites, are never used as each other's distractors.
 
+## Single-file build (`dist/index.html`)
+
+The **whole SatWizz app** is also available as **one self-contained HTML file**: Practice with all 190 questions, the Vocab Vault (flashcards, sprints, Derby), the Leaderboard tab, the Shop and Profile, with every style, script and icon inline.
+- **Run locally:** double-click `dist/index.html`.
+- **Host it:** upload it to any static host.
+
+Progress saves in `localStorage`, as in the regular build.
+
+```sh
+node scripts/build-single.js   # rebuild after changing index.html, css/ or js/
+```
+
+It reads the real `index.html` and inlines everything that loads locally (24 files). Three things stay outside the file:
+- **Fonts:** Google Fonts are optional, and system fonts are used offline.
+- **Accounts:** the **Supabase client** loads from its CDN. To enable accounts, cloud sync, leaderboards and friends, fill in `js/config.js` before building, as in the regular setup. Without keys, the app runs in guest mode.
+- **Push:** **Lock In push alerts** need `sw.js` uploaded next to `index.html`, because browsers require a service worker to be its own file. In-app Lock In banners work without it. The web app manifest is left out (installing as an app needs separate files).
+
 ## Standalone Derby (`derby/index.html`)
 
 The SAT Vocabulary Derby also ships as **one self-contained HTML file**, with all HTML, CSS and JavaScript inline. Use it in either of two ways:
@@ -223,7 +240,9 @@ js/onboarding.js            sign-up / log-in modal
 js/social-view.js           Leaderboard tab: leaderboards, friend streaks, requests, invites
 js/app.js                   chapter feed, drawers, streaks, shop, profile, demo mode
 scripts/validate-content.js content checks for the curriculum and vocab
+scripts/build-single.js     builds the whole app as one file: dist/index.html
 scripts/build-derby.js      builds the standalone derby/index.html
+dist/index.html             the whole app in a single file (generated)
 derby/index.html            standalone SAT Vocabulary Derby (generated, single file)
 supabase/schema.sql         tables, row-level security, social functions
 supabase/functions/lock-in  Edge Function that sends Lock In pushes

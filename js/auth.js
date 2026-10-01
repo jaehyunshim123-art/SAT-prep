@@ -537,7 +537,13 @@
     if (state === "not-configured") throw new Error("Push alerts aren't set up on this copy of SatWizz yet.");
     const permission = await Notification.requestPermission();
     if (permission !== "granted") throw new Error("Notifications are blocked. Allow them in your browser settings to get Lock In alerts.");
-    const reg = await navigator.serviceWorker.register("sw.js");
+    let reg;
+    try {
+      reg = await navigator.serviceWorker.register("sw.js");
+    } catch (e) {
+      // The single-file build (dist/index.html) has no sw.js beside it.
+      throw new Error("Push alerts need the sw.js file next to this page. Upload sw.js alongside index.html to turn them on.");
+    }
     await navigator.serviceWorker.ready;
     const sub = (await reg.pushManager.getSubscription()) ||
       (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(cfg.vapidPublicKey) }));
