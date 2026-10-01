@@ -13,7 +13,11 @@ const repo = require("path").resolve(__dirname, "..");
 global.window = {};
 require(`${repo}/js/themes.js`);
 require(`${repo}/js/questions.js`);
-for (let i = 1; i <= 10; i++) require(`${repo}/js/curriculum/ch${i}.js`);
+require(`${repo}/clause-derby/src/bank.js`);
+for (let i = 1; i <= 7; i++) require(`${repo}/clause-derby/src/ch${i}.js`);
+require(`${repo}/js/curriculum/clause.js`);
+for (let i = 1; i <= 9; i++) require(`${repo}/js/curriculum/ch${i}.js`);
+require(`${repo}/js/focus.js`);
 require(`${repo}/js/derby.js`);
 require(`${repo}/js/vocab.js`);
 const SW = window.SatWizz;
@@ -50,7 +54,10 @@ for (const ch of SW.chapters) {
   if (!ch.questions.length) { console.log(`note: chapter ${ch.id} has no questions yet (Phase 2)`); continue; }
   const pauseText = [ch.pause.summary, ch.pause.example, ...ch.pause.rules, ...ch.pause.patterns.map((p) => p.f)].join(" ");
   if (pauseText.replace(TOKEN, "").includes("{{")) bad.push(`ch${ch.id} pause: unknown placeholder`);
-  if (!ch.bonus && ch.questions.length !== 20) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want 20)`);
+  // Core chapters: 25 pop-culture questions (with a rule line) + 20 extra practice.
+  if (!ch.bonus && ch.questions.length !== 45) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want 45)`);
+  if (!ch.bonus && ch.questions.slice(0, 25).some((q) => !q.rule)) bad.push(`ch${ch.id}: pop-culture set should lead`);
+  if (!ch.pause.patterns.length || !ch.pause.example) bad.push(`ch${ch.id}: lesson needs patterns and an example`);
   for (const q of ch.questions) {
     checkCommon(q.id, q, []);
     if (q.shortcut) {

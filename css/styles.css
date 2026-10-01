@@ -240,7 +240,7 @@ button.avatar:hover { border-color: var(--volt); }
   font-variant-numeric: tabular-nums;
 }
 
-/* Focus Shields + combo row above the feed */
+/* Focus + combo row above the feed */
 .focusbar {
   display: flex;
   align-items: center;
@@ -248,9 +248,6 @@ button.avatar:hover { border-color: var(--volt); }
   padding-block: 0 8px;
   min-height: 36px;
 }
-.shields { display: inline-flex; gap: 2px; font-size: 1.15rem; line-height: 1; }
-.shield { transition: filter 0.3s ease, opacity 0.3s ease; }
-.shield.lost { filter: grayscale(1); opacity: 0.3; }
 .focusbar .combo {
   margin-left: auto;
   padding: 3px 10px;
@@ -1633,8 +1630,6 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
 .field-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .field-list li { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; align-items: center; }
 .field-list li .muted { grid-column: 2; }
-.focus-bar { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 800; letter-spacing: 0.08em; color: var(--volt); white-space: nowrap; }
-.focus-bar.spooked { color: var(--bad); }
 .bad-text { color: var(--bad); }
 .focus-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 8px 2px 0; }
 .focus-row .muted { flex: 1 1 10rem; }
@@ -1697,7 +1692,6 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
 }
 @media (max-width: 420px) {
   .hud { gap: 6px; }
-  #hud-xp { display: none; } /* XP stays visible under Streak → Records */
   .combo-word { display: none; }
 }
 @media (max-width: 420px) {
@@ -1715,3 +1709,97 @@ u.target { text-decoration-thickness: 2px; text-underline-offset: 3px; font-weig
   .pill { padding: 3px 6px; }
   .acct { padding: 0 7px; }
 }
+
+/* ---------- Focus Meter (0-100%, js/focus.js) ---------- */
+.fmeter { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; vertical-align: middle; }
+.fmeter-bar { display: inline-block; width: 46px; height: 7px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.fmeter-bar i { display: block; height: 100%; border-radius: inherit; background: var(--good); transition: width 0.4s ease, background 0.3s ease; }
+.fmeter.low .fmeter-bar i { background: var(--flame); }
+.fmeter.critical .fmeter-bar i { background: var(--bad); }
+.fmeter.low .fmeter-num { color: var(--flame); }
+.fmeter.critical .fmeter-num { color: var(--bad); }
+.pill.focus-pill { cursor: pointer; padding-inline: 8px; }
+.pill.focus-pill .fmeter-bar { width: 34px; }
+.pill.focus-pill.critical { border-color: var(--bad); }
+.pill.focus-pill.low { border-color: var(--flame); }
+.focus-hint { margin-right: auto; }
+@media (max-width: 540px) {
+  .pill.focus-pill .fmeter-bar { display: none; }
+  .pill.focus-pill b { display: none; }
+}
+/* Header fit: Save becomes a cloud icon, then the brand drops "Sat". */
+.brand .b-pre { font-weight: inherit; }
+.acct-short { display: none; }
+@media (max-width: 440px) {
+  .acct { padding: 0 6px; }
+  .acct-long { display: none; }
+  .acct-short { display: inline; }
+  .brand { font-size: 1.1rem; }
+}
+@media (max-width: 360px) {
+  .brand .b-pre { display: none; }
+  .hud { gap: 4px; }
+  .pill { padding: 3px 6px; font-size: 0.85rem; }
+}
+@media (max-width: 340px) {
+  .hud { gap: 3px; }
+  .brand { font-size: 0.95rem; }
+  .hud .pill { padding: 2px 5px; font-size: 0.8rem; gap: 2px; }
+  .hud .avatar.sm { width: 28px; height: 28px; font-size: 0.95rem; }
+  .acct { height: 28px; min-width: 28px; padding: 0 4px; }
+}
+
+/* Low Focus: open questions blur (answered cards and explanations never do). */
+.card[data-qid]:not(.answered) .bb-passage,
+.card[data-qid]:not(.answered) .choices,
+#derby-q:not(.answered) .bb-passage,
+#derby-q:not(.answered) .choices { transition: filter 0.4s ease; }
+body[data-focus="low"] .card[data-qid]:not(.answered) .bb-passage,
+body[data-focus="low"] .card[data-qid]:not(.answered) .choices,
+body[data-focus="low"] #derby-q:not(.answered) .bb-passage,
+body[data-focus="low"] #derby-q:not(.answered) .choices { filter: blur(1px); }
+body[data-focus="critical"] .card[data-qid]:not(.answered) .bb-passage,
+body[data-focus="critical"] .card[data-qid]:not(.answered) .choices,
+body[data-focus="critical"] #derby-q:not(.answered) .bb-passage,
+body[data-focus="critical"] #derby-q:not(.answered) .choices { filter: blur(2px); }
+.focus-shake { animation: focus-shake 0.5s ease; }
+@keyframes focus-shake {
+  15%, 55% { transform: translateX(-7px); }
+  35%, 75% { transform: translateX(7px); }
+  90% { transform: translateX(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No blur or shake: a desaturated tint says the same thing. */
+  body[data-focus] .card[data-qid]:not(.answered) .bb-passage,
+  body[data-focus] .card[data-qid]:not(.answered) .choices,
+  body[data-focus] #derby-q:not(.answered) .bb-passage,
+  body[data-focus] #derby-q:not(.answered) .choices { filter: none; }
+  body[data-focus="low"] .card[data-qid]:not(.answered) .bb-passage,
+  body[data-focus="low"] #derby-q:not(.answered) .bb-passage { filter: saturate(0.4); }
+  body[data-focus="critical"] .card[data-qid]:not(.answered) .bb-passage,
+  body[data-focus="critical"] #derby-q:not(.answered) .bb-passage { filter: grayscale(1) opacity(0.8); }
+  .focus-shake { animation: none; }
+}
+
+/* View transitions between tabs */
+.view-in { animation: view-in 0.22s ease; }
+@keyframes view-in { from { opacity: 0; } } /* opacity only: a transform would briefly overflow the page */
+
+/* Profile: stats row, Leaderboard & Friends entry; ranks sub-header */
+.you-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; text-align: center; }
+.you-stats b { display: block; font-family: var(--font-display); font-size: 1.05rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.you-stats span { font-size: 0.72rem; color: var(--muted); }
+.nav-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.nav-row:hover { border-color: var(--volt); }
+.subnav { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 4px 8px; }
+
+/* High-Barrier Shop */
+.shop-tier h2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.price-tag { font-size: 0.85rem; padding: 2px 10px; border-radius: 999px; color: var(--spark); background: var(--spark-bg); font-variant-numeric: tabular-nums; }
+.silk-swatch { border-radius: 10px; background: color-mix(in srgb, var(--silk, var(--volt)) 28%, transparent); }
+.shop-info .fmeter { margin-top: 4px; }
+
+/* Vault: card status chips and toggles; rule line in explanations */
+.fc-flag.ok { color: var(--good); background: var(--good-bg); }
+.fc-toggle[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--volt); }
+.rule-line { font-size: 0.9rem; padding: 8px 10px; border-left: 3px solid var(--volt); background: var(--surface-2); border-radius: 8px; margin-block: 8px; }

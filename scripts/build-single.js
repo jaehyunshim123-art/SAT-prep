@@ -37,7 +37,7 @@ html = html.replace(/<link rel="stylesheet" href="(css\/[^"]+)">/g, (m, href) =>
 });
 
 // Local scripts → inline <script>, same order. CDN scripts stay as they are.
-html = html.replace(/<script src="(js\/[^"]+)"><\/script>/g, (m, src) => {
+html = html.replace(/<script src="((?:js|clause-derby\/src)\/[^"]+)"><\/script>/g, (m, src) => {
   inlined.push(src);
   return `<script>\n/* ===== ${src} ===== */\n${safeScript(read(src))}\n</script>`;
 });

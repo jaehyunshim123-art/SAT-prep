@@ -228,7 +228,7 @@
   // - XP and best streak keep the higher value; the current streak comes from
   //   whichever side met its daily goal more recently.
   // - Unlocked and completed chapters, themes, badges and avatars are combined.
-  // - Focus Shields are per session and never synced.
+  // - The Focus Meter (0-100%) stays on this device and is never synced.
   // - Sparks, Combo Savers and the wager are spendable, so taking the max would undo
   //   purchases. If this device last synced with the same account, the newer
   //   side wins. Otherwise (guest progress, another account) keep the higher
@@ -273,7 +273,13 @@
             out.comboSavers = clampInt(p.combo_savers, 0, 3);
           }
         } else {
-          out.sparks = Math.max(local.sparks || 0, clampInt(p.sparks, 0, 1e9));
+          // A fresh device (nothing played yet, just the 2,500 ⚡ starting
+          // bankroll) signing in to an account that has played takes the
+          // account's balance, so a new browser can't top an account up.
+          const pristine = !(local.xp > 0) && !(local.totalCorrect > 0) && !(local.vocab && local.vocab.derby && local.vocab.derby.races > 0);
+          out.sparks = pristine && (p.total_xp || 0) > 0
+            ? clampInt(p.sparks, 0, 1e9)
+            : Math.max(local.sparks || 0, clampInt(p.sparks, 0, 1e9));
           out.comboSavers = Math.max(local.comboSavers || 0, clampInt(p.combo_savers, 0, 3));
           if (!local.wager) out.wager = cleanWager(p.spark_wager);
         }

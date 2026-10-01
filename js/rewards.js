@@ -1,4 +1,4 @@
-// SatWizz rewards: Sparks economy, Wizz Shop, Focus Shields, Aura Shields,
+// SatWizz rewards: Sparks economy, High-Barrier Shop, Focus Elixir, Aura Shields,
 // the Double-Spark Wager and achievement titles.
 // Pure state logic with no DOM. Each function takes the app state, changes it,
 // and returns what happened so the UI can react.
@@ -13,12 +13,12 @@
     comboEvery: 3,
     dailyGoalSparks: 50,
     chapterSparks: 50, // first completion of each chapter
-    maxFocus: 3,
+    startSparks: 2500, // new players' bankroll (Derby wagers, High-Barrier Shop)
     maxAura: 5,
     auraPrice: 50,
     auraBundleSize: 3,
     auraBundlePrice: 120,
-    focusRefillPrice: 30,
+    elixirPrice: 500, // Focus Elixir: Focus back to 100% (js/focus.js)
     comboSaverPrice: 40,
     maxComboSavers: 3,
     comboSaverMin: 3, // only protects combos of 3 or more
@@ -133,23 +133,14 @@
     return { lost: true, stake };
   }
 
-  // ---------- Focus Shields ----------
-  function loseFocus(state) {
-    state.focus = Math.max(0, state.focus - 1);
-    return state.focus;
-  }
-
-  function restoreFocus(state) {
-    state.focus = RULES.maxFocus;
-  }
-
-  // Skip the Focus Break review by paying Sparks.
-  function buyFocusRefill(state) {
-    if (state.focus >= RULES.maxFocus) return fail("full");
-    if (state.sparks < RULES.focusRefillPrice) return fail("short", { need: RULES.focusRefillPrice - state.sparks });
-    state.sparks -= RULES.focusRefillPrice;
-    restoreFocus(state);
-    return { ok: true, spent: RULES.focusRefillPrice };
+  // ---------- Focus Elixir ----------
+  // Refills the Focus Meter (js/focus.js) to 100%.
+  function buyElixir(state) {
+    if (state.focus >= SW.focus.RULES.max) return fail("full");
+    if (state.sparks < RULES.elixirPrice) return fail("short", { need: RULES.elixirPrice - state.sparks });
+    state.sparks -= RULES.elixirPrice;
+    SW.focus.refill(state);
+    return { ok: true, spent: RULES.elixirPrice };
   }
 
   // ---------- Combo Savers ----------
@@ -250,7 +241,7 @@
     buyAura,
     buyAuraBundle,
     earnAuraForStreak,
-    buyFocusRefill,
+    buyElixir,
     buyComboSaver,
     useComboSaver,
     avatarById,
@@ -260,8 +251,6 @@
     wagerProgress,
     settleWager,
     loseWager,
-    loseFocus,
-    restoreFocus,
     trackFastRun,
     BADGES,
     badgeById,

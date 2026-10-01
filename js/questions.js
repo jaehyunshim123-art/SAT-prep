@@ -1,7 +1,7 @@
 // SatWizz curriculum framework.
 //
 // Loaded BEFORE the chapter files. It defines:
-//   • CURRICULUM_PLAN: the 9-chapter sequence (plus an optional bonus chapter)
+//   • CURRICULUM_PLAN: the 7-chapter sequence (plus two bonus chapters)
 //   • STEMS: the official Digital SAT question stems
 //   • SatWizz.curriculum.addChapter(): how a chapter file registers itself
 //   • SatWizz.curriculum.build(): called once by the app after every chapter
@@ -51,19 +51,28 @@
 
   const SW = (window.SatWizz = window.SatWizz || {});
 
-  // The 9-chapter sequence. Chapters unlock in this order.
+  // The 7-chapter sequence, then two bonus chapters. Chapters unlock in this order.
+  // Each core chapter leads with its pop-culture set (clause-derby/src/chN.js,
+  // registered by js/curriculum/clause.js), then the extra practice in
+  // js/curriculum/chN.js.
   SW.CURRICULUM_PLAN = [
-    { id: 1, short: "Complete Sentences", title: "Identifying Independent Clauses" },
-    { id: 2, short: "Connecting Clauses", title: "Connecting Independent Clauses" },
-    { id: 3, short: "Subject-Verb Agreement", title: "Subject-Verb Agreement" },
-    { id: 4, short: "Verb vs. Non-Verb", title: "Verb vs. Non-Verb Identification" },
-    { id: 5, short: "Verb Tenses", title: "Verb Tenses" },
-    { id: 6, short: "Transitions", title: "Transitions" },
-    { id: 7, short: "Semicolons, Colons, Dashes", title: "Punctuation Fundamentals: Semicolons, Colons, Dashes" },
-    { id: 8, short: "Appositives", title: "Appositives & Non-Essential Clauses" },
-    { id: 9, short: "Modifiers & Parallelism", title: "Modifiers & Parallelism" },
-    { id: 10, short: "Pronouns & Possessives", title: "Bonus: Pronouns & Possessives", bonus: true },
+    { id: 1, short: "Clause Connectors", title: "Independent Clause Connectors & Sentence Boundaries" },
+    { id: 2, short: "Subject-Verb Agreement", title: "Subject-Verb Agreement" },
+    { id: 3, short: "Verb vs. Non-Verb", title: "Verb vs. Non-Verb Identification (Appositives)" },
+    { id: 4, short: "Verb Tenses", title: "Verb Tenses & Aspect" },
+    { id: 5, short: "Logical Transitions", title: "Logical Transitions" },
+    { id: 6, short: "Semicolons, Dashes, Colons", title: "Punctuation Fundamentals (Semicolon, Dash, Colon)" },
+    { id: 7, short: "Appositives", title: "Appositives & Non-Essential Clauses" },
+    { id: 8, short: "Modifiers & Parallelism", title: "Bonus: Modifiers & Parallelism", bonus: true },
+    { id: 9, short: "Pronouns & Possessives", title: "Bonus: Pronouns & Possessives", bonus: true },
   ];
+
+  // Saves from before the 7-chapter curriculum (SAVE_VERSION < 3) used ids 1-10:
+  // old → new chapter id. Old chapter 1 (complete sentences) was retired.
+  SW.LEGACY_CHAPTER_MAP = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9 };
+
+  // Share of a chapter's questions you need right to unlock the next one.
+  SW.UNLOCK_SHARE = 0.6;
 
   // Official Digital SAT question stems. {word} is filled for vocab "meaning" items.
   SW.STEMS = {
@@ -87,10 +96,23 @@
   const registered = [];
 
   SW.curriculum = {
+    // A chapter can register more than once (pop-culture set, then extra
+    // practice): questions are appended, and the first registration's title
+    // and lesson win. Lesson patterns/example missing from it are filled in.
     addChapter(def) {
       const plan = SW.CURRICULUM_PLAN.find((p) => p.id === def.id);
       if (!plan) console.warn(`SatWizz: chapter ${def.id} isn't in CURRICULUM_PLAN`);
-      registered.push({ ...plan, ...def, questions: def.questions || [] });
+      const prev = registered.find((c) => c.id === def.id);
+      if (!prev) {
+        registered.push({ ...def, ...plan, questions: (def.questions || []).slice() });
+        return;
+      }
+      prev.questions.push(...(def.questions || []));
+      if (!prev.pause) prev.pause = def.pause;
+      else if (def.pause) {
+        if (!prev.pause.patterns || !prev.pause.patterns.length) prev.pause.patterns = def.pause.patterns || [];
+        if (!prev.pause.example) prev.pause.example = def.pause.example || "";
+      }
     },
 
     // Orders chapters and exposes SatWizz.chapters / SatWizz.questions.

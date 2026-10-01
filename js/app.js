@@ -10,7 +10,7 @@
   const chapterById = SW.chapterById;
   const CORE_CHAPTERS = SW.CORE_CHAPTERS;
   const REVIEW_ID = "review"; // mixed review of completed chapters
-  const SAVE_VERSION = 2;
+  const SAVE_VERSION = 3; // 3: 7-chapter curriculum, Focus 0-100%
   const auth = SW.auth;
   const onboarding = SW.onboarding;
   const sfx = SW.sfx;
@@ -21,7 +21,8 @@
   const LEGACY_STORE_KEY = "brainblast-sat.v1"; // pre-rebrand saves
   const SIGNUP_PROMPT_COMBO = 3;
   const GOALS = [5, 10, 20];
-  const REVIEW_LENGTH = 2;
+  const FOCUS = SW.focus; // the 0-100% Focus Meter (js/focus.js)
+  const REVIEW_LENGTH = FOCUS.RULES.restoreStreak; // Focus Break: this many right in a row
 
   // ---------- State ----------
   const DEFAULTS = {
@@ -56,8 +57,9 @@
     completedChapters: [],
     chapterCorrect: {}, // chapterId -> question ids answered correctly
     // gamification
-    sparks: 0,
-    focus: RULES.maxFocus, // refilled at the start of every session
+    sparks: RULES.startSparks, // new players start with 2,500 ⚡
+    focus: FOCUS.RULES.max, // Focus Meter 0-100%, kept between sessions (js/focus.js)
+    focusStreak: 0, // right answers in a row toward the next +25%
     unlockedThemes: [],
     badges: [],
     title: null, // equipped badge id
@@ -97,7 +99,23 @@
     if (typeof saved.totalCorrect !== "number") {
       s.totalCorrect = Object.values(s.skills || {}).reduce((n, k) => n + (k.right || 0), 0);
     }
-    // Saves from before the curriculum: drop old question ids and filters.
+    // Saves from before the 7-chapter curriculum: renumber chapters
+    // (old 2-10 → 1-9; old chapter 1 was retired) and turn the 3 Focus
+    // Shields into a full 0-100% Focus Meter.
+    if ((saved.v || 1) < 3) {
+      const map = (id) => SW.LEGACY_CHAPTER_MAP[id];
+      const ids = (list) => (Array.isArray(list) ? list.map(map).filter(Boolean) : []);
+      s.unlockedChapters = ids(saved.unlockedChapters);
+      s.completedChapters = ids(saved.completedChapters);
+      const cc = {};
+      for (const [k, v] of Object.entries(saved.chapterCorrect || {})) if (map(Number(k))) cc[map(Number(k))] = v;
+      s.chapterCorrect = cc;
+      s.chapterId = saved.chapterId === REVIEW_ID ? REVIEW_ID : map(saved.chapterId) || 1;
+      s.focus = FOCUS.RULES.max;
+      s.focusStreak = 0;
+    }
+    s.focus = FOCUS.clamp(s.focus);
+    // Drop question ids that no longer exist and old filters.
     s.missed = s.missed.filter((id) => BY_ID[id]);
     delete s.filter;
     delete s.focusDay;
@@ -108,11 +126,11 @@
     if (s.chapterId !== REVIEW_ID && !s.unlockedChapters.includes(s.chapterId)) s.chapterId = 1;
     // Packs that used to be free stay free for anyone who played before v2,
     // and anyone already using a cast that became paid keeps it.
-    if ((saved.v || 1) < SAVE_VERSION) {
+    if ((saved.v || 1) < 2) {
       const played = (saved.xp || 0) > 0 || (saved.totalCorrect || 0) > 0 || Object.keys(saved.days || {}).length > 0;
       if (played) SW.legacyFreeThemes.forEach((id) => { if (!s.unlockedThemes.includes(id)) s.unlockedThemes.push(id); });
-      s.v = SAVE_VERSION;
     }
+    s.v = SAVE_VERSION;
     const current = THEMES.find((t) => t.id === s.themeId);
     if (current && current.price && !s.unlockedThemes.includes(current.id)) s.unlockedThemes.push(current.id);
     return s;
@@ -219,11 +237,11 @@
       type: "button",
       "data-id": t.id,
       "aria-pressed": String(t.id === S.themeId),
-    }, `<b>${esc(t.label)}</b><span>${locked ? `🔒 ${t.price} ⚡ in the Wizz Shop` : esc(sub)}</span>`);
+    }, `<b>${esc(t.label)}</b><span>${locked ? `🔒 ${fmt(t.price)} ⚡ in the High-Barrier Shop` : esc(sub)}</span>`);
     b.addEventListener("click", () => {
       if (locked) {
         show("shop");
-        toast(`Unlock ${t.label} in the Wizz Shop for ${t.price} ⚡`);
+        toast(`Unlock ${t.label} in the High-Barrier Shop for ${fmt(t.price)} ⚡`);
         return;
       }
       onPick(t);
@@ -264,8 +282,11 @@
     if (ch) {
       const done = new Set(correctIn(ch.id));
       // In progress: only what's left. Replay of a finished chapter: everything.
-      const ids = ch.questions.map((q) => q.id).filter((id) => isComplete(ch.id) || !done.has(id));
-      queue = shuffle(ids).map((id) => ({ id, isRetry: false }));
+      // The pop-culture set (questions with a rule line) comes first, then the
+      // extra practice, each shuffled.
+      const left = ch.questions.filter((q) => isComplete(ch.id) || !done.has(q.id));
+      queue = [...shuffle(left.filter((q) => q.rule)), ...shuffle(left.filter((q) => !q.rule))]
+        .map((q) => ({ id: q.id, isRetry: false }));
     } else {
       queue = [];
     }
@@ -312,12 +333,12 @@
   const app = $("#app");
   app.innerHTML = `
     <header class="hud">
-      <div class="brand" id="brand" aria-label="SatWizz">Sat<span>Wizz</span><em class="demo-badge" id="demo-badge" hidden>DEMO</em></div>
-      <span class="pill flame" id="hud-streak" title="Day streak"></span>
-      <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the Wizz Shop"></button>
-      <span class="pill" id="hud-xp" title="Total XP"></span>
-      <button class="avatar sm" id="hud-avatar" type="button"></button>
-      <button class="acct" id="hud-account" type="button">Save</button>
+      <div class="brand" id="brand" aria-label="SatWizz"><b class="b-pre">Sat</b><span>Wizz</span><em class="demo-badge" id="demo-badge" hidden>DEMO</em></div>
+      <button class="pill flame" id="hud-streak" type="button" title="Lock In Streak: days in a row you met your daily goal"></button>
+      <button class="pill sparks" id="hud-sparks" type="button" title="Sparks. Spend them in the High-Barrier Shop"></button>
+      <button class="pill focus-pill" id="hud-focus" type="button" title="Focus Meter"></button>
+      <button class="avatar sm" id="hud-avatar" type="button" aria-label="Profile, leaderboard and friends"></button>
+      <button class="acct" id="hud-account" type="button"><span class="acct-long">Save</span><span class="acct-short" aria-hidden="true">☁️</span></button>
     </header>
     <div>
       <div class="goalbar" aria-hidden="true"><i id="goal-fill"></i></div>
@@ -330,20 +351,25 @@
     </div>
     <main class="view feed" id="view-feed" aria-live="polite"></main>
     <main class="view scrollview" id="view-vocab" hidden></main>
-    <main class="view scrollview ranks-view" id="view-ranks" hidden></main>
+    <main class="view scrollview" id="view-derby" hidden></main>
     <main class="view scrollview" id="view-shop" hidden></main>
     <main class="view scrollview" id="view-you" hidden></main>
-    <nav class="tabs" role="tablist">
+    <main class="view scrollview ranks-view" id="view-ranks" hidden>
+      <div class="subnav"><button class="linkbtn" type="button" id="ranks-back">← Profile</button><span class="label-sm">Leaderboard &amp; Friends</span></div>
+      <div id="ranks-mount"></div>
+    </main>
+    <nav class="tabs" role="tablist" aria-label="SatWizz">
       <button class="tab" role="tab" data-view="feed" aria-selected="true"><span class="ico" aria-hidden="true">✏️</span>Practice</button>
-      <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vocab</button>
-      <button class="tab" role="tab" data-view="ranks" aria-selected="false" aria-label="Leaderboard"><span class="ico" aria-hidden="true">🏆</span><span class="lbl-long" aria-hidden="true">Leaderboard</span><span class="lbl-short" aria-hidden="true">Leaders</span></button>
+      <button class="tab" role="tab" data-view="vocab" aria-selected="false"><span class="ico" aria-hidden="true">📚</span>Vault</button>
+      <button class="tab" role="tab" data-view="derby" aria-selected="false"><span class="ico" aria-hidden="true">🐎</span>Derby</button>
       <button class="tab" role="tab" data-view="shop" aria-selected="false"><span class="ico" aria-hidden="true">🛍️</span>Shop</button>
-      <button class="tab" role="tab" data-view="you" aria-selected="false"><span class="ico" aria-hidden="true">🎭</span>Profile</button>
     </nav>
     <footer class="disclaimer">SatWizz is an independent practice tool and is not affiliated with or endorsed by the College Board. Names in practice sentences are used for fun and don't imply any endorsement or affiliation.</footer>`;
 
   const feed = $("#view-feed");
-  const VIEWS = ["feed", "vocab", "ranks", "shop", "you"];
+  // Four tabs (Practice, Vault, Derby, Shop). Profile opens from the header
+  // avatar, and Leaderboard & Friends from Profile.
+  const VIEWS = ["feed", "vocab", "derby", "shop", "you", "ranks"];
   let currentView = "feed";
   let streakTab = "streak"; // Profile's streak section: "streak" or "achievements"
 
@@ -356,13 +382,32 @@
   };
   $("#hud-avatar").addEventListener("click", openProfile);
   $("#hud-streak").addEventListener("click", openProfile); // streak details live in Profile
+  $("#hud-focus").addEventListener("click", () => {
+    toast(S.focus >= FOCUS.RULES.max
+      ? "🧠 Focus 100%. A miss costs 25%, rushing (under 3s) 10%."
+      : `🧠 Focus ${S.focus}%. Get 2 right in a row for +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2), or buy a Focus Elixir in the Shop.`);
+  });
+  $("#ranks-back").addEventListener("click", () => show("you"));
+  const openRanks = () => show("ranks");
 
   function show(view) {
+    const changed = view !== currentView;
     currentView = view;
     app.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.view === view)));
     for (const v of VIEWS) $(`#view-${v}`).hidden = v !== view;
     $("#feed-tools").hidden = view !== "feed";
+    if (changed && !reducedMotion()) {
+      const el = $(`#view-${view}`);
+      el.classList.remove("view-in");
+      void el.offsetWidth;
+      el.classList.add("view-in");
+    }
     if (view === "vocab") vocab.render();
+    if (view === "derby") {
+      if (!derby.active()) derby.open();
+      else if (derby.racing()) derby.sync();
+      else derby.render();
+    }
     if (view === "ranks") ranks.render();
     if (view === "shop") renderShop();
     if (view === "you") renderYou();
@@ -370,6 +415,7 @@
 
   function rerenderCurrent() {
     if (currentView === "vocab" && !vocab.busy()) vocab.render();
+    if (currentView === "derby" && !derby.racing()) derby.render();
     if (currentView === "ranks") ranks.render();
     if (currentView === "shop") renderShop();
     if (currentView === "you") renderYou();
@@ -389,11 +435,33 @@
     earn: (n) => rewards.earn(S, n),
     recordAnswer: (correct) => recordVocabAnswer(correct),
     renderHud: (bump) => renderHud(bump),
+    openDerby: () => show("derby"),
+  });
+
+  // The Vocab Derby has its own tab (js/derby.js). It shares the app's Focus
+  // Meter, so a rough race carries into Practice and the other way round.
+  const derby = SW.derby.mount({
+    container: $("#view-derby"),
+    tab: true,
+    getState: () => S,
+    save: () => save(),
+    esc,
+    fill: (text, cast, mark) => fill(text, cast || castOf(), mark),
+    todayKey: () => todayKey(),
+    sfx,
+    toast: (m) => toast(m),
+    celebrate: (...a) => celebrate(...a),
+    earn: (n) => rewards.earn(S, n),
+    recordAnswer: (correct) => recordVocabAnswer(correct),
+    renderHud: (bump) => renderHud(bump),
+    focusState: () => S,
+    shake: () => shake(),
+    onExit: () => derby.open(),
   });
 
   // Leaderboards & friends live in their own module (js/social-view.js).
   const ranks = SW.socialView.mount({
-    container: $("#view-ranks"),
+    container: $("#ranks-mount"),
     getState: () => S,
     save: () => save(false),
     esc,
@@ -425,7 +493,7 @@
       S.demo = true;
       S.unlockedChapters = CHAPTERS.map((c) => c.id);
       S.sparks = 99999;
-      S.focus = RULES.maxFocus;
+      FOCUS.refill(S);
       save(false);
       toast("Demo Mode on: all chapters unlocked and Sparks maxed. Tap the logo 5 times to exit.");
     } else {
@@ -433,7 +501,6 @@
       try { restored = JSON.parse(localStorage.getItem(DEMO_BACKUP_KEY) || "null"); } catch (e) { /* ignore */ }
       S = restored ? normalize(restored) : { ...S, demo: false };
       S.demo = false;
-      S.focus = RULES.maxFocus;
       try { localStorage.removeItem(DEMO_BACKUP_KEY); } catch (e) { /* ignore */ }
       save(false);
       toast("Demo Mode off. Your real progress is back.");
@@ -446,6 +513,11 @@
   }
 
   // ---------- HUD ----------
+  // A miss at critical Focus (under 25%) shakes the screen (not with reduced motion).
+  function shake() {
+    if (!reducedMotion()) FOCUS.shake(app);
+  }
+
   function bumpEl(el) {
     el.classList.remove("bump");
     void el.offsetWidth;
@@ -455,6 +527,7 @@
   // 12,345 → "12.3K" so big balances fit the header on phones.
   const compactFmt = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
   const compact = (n) => (n >= 10000 ? compactFmt.format(n) : String(n));
+  const fmt = (n) => Number(n || 0).toLocaleString("en-US");
 
   // bump: list of "streak" | "sparks"
   function renderHud(bump = []) {
@@ -463,8 +536,13 @@
     st.innerHTML = `🔥 ${S.streak}${atRisk() ? ' <span class="risk" title="Streak at risk">⌛</span>' : ""}`;
     st.classList.toggle("cold", S.streak === 0 || atRisk());
     $("#hud-sparks").textContent = `⚡ ${compact(S.sparks)}`;
-    $("#hud-sparks").setAttribute("aria-label", `${S.sparks} Sparks. Open the Wizz Shop`);
-    $("#hud-xp").textContent = `${S.xp} XP`;
+    $("#hud-sparks").setAttribute("aria-label", `${S.sparks} Sparks. Open the High-Barrier Shop`);
+    st.setAttribute("aria-label", `Lock In Streak: ${S.streak} day${S.streak === 1 ? "" : "s"}${atRisk() ? ", at risk" : ""}`);
+    const fp = $("#hud-focus");
+    fp.innerHTML = FOCUS.meterHtml(S.focus);
+    fp.className = `pill focus-pill ${FOCUS.level(S.focus)}`;
+    fp.setAttribute("aria-label", `Focus ${S.focus}%`);
+    FOCUS.paint(S.focus); // <body data-focus>: low-Focus blur
     $("#demo-badge").hidden = !S.demo;
     renderAccountButton();
     renderFocus();
@@ -480,14 +558,13 @@
     if (bump.includes("sparks")) bumpEl($("#hud-sparks"));
   }
 
-  // Focus Shields + combo, shown above the question feed.
+  // Combo (and Restore Focus at 0%), shown above the question feed. The Focus
+  // Meter itself lives in the header.
   function renderFocus(bumpCombo) {
     const bar = $("#focusbar");
-    const shields = Array.from({ length: RULES.maxFocus }, (_, i) =>
-      `<span class="shield${i < S.focus ? "" : " lost"}" aria-hidden="true">🛡️</span>`).join("");
     bar.innerHTML = `
-      <span class="label-sm">Focus</span>
-      <span class="shields" role="img" aria-label="${S.focus} of ${RULES.maxFocus} Focus Shields">${shields}</span>
+      <span class="label-sm">Focus ${S.focus}%</span>
+      <span class="muted small focus-hint">${S.focus < FOCUS.RULES.max ? `2 in a row: +${FOCUS.RULES.restore}% (${S.focusStreak || 0}/2)` : "Locked in"}</span>
       ${S.focus === 0 ? '<button class="mini-btn" type="button" id="restore-focus">Restore Focus</button>' : ""}
       <span class="combo${S.combo >= 3 ? " hot" : ""}" id="combo-pill" title="Correct answers in a row">×${S.combo}<span class="combo-word"> combo</span></span>`;
     $("#restore-focus", bar)?.addEventListener("click", () => openFocusBreak());
@@ -517,7 +594,11 @@
   let sentinelObs;
   let activeCard = null;
   const visObs = new IntersectionObserver((entries) => {
-    for (const e of entries) if (e.isIntersecting) activeCard = e.target;
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      activeCard = e.target;
+      if (!activeCard._seenAt) activeCard._seenAt = Date.now();
+    }
   }, { root: feed, threshold: 0.6 });
 
   // Opens a chapter (or mixed review): Explanation Pause, then its questions.
@@ -566,6 +647,7 @@
     const pending = [...feed.querySelectorAll(".card[data-qid]")].filter((c) => !c._answered).length;
     if (pending < 2 && queue.length) appendCards(2 - pending);
     const ch = currentChapter();
+    if (ch) unlockNextAt60(ch);
     if (!ch || completeShown || queue.length || pending) return;
     completeShown = true;
     const firstTime = !isComplete(ch.id);
@@ -587,6 +669,17 @@
     feed.querySelector(".sentinel")?.remove();
     feed.append(completeCard(ch, firstTime));
     renderChapterBar();
+  }
+
+  // The next chapter opens once 60% of this one is answered correctly.
+  const unlockNeed = (ch) => Math.ceil(ch.questions.length * SW.UNLOCK_SHARE);
+  function unlockNextAt60(ch) {
+    const next = chapterById(ch.id + 1);
+    if (!next || isUnlocked(next.id) || correctIn(ch.id).length < unlockNeed(ch)) return;
+    S.unlockedChapters.push(next.id);
+    save();
+    sfx.play("combo");
+    toast(`🔓 ${next.bonus ? "Bonus chapter" : `Chapter ${next.id}`} unlocked: ${next.short}`);
   }
 
   // "Explanation Pause": the lesson card that opens each chapter.
@@ -682,6 +775,7 @@
     card._label = opts.label || "";
     card._review = Boolean(opts.review);
     card._onDone = opts.onDone || null;
+    card._madeAt = Date.now(); // think time starts when the card scrolls into view (_seenAt)
     paintCard(card);
     return card;
   }
@@ -750,7 +844,7 @@
 
   // ---------- Answering ----------
   const fastRun = []; // timestamps of the current correct run (Lightning Fast badge)
-  let lastWrong = null; // question that cost the last Focus Shield
+  let lastWrong = null; // last question answered wrong (the Focus Break reviews its skill)
 
   function answer(card, ci) {
     if (card._answered) return;
@@ -760,9 +854,11 @@
       return;
     }
     card._answered = true;
+    card.classList.add("answered");
     const q = card._q;
     const correct = ci === q.answer;
     const cast = castOf();
+    const thinkMs = Date.now() - (card._seenAt || card._madeAt || Date.now());
 
     card.querySelectorAll(".choice").forEach((b) => {
       const bci = Number(b.dataset.ci);
@@ -791,7 +887,6 @@
 
     let xp = 0;
     let sparks = null;
-    let focusLeft = S.focus;
     let savedCombo = 0; // combo kept by a Combo Saver
     if (correct) {
       S.combo++;
@@ -809,10 +904,13 @@
       if (!S.missed.includes(q.id)) S.missed.push(q.id);
       if (!card._review) {
         requeue(q.id);
-        focusLeft = rewards.loseFocus(S);
         lastWrong = q;
       }
     }
+    // Focus: −25% for a miss, −10% for rushing (under 3s), +25% for 2 right in a row.
+    const focusRes = FOCUS.apply(S, { correct, ms: thinkMs, rushMs: FOCUS.RULES.practiceRushMs });
+    const focusLeft = S.focus;
+    if (!correct && FOCUS.level(S.focus) === "critical") shake();
     S.xp += xp;
     // A Combo Saver keeps the combo, but not a "5 in a row" speed run.
     const fast = rewards.trackFastRun(fastRun, correct, Date.now());
@@ -825,8 +923,8 @@
     // feedback
     let tag;
     if (correct) tag = `+${xp} XP · +${sparks.total} ⚡${sparks.bonus ? " combo bonus" : ""}`;
-    else if (card._review) tag = "Review keeps your Focus safe";
-    else tag = focusLeft === 0 ? "Focus is out" : `−1 🛡️ · ${focusLeft} left`;
+    else tag = focusLeft === 0 ? "Focus is out" : `Focus ${focusLeft}%`;
+    if (focusRes.delta) tag += ` · ${focusRes.delta > 0 ? "+" : "−"}${Math.abs(focusRes.delta)}% Focus${focusRes.rushed ? " (rushed)" : ""}`;
     if (savedCombo) tag += ` · Combo Saver kept ×${savedCombo}`;
     const verdict = correct ? pickPraise() : "Not quite";
     const fb = h("div", { class: `feedback ${correct ? "ok" : "no"}` });
@@ -835,6 +933,7 @@
       // Inside the Focus Break drawer: keep the explanation inline.
       fb.innerHTML = `
         <h3>${verdict}<small>${esc(tag)}</small></h3>
+        ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${esc(q.rule)}</p>` : ""}
         <p>${fill(q.notes[q.answer], cast, false)}</p>`;
       next.addEventListener("click", () => card._onDone?.());
     } else {
@@ -880,7 +979,7 @@
   }
 
   // Vocab Vault answers count toward the daily goal, XP and friend streaks.
-  // They don't touch Focus Shields or the practice combo.
+  // They don't touch the practice combo (the Derby applies Focus itself).
   function recordVocabAnswer(correct) {
     rollover();
     const d = today();
@@ -948,6 +1047,7 @@
         <button class="linkbtn" type="button" data-close>Close</button>
       </div>
       <p class="explain-sentence">${filled}</p>
+      ${q.rule ? `<p class="rule-line"><b>Rule:</b> ${esc(q.rule)}</p>` : ""}
       ${shortcut ? `<p class="shortcut-chip"><b>Shortcut ${esc(q.shortcut)}</b> ${esc(shortcut)}</p>` : ""}
       <ol class="why-list">${order.map((o) => rows[o.pos]).join("")}</ol>
       <button class="btn wide" type="button" data-next>Next question ↓</button>`;
@@ -1026,14 +1126,18 @@
   let focusSheet = null;
   let focusReturn = null;
 
-  // Two review questions from the same chapter, same skill first.
-  function pickReview(base) {
-    const sameChapter = QUESTIONS.filter((q) => q.chapterId === base.chapterId && q.id !== base.id);
+  // Review questions from the same chapter, same skill first, skipping ones
+  // already used in this break.
+  function pickReview(base, used) {
+    const sameChapter = QUESTIONS.filter((q) => q.chapterId === base.chapterId && q.id !== base.id && !used.has(q.id));
     const sameSkill = shuffle(sameChapter.filter((q) => q.skill === base.skill));
     const rest = shuffle(sameChapter.filter((q) => q.skill !== base.skill));
-    return [...sameSkill, ...rest].slice(0, REVIEW_LENGTH);
+    return [...sameSkill, ...rest][0] || shuffle(QUESTIONS.filter((q) => !used.has(q.id)))[0];
   }
 
+  // At 0% Focus the feed pauses here: read the chapter's rules, then answer
+  // review questions until you get 2 right in a row (+25% Focus),
+  // or drink a Focus Elixir (500 ⚡) to go straight back to 100%.
   function openFocusBreak() {
     if (focusSheet || onboarding.isOpen()) return;
     const base = lastWrong || BY_ID[S.missed[S.missed.length - 1]] || currentChapter()?.questions[0] || QUESTIONS[0];
@@ -1060,56 +1164,60 @@
     sheet.innerHTML = `
       ${header("")}
       <h2 id="fb-title">Focus is out. Take a breath.</h2>
-      <p class="muted">Here's the rule summary for this chapter. Then answer ${REVIEW_LENGTH} review questions to restore all ${RULES.maxFocus} shields.</p>
+      <p class="muted">Here's the rule summary for this chapter. Then get ${REVIEW_LENGTH} review questions right in a row to win back ${FOCUS.RULES.restore}% Focus.</p>
+      ${FOCUS.meterHtml(S.focus)}
       <article class="tip-card">
         <span class="label-sm">${ch.bonus ? "Bonus" : `Chapter ${ch.id}`} · ${esc(ch.short)}</span>
         <ul class="rule-list">${ch.pause.rules.map((r) => `<li>${fill(r, cast, false)}</li>`).join("")}</ul>
-        <p class="tip-ex">${fill(ch.pause.example, cast, false)}</p>
+        ${ch.pause.example ? `<p class="tip-ex">${fill(ch.pause.example, cast, false)}</p>` : ""}
       </article>
-      <button class="btn wide" type="button" id="fb-start">Start ${REVIEW_LENGTH}-question review</button>
-      ${S.sparks >= RULES.focusRefillPrice
-        ? `<button class="btn ghost wide" type="button" id="fb-refill">Skip review · Focus Refill ${RULES.focusRefillPrice} ⚡</button>`
-        : `<button class="btn ghost wide" type="button" disabled>Focus Refill needs ${RULES.focusRefillPrice - S.sparks} more ⚡</button>`}`;
+      <button class="btn wide" type="button" id="fb-start">Start review</button>
+      ${S.sparks >= RULES.elixirPrice
+        ? `<button class="btn ghost wide" type="button" id="fb-refill">🧪 Focus Elixir · ${fmt(RULES.elixirPrice)} ⚡ (back to 100%)</button>`
+        : `<button class="btn ghost wide" type="button" disabled>🧪 Focus Elixir needs ${fmt(RULES.elixirPrice - S.sparks)} more ⚡</button>`}`;
     wireClose();
-    $("#fb-start", sheet).addEventListener("click", () => runReview(sheet, pickReview(base), 0, header, wireClose));
+    $("#fb-start", sheet).addEventListener("click", () => runReview(sheet, base, new Set(), 1, header, wireClose));
     $("#fb-refill", sheet)?.addEventListener("click", () => {
-      const res = rewards.buyFocusRefill(S);
+      const res = rewards.buyElixir(S);
       if (!res.ok) return;
       save();
       renderHud(["sparks"]);
       closeFocusBreak();
-      toast(`🛡️ Focus refilled for ${res.spent} ⚡`);
+      toast(`🧪 Focus back to 100% for ${fmt(res.spent)} ⚡`);
     });
     $("#fb-start", sheet).focus();
   }
 
-  function runReview(sheet, questions, i, header, wireClose) {
-    if (i >= questions.length) {
-      rewards.restoreFocus(S);
+  function runReview(sheet, base, used, n, header, wireClose) {
+    if (S.focus > 0) {
       save();
-      renderFocus();
+      renderHud();
       sheet.innerHTML = `
         ${header("Done")}
         <div class="restored">
-          <span class="restored-shields" aria-hidden="true">🛡️🛡️🛡️</span>
+          <span class="restored-shields" aria-hidden="true">🧠</span>
           <h2 id="fb-title">Focus restored</h2>
-          <p class="muted">All ${RULES.maxFocus} shields are back. Keep going.</p>
+          <p class="muted">You're back to ${S.focus}%. Two more right in a row adds another ${FOCUS.RULES.restore}%.</p>
+          ${FOCUS.meterHtml(S.focus)}
         </div>
         <button class="btn wide" type="button" data-close>Back to practice</button>`;
       wireClose();
       sheet.querySelector(".btn").focus();
       return;
     }
+    const q = pickReview(base, used);
+    used.add(q.id);
     sheet.innerHTML = `
-      ${header(`Review ${i + 1} of ${questions.length}`)}
-      <h2 id="fb-title" class="sr-only">Review question ${i + 1}</h2>
+      ${header(`Review ${n} · ${S.focusStreak || 0}/${REVIEW_LENGTH} in a row`)}
+      <h2 id="fb-title" class="sr-only">Review question ${n}</h2>
       <div class="review-slot"></div>`;
     wireClose();
-    const card = makeCard(questions[i], {
+    const card = makeCard(q, {
       review: true,
-      label: `R${i + 1}`,
-      onDone: () => runReview(sheet, questions, i + 1, header, wireClose),
+      label: `R${n}`,
+      onDone: () => runReview(sheet, base, used, n + 1, header, wireClose),
     });
+    card._seenAt = Date.now();
     $(".review-slot", sheet).append(card);
     card.querySelector(".choice").focus();
   }
@@ -1160,7 +1268,7 @@
       const status = done ? "✓" : current ? "▶" : unlocked ? "•" : "🔒";
       const sub = unlocked
         ? `${done ? "Complete" : `${got} of ${ch.questions.length} correct`}${current ? " · current" : ""}`
-        : `Finish Chapter ${ch.id - 1} first`;
+        : (() => { const prev = chapterById(ch.id - 1); return `Get ${unlockNeed(prev)} of ${prev.questions.length} right in ${prev.bonus ? "the bonus chapter" : `Chapter ${prev.id}`} to unlock`; })();
       return `
         <button type="button" class="chapter-row${done ? " done" : ""}${current ? " current" : ""}" data-ch="${ch.id}" ${unlocked ? "" : "disabled"}>
           <span class="ch-status" aria-hidden="true">${status}</span>
@@ -1326,7 +1434,7 @@
       <section class="panel">
         <div class="freeze-row">
           <span class="ice" aria-hidden="true">${"💠".repeat(S.freezes) || "–"}</span>
-          <p><b>${S.freezes} of ${RULES.maxAura} Aura Shields.</b> Each one covers a missed day automatically. You get one free every ${RULES.auraEarnEvery} streak days, or buy one in the Wizz Shop.</p>
+          <p><b>${S.freezes} of ${RULES.maxAura} Aura Shields.</b> Each one covers a missed day automatically. You get one free every ${RULES.auraEarnEvery} streak days, or buy one in the High-Barrier Shop.</p>
         </div>
         ${wp ? `<p class="muted">🎲 Double-Spark Wager: day ${wp.days} of ${wp.of}</p>` : ""}
       </section>
@@ -1365,7 +1473,14 @@
       </section>`;
   }
 
-  // ---------- Wizz Shop ----------
+  // ---------- High-Barrier Shop ----------
+  // Prices: Jockey/Character Skins 1,000 · Custom Mounts/Avatars 1,500 ·
+  // Focus Elixir 500. Derby gear lives in the Derby stats (vocab progress).
+  const D = SW.derby;
+  const derbyStats = () => {
+    S.vocab.derby = Object.assign(S.vocab.derby || {}, D.mergeStats(S.vocab.derby, null));
+    return S.vocab.derby;
+  };
   let armed = null; // id of the buy button waiting for a second tap
   let armTimer;
 
@@ -1376,84 +1491,75 @@
     const wp = rewards.wagerProgress(S);
     const auraRoom = RULES.maxAura - S.freezes;
 
+    const derbySt = derbyStats();
     const buyBtn = (id, price, opts = {}) => {
       if (opts.state) return `<button class="buy" type="button" disabled>${esc(opts.state)}</button>`;
-      if (S.sparks < price) return `<button class="buy" type="button" disabled>Need ${price - S.sparks} more</button>`;
+      if (S.sparks < price) return `<button class="buy" type="button" disabled>Need ${fmt(price - S.sparks)} more</button>`;
       const confirm = armed === id;
-      return `<button class="buy${confirm ? " confirm" : ""}" type="button" data-buy="${id}">${confirm ? `Confirm ${price} ⚡` : `${price} ⚡`}</button>`;
+      return `<button class="buy${confirm ? " confirm" : ""}" type="button" data-buy="${id}">${confirm ? `Confirm ${fmt(price)} ⚡` : `${fmt(price)} ⚡`}</button>`;
     };
-
-    const packRows = packs.map((t) => {
-      const owned = rewards.isThemeUnlocked(S, t.id);
-      const inUse = S.themeId === t.id;
-      const action = owned
-        ? (inUse ? '<button class="buy" type="button" disabled>In use</button>' : `<button class="buy owned" type="button" data-use="${t.id}">Use</button>`)
-        : buyBtn(`theme:${t.id}`, t.price);
-      return `
+    const row = (icon, title, sub, action) => `
         <article class="shop-item">
-          <span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>
-          <div class="shop-info"><b>${esc(t.label)}</b><span>${esc(t.people.map((p) => p.name).join(", "))}</span></div>
+          ${icon}
+          <div class="shop-info"><b>${title}</b><span>${sub}</span></div>
           ${action}
         </article>`;
-    }).join("");
+    const useBtn = (inUse, attrs) => (inUse ? '<button class="buy" type="button" disabled>In use</button>' : `<button class="buy owned" type="button" ${attrs}>Use</button>`);
 
-    const avatarRows = SW.avatars.filter((a) => a.price > 0).map((a) => {
-      const owned = rewards.isAvatarUnlocked(S, a.id);
-      const action = owned
-        ? (S.avatar === a.id ? '<button class="buy" type="button" disabled>In use</button>' : `<button class="buy owned" type="button" data-wear-avatar="${a.id}">Use</button>`)
-        : buyBtn(`avatar:${a.id}`, a.price);
-      return `
-        <article class="shop-item">
-          <span class="avatar md" aria-hidden="true">${a.emoji}</span>
-          <div class="shop-info"><b>${esc(a.label)}</b><span>${owned ? "Owned" : "Profile picture"}</span></div>
-          ${action}
-        </article>`;
-    }).join("");
+    // 1,000 ⚡: Derby jockey silks and character casts (theme packs).
+    const silkRows = D.STABLE.silks.map((x) => row(
+      `<span class="shop-icon silk-swatch silk-${x.id}" aria-hidden="true">🏇</span>`, esc(x.name), "Jockey silks for your Derby horse",
+      derbySt.silks.includes(x.id) ? useBtn(derbySt.silk === x.id, `data-silk="${x.id}"`) : buyBtn(`silk:${x.id}`, x.price))).join("");
+    const packRows = packs.map((t) => row(
+      `<span class="shop-icon" aria-hidden="true">${t.icon || "🎭"}</span>`, esc(t.label), `Character cast: ${esc(t.people.map((p) => p.name).join(", "))}`,
+      rewards.isThemeUnlocked(S, t.id) ? useBtn(S.themeId === t.id, `data-use="${t.id}"`) : buyBtn(`theme:${t.id}`, t.price))).join("");
+    // 1,500 ⚡: Derby mounts and profile avatars.
+    const mountRows = D.STABLE.mounts.map((m) => row(
+      `<span class="shop-icon" aria-hidden="true">${m.emoji}</span>`, esc(m.name), "Custom mount: runs in your Derby lane",
+      derbySt.mounts.includes(m.id) ? useBtn(derbySt.mount === m.id, `data-mount="${m.id}"`) : buyBtn(`mount:${m.id}`, m.price))).join("");
+    const avatarRows = SW.avatars.filter((a) => a.price > 0).map((a) => row(
+      `<span class="avatar md" aria-hidden="true">${a.emoji}</span>`, esc(a.label), "Avatar: your profile picture",
+      rewards.isAvatarUnlocked(S, a.id) ? useBtn(S.avatar === a.id, `data-wear-avatar="${a.id}"`) : buyBtn(`avatar:${a.id}`, a.price))).join("");
 
     v.innerHTML = `
       <div class="stack">
         <section class="panel wallet">
-          <span class="label-sm">Wizz Shop</span>
-          <div class="wallet-num"><span aria-hidden="true">⚡</span> ${S.sparks} <small>Sparks</small></div>
+          <span class="label-sm">High-Barrier Shop</span>
+          <div class="wallet-num"><span aria-hidden="true">⚡</span> ${fmt(S.sparks)} <small>Sparks</small></div>
           <ul class="earn-list">
-            <li><b>+${RULES.sparksPerCorrect}</b> each correct answer</li>
-            <li><b>+${RULES.comboBonus}</b> bonus every ${RULES.comboEvery} in a row</li>
-            <li><b>+${RULES.dailyGoalSparks}</b> for your daily goal</li>
+            <li><b>×1.5</b> your bet back on every Derby win</li>
+            <li><b>+${RULES.sparksPerCorrect}</b> each correct answer · <b>+${RULES.comboBonus}</b> every ${RULES.comboEvery} in a row</li>
+            <li><b>+${RULES.dailyGoalSparks}</b> for your daily goal · <b>+${RULES.chapterSparks}</b> per chapter completed</li>
           </ul>
         </section>
-        <section class="panel stable-link">
-          <span class="shop-icon" aria-hidden="true">🐎</span>
-          <div class="shop-info"><b>Derby Stable</b><span>Jockey silks, mounts, Focus Boosters and Starting Bursts for the SAT Vocabulary Derby.</span></div>
-          <button class="buy owned" type="button" id="goto-stable">Visit →</button>
+        <section class="panel shop-tier">
+          <h2>Jockey &amp; Character Skins <span class="price-tag">1,000 ⚡</span></h2>
+          <p class="muted">Silks for your Derby jockey, and new character casts for every Practice question.</p>
+          <div class="shop-list">${silkRows}${packRows}</div>
         </section>
-        <section class="panel">
-          <h2>Theme packs</h2>
-          <p class="muted">New casts for every question.</p>
-          <div class="shop-list">${packRows}</div>
+        <section class="panel shop-tier">
+          <h2>Custom Mounts &amp; Avatars <span class="price-tag">1,500 ⚡</span></h2>
+          <p class="muted">Ride something rarer than a horse, or wear it on your profile.</p>
+          <div class="shop-list">${mountRows}${avatarRows}</div>
+        </section>
+        <section class="panel shop-tier">
+          <h2>Focus Elixir <span class="price-tag">${fmt(RULES.elixirPrice)} ⚡</span></h2>
+          <div class="shop-list">
+            ${row('<span class="shop-icon" aria-hidden="true">🧪</span>', "Focus Elixir",
+              `Refills your Focus Meter to 100% right now, in Practice and the Derby. Otherwise only 2 right in a row restore it (+${FOCUS.RULES.restore}%). ${FOCUS.meterHtml(S.focus)}`,
+              buyBtn("elixir", RULES.elixirPrice, { state: S.focus >= FOCUS.RULES.max ? "Focus full" : "" }))}
+          </div>
         </section>
         <section class="panel">
           <h2>Power-ups</h2>
           <div class="shop-list">
-            <article class="shop-item">
-              <span class="shop-icon" aria-hidden="true">💠</span>
-              <div class="shop-info"><b>Aura Shield</b><span>Protects your streak on a day you miss practice. Used automatically. You have ${S.freezes} of ${RULES.maxAura}.</span></div>
-              ${buyBtn("aura", RULES.auraPrice, { state: S.freezes >= RULES.maxAura ? "Full" : "" })}
-            </article>
-            <article class="shop-item">
-              <span class="shop-icon" aria-hidden="true">💠<sup>×${RULES.auraBundleSize}</sup></span>
-              <div class="shop-info"><b>Aura Shield ×${RULES.auraBundleSize}</b><span>Costs ${RULES.auraPrice * RULES.auraBundleSize - RULES.auraBundlePrice} ⚡ less than buying ${RULES.auraBundleSize} one at a time. Needs room for ${RULES.auraBundleSize}.</span></div>
-              ${buyBtn("aura3", RULES.auraBundlePrice, { state: auraRoom < RULES.auraBundleSize ? (auraRoom ? `Room for ${auraRoom}` : "Full") : "" })}
-            </article>
-            <article class="shop-item">
-              <span class="shop-icon" aria-hidden="true">🛡️</span>
-              <div class="shop-info"><b>Focus Refill</b><span>Restores all ${RULES.maxFocus} Focus Shields right away, no review needed. Focus: ${S.focus} of ${RULES.maxFocus}.</span></div>
-              ${buyBtn("focus", RULES.focusRefillPrice, { state: S.focus >= RULES.maxFocus ? "Full" : "" })}
-            </article>
-            <article class="shop-item">
-              <span class="shop-icon" aria-hidden="true">🔗</span>
-              <div class="shop-info"><b>Combo Saver</b><span>The next wrong answer on a combo of ${RULES.comboSaverMin}+ keeps your combo. Used automatically. You have ${S.comboSavers} of ${RULES.maxComboSavers}.</span></div>
-              ${buyBtn("saver", RULES.comboSaverPrice, { state: S.comboSavers >= RULES.maxComboSavers ? "Full" : "" })}
-            </article>
+            ${row('<span class="shop-icon" aria-hidden="true">💨</span>', esc(D.STABLE.burst.name), `Start your next Derby one step ahead. You have ${derbySt.bursts}.`, buyBtn("burst", D.STABLE.burst.price))}
+            ${row('<span class="shop-icon" aria-hidden="true">💠</span>', "Aura Shield", `Protects your Lock In Streak on a day you miss practice. Used automatically. You have ${S.freezes} of ${RULES.maxAura}.`,
+              buyBtn("aura", RULES.auraPrice, { state: S.freezes >= RULES.maxAura ? "Full" : "" }))}
+            ${row(`<span class="shop-icon" aria-hidden="true">💠<sup>×${RULES.auraBundleSize}</sup></span>`, `Aura Shield ×${RULES.auraBundleSize}`, `Costs ${RULES.auraPrice * RULES.auraBundleSize - RULES.auraBundlePrice} ⚡ less than buying ${RULES.auraBundleSize} one at a time. Needs room for ${RULES.auraBundleSize}.`,
+              buyBtn("aura3", RULES.auraBundlePrice, { state: auraRoom < RULES.auraBundleSize ? (auraRoom ? `Room for ${auraRoom}` : "Full") : "" }))}
+            ${row('<span class="shop-icon" aria-hidden="true">🔗</span>', "Combo Saver", `The next wrong answer on a combo of ${RULES.comboSaverMin}+ keeps your combo. Used automatically. You have ${S.comboSavers} of ${RULES.maxComboSavers}.`,
+              buyBtn("saver", RULES.comboSaverPrice, { state: S.comboSavers >= RULES.maxComboSavers ? "Full" : "" }))}
             <article class="shop-item">
               <span class="shop-icon" aria-hidden="true">🎲</span>
               <div class="shop-info">
@@ -1465,15 +1571,18 @@
             </article>
           </div>
         </section>
-        <section class="panel">
-          <h2>Avatars</h2>
-          <p class="muted">Rare profile pictures. Pick yours under Personalize.</p>
-          <div class="shop-list">${avatarRows}</div>
-        </section>
       </div>`;
 
+    v.querySelectorAll("[data-silk], [data-mount]").forEach((b) => b.addEventListener("click", () => {
+      const st = derbyStats();
+      if (b.dataset.silk) st.silk = b.dataset.silk;
+      else st.mount = b.dataset.mount;
+      st.at = Date.now();
+      save();
+      sfx.play("tap");
+      renderShop();
+    }));
     v.querySelectorAll("[data-buy]").forEach((b) => b.addEventListener("click", () => onBuy(b.dataset.buy)));
-    v.querySelector("#goto-stable").addEventListener("click", () => { show("vocab"); vocab.openDerbyStable(); });
     v.querySelectorAll("[data-wear-avatar]").forEach((b) => b.addEventListener("click", () => {
       setAvatar(b.dataset.wearAvatar);
       renderShop();
@@ -1521,9 +1630,12 @@
     } else if (id === "aura3") {
       res = rewards.buyAuraBundle(S);
       if (res.ok) toast(`💠 ${RULES.auraBundleSize} Aura Shields added. You have ${S.freezes} of ${RULES.maxAura}.`);
-    } else if (id === "focus") {
-      res = rewards.buyFocusRefill(S);
-      if (res.ok) toast("🛡️ Focus refilled.");
+    } else if (id === "elixir") {
+      res = rewards.buyElixir(S);
+      if (res.ok) toast("🧪 Focus Elixir: Focus back to 100%.");
+    } else if (id === "burst" || id.startsWith("silk:") || id.startsWith("mount:")) {
+      res = D.buyItem(derbyStats(), S, id, S);
+      if (res.ok) toast(id === "burst" ? `💨 ${D.STABLE.burst.name} added` : "🏇 New Derby gear equipped!");
     } else if (id === "saver") {
       res = rewards.buyComboSaver(S);
       if (res.ok) toast(`🔗 Combo Saver ready. You have ${S.comboSavers} of ${RULES.maxComboSavers}.`);
@@ -1564,6 +1676,17 @@
 
     v.innerHTML = `
       <div class="stack">
+        <section class="panel you-stats">
+          <div><b>${fmt(S.xp)}</b><span>XP</span></div>
+          <div><b>⚡ ${fmt(S.sparks)}</b><span>Sparks</span></div>
+          <div><b>🔥 ${S.streak}</b><span>Lock In Streak</span></div>
+          <div><b>🧠 ${S.focus}%</b><span>Focus</span></div>
+        </section>
+        <button class="panel nav-row" type="button" id="open-ranks">
+          <span class="shop-icon" aria-hidden="true">🏆</span>
+          <span class="shop-info"><b>Leaderboard &amp; Friends</b><span>Global and friends rankings, friend streaks and invites</span></span>
+          <span aria-hidden="true">→</span>
+        </button>
         <div id="streak-slot"></div>
         <section class="panel" id="account-panel"></section>
         <section class="panel" id="settings-panel">
@@ -1608,6 +1731,7 @@
         </section>
       </div>`;
 
+    $("#open-ranks", v).addEventListener("click", openRanks);
     renderStreak();
     renderAccountPanel();
     renderSettings();
@@ -2018,7 +2142,6 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) renderHud(); });
 
   // ---------- Boot ----------
-  S.focus = RULES.maxFocus; // 3 Focus Shields per session
   sfx.setMuted(S.muted);
   sfx.setHaptics(S.haptics);
   captureInvite();

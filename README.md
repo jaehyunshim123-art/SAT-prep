@@ -1,8 +1,12 @@
 # SatWizz
 
-A mobile-first, gamified SAT grammar and vocabulary course. You work through a 9-chapter curriculum in a snap-scrolling feed of Digital SAT-style questions, drill vocabulary in the Vocab Vault, earn Sparks, keep daily and friend streaks, and climb live leaderboards. The names in every question change to a cast you pick.
+A mobile-first, gamified Digital SAT grammar and vocabulary course. You work through a 7-chapter grammar curriculum in a snap-scrolling feed of Digital SAT-style questions, flip 3D flashcards in the Vocab Vault, bet Sparks in the Vocab Derby, and spend them in the High-Barrier Shop. Daily and friend streaks and live leaderboards keep you coming back.
 
-The bottom nav has five tabs: **Practice · Vocab · Leaderboard · Shop · Profile**. Your daily streak and achievements live at the top of Profile, and tapping the 🔥 pill in the header opens it.
+- **Header (every screen):** ⚡ **Spark balance** (new players start with **2,500**), 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%).
+- **Bottom nav, four tabs:** ✏️ **Practice** (chapter lessons and questions) · 📚 **Vault** (flashcards and sprints) · 🐎 **Derby** (the arcade racing game) · 🛍️ **Shop** (High-Barrier Shop). Views fade in as you switch.
+- **Profile** opens from the avatar in the header. It holds your stats, streak and achievements, account, settings and cast, plus **🏆 Leaderboard & Friends**.
+
+The whole app is also built as **one self-contained `dist/index.html`** (see below).
 
 ## Question format
 
@@ -16,22 +20,26 @@ The stems live in `SatWizz.STEMS` in `js/questions.js`. `SatWizz.stemFor(q)` pic
 
 ## Curriculum
 
-Each chapter opens with an **Explanation Pause** lesson card: the rules in plain language, ✓/✗ pattern chips and a worked example with your cast's names. Then come **20 practice questions** (180 in total).
+Seven chapters, in this order, plus two bonus chapters. Each core chapter starts with **25 pop-culture questions** (Ronaldo, Voldemort, Stephen Curry, Batman, Taylor Swift and more; shared with Clause Derby in `clause-derby/src/chN.js`). Then come **20 extra-practice questions** that use your cast's names (`js/curriculum/chN.js`). That makes **345 questions** in all.
 
-After each answer a **slide-up drawer** explains why the right answer works and why every other choice fails. A wrong answer comes back two cards later marked "↺ Try again". A chapter is complete once every question has been answered correctly. The first completion earns **+50 ⚡** and unlocks the next chapter.
+Each chapter opens with an **Explanation Pause** lesson card: the chapter's explicit rules, ✓/✗ pattern chips and a worked example. After each answer a **slide-up drawer** shows the rule being tested, why the right answer works and why every other choice fails. A wrong answer comes back two cards later marked "↺ Try again".
+
+- **Unlocking:** getting **60%** of a chapter right (27 of 45) unlocks the next one.
+- **Complete:** a chapter is complete once every question has been answered correctly. The first completion earns **+50 ⚡**.
 
 | # | Chapter | What it covers |
 |---|---|---|
-| 1 | Identifying Independent Clauses | Subject + verb + complete thought vs. fragments; "hanging" words (Although, Because, While, Which…) |
-| 2 | Connecting Independent Clauses | Legal: `IC, conj IC` · `IC; IC` · `DC, IC` · `IC DC` · `IC, DC`. Illegal: `IC, IC` · `IC; DC` · `IC, conj DC` · `DC, DC`. Flexpos / linking-word (LW) rules: no `IC, LW, IC`, no `IC; LW, DC` |
-| 3 | Subject-Verb Agreement | Prepositional-phrase traps, along with, either/or, each/every, there is/are, flipped sentences, plus the **3:1 and 2:1 shortcuts** |
-| 4 | Verb vs. Non-Verb | Main verbs vs. -ing / "to" / "having" forms; 2:1 shortcut for verb spots |
-| 5 | Verb Tenses | Time clues, consistency, perfect tenses, past participles |
-| 6 | Transitions | Contrast, cause/effect, addition, example, sequence, summary; illegal connector setups like `IC; though, IC` |
-| 7 | Semicolons, Colons, Dashes | `IC; IC`, `A; B; and C` lists, colon/dash need an IC on the left, no dash before FANBOYS, `, which` |
-| 8 | Appositives & Non-Essential Clauses | Symmetrical `, … ,` / `— … —`; essential appositives ("The researcher {{NAME_1}}") take no commas |
-| 9 | Modifiers & Parallelism | The target rule for opening modifiers; A/B, list and comparison parallelism |
-| Bonus | Pronouns & Possessives | 10 questions; unlocks after Chapter 9 |
+| 1 | Independent Clause Connectors & Sentence Boundaries | Comma + FANBOYS, semicolons, periods; comma splices and run-ons. Includes the Ronaldo/Pessi example (`posts. With`) |
+| 2 | Subject-Verb Agreement | Singular vs. plural; tracking the subject past prepositional and parenthetical phrases; the **3:1 / 2:1 shortcuts**. Includes the "Dark Lord's name ___ pronounced" example (`is`) |
+| 3 | Verb vs. Non-Verb Identification (Appositives) | Does the blank need a conjugated main verb or a participle modifier? Includes the Stephen Curry example (`Curry, intending` vs. `Curry intends`) |
+| 4 | Verb Tenses & Aspect | Explicit time frames: past (happened), future (will happen), past perfect (had happened), present perfect (until now), present (general truths) |
+| 5 | Logical Transitions | Contrast (However), addition, cause/effect, example, sequence. Includes the Batman example |
+| 6 | Punctuation Fundamentals (Semicolon, Dash, Colon) | Paired dashes around non-essential appositives; semicolons between ICs; a colon after an IC for a list, noun or explanation |
+| 7 | Appositives & Non-Essential Clauses | "a/an" cues → non-essential (paired commas or dashes); essential vs. non-essential names |
+| Bonus | Modifiers & Parallelism | 20 questions; unlocks at 60% of Chapter 7 |
+| Bonus | Pronouns & Possessives | 10 questions |
+
+**Saves from the old 9-chapter course** migrate automatically: chapters 2–10 become 1–9, and the old "Complete Sentences" chapter was retired. Accounts that synced the old chapter numbers may see one extra chapter unlocked.
 
 **Ratio shortcuts** (taught in Chapters 3 and 4, where the answer choices are verbs):
 - **3:1:** if three choices are plural verbs and one is singular (or the reverse), the odd one out is the answer.
@@ -39,19 +47,35 @@ After each answer a **slide-up drawer** explains why the right answer works and 
 
 Every question where a shortcut applies is tagged, and `scripts/validate-content.js` checks the shortcut really leads to the right answer. The drawer shows a shortcut chip on those questions.
 
-**Chapter drawer.** Tap the chapter bar above the feed to see every chapter's status (✓ done, ▶ current, 🔒 locked) and progress. You can jump to any unlocked chapter. Mixed review (missed questions first) opens once you finish a chapter.
+**Chapter drawer.** Tap the chapter bar above the feed to see every chapter's status (✓ done, ▶ current, 🔒 locked with how many you need to unlock it) and progress. You can jump to any unlocked chapter. Mixed review (missed questions first) opens once you finish a chapter.
+
+## Focus Meter (0–100%)
+
+One meter, shown in the header and shared by Practice and the Derby (`js/focus.js`). It stays where you leave it between sessions.
+- **Losing Focus:**
+  - a wrong answer costs **25%**;
+  - **rushing** costs **10%**: answering in under 3s in Practice, or under 1.5s in the Derby.
+- **Restoring Focus:** only **2 right answers in a row** (+25%) or a **🧪 Focus Elixir** (500 ⚡, back to 100%).
+- **Effects:**
+  - under 50%, open questions blur slightly;
+  - under 25%, they blur more and the screen **shakes** on each miss.
+
+  Answered questions and explanations never blur. With reduced motion turned on, a desaturated tint replaces the blur and shake.
+- **At 0% in Practice,** a **Focus Break** opens: the chapter's rules, then review questions until you get 2 right in a row. The Elixir skips it.
+- **In the Derby,** missing Focus locks each question for up to 9s while the rivals keep running, plus 4s after a miss.
 
 ## Vocab Vault
 
-The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core high-frequency words and 25 advanced ones (*equanimity, fastidious, obdurate, recalcitrant, surreptitious, …*). New users see core words first; the Derby leads with advanced ones.
+The **Vault** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core high-frequency words and 25 advanced ones (*equanimity, fastidious, obdurate, recalcitrant, surreptitious, …*). New users see core words first; the Derby leads with advanced ones.
 
 **🃏 Flashcards.** A deck of 10 cards that flip in 3D.
 - **Front:** the word, its part of speech and its context sentence, filled in with your cast and highlighted.
 - **Back:** the definition, synonyms, antonyms and root breakdown.
-- **Controls:** tap to flip. Swipe right or tap **Got It**, swipe left or tap **Review Later**. On a keyboard, Space flips and →/← choose.
-- **Got It** earns +5 ⚡, once per word per day.
-- **Review Later** brings the card back once at the end of the deck and flags the word 🔁.
-- Flagged words lead the next deck and the next sprint. A sprint miss also flags a word, and a correct sprint answer or Got It clears the flag.
+- **Controls:** tap to flip. Swipe right or tap **✓ Mastered**, swipe left or tap **↺ Needs Review**. On a keyboard, Space flips and →/← choose.
+- **Toggles:** the two buttons show the word's current status, and so does the chip on the card and in your word list.
+- **Mastered** earns +5 ⚡, once per word per day.
+- **Needs Review** brings the card back once at the end of the deck and flags the word.
+- Flagged words lead the next deck and the next sprint. A sprint miss also flags a word, and a correct sprint answer or Mastered clears the flag.
 - Flashcards don't change tiers: only sprints do.
 
 **⚡ Daily 5-Word Sprint.** Words-in-Context questions in two formats:
@@ -61,15 +85,17 @@ The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
 - **Daily Sprint:** 5 cards. It serves flagged words first, then words due for review (lowest tier first), then new words, then mastered ones for review.
 - **Spaced repetition:** 3 tiers, **Novice 🌱 → Practitioner ⚡ → Master 👑**. A correct answer moves a word up one tier, at most once per day, so reaching Master takes practice on separate days. A wrong answer drops the word back to Novice and slides up a breakdown with the definition, root word, context clue and a note on every choice.
 - **Rewards:**
-  - +5 ⚡ per correct sprint card (and per flashcard Got It, once per word per day);
+  - +5 ⚡ per correct sprint card (and per flashcard Mastered, once per word per day);
   - +25 ⚡ the first time a word reaches Master;
   - +20 ⚡ for finishing a sprint (once per day).
 
-  Vocab answers also count toward your daily goal and give +5 XP each. They don't use Focus Shields or combos.
+  Vocab answers also count toward your daily goal and give +5 XP each. They don't use Focus or combos.
 - Progress syncs to `profiles.vocab_progress`. If both devices practiced a word, the newer answer wins.
 
-**🏇 SAT Vocabulary Derby** (`js/derby.js`). A wager-based horse race on the Vault's advanced words.
-- **Flow:** an intro screen (ASCII title banner, rules, the field, your Focus) → **START** → place a bet → race → results.
+## Vocab Derby
+
+The **Derby** tab (`js/derby.js`) is a wager-based horse race on the Vault's advanced words.
+- **Flow:** an intro screen (the `=== 🐎 SATWIZZ VOCAB DERBY 🐎 ===` banner, rules, the field, your Focus) → **Start Derby** → place a bet → race → results.
 - **Betting:** bet real ⚡ Sparks (50, 100, 250 or 500) or take a Fun run.
   - The bet is taken at the gate, and a win pays it back **×1.5**.
   - Up to **3 betting races a day**; Fun runs are unlimited.
@@ -96,26 +122,21 @@ The **Vocab** tab (`js/vocab.js`) teaches 55 SAT words in three modes: 30 core h
 - **Your turns:** answer advanced questions (Words in Context, definition, synonym or antonym) while a ⏱ think timer runs.
   - **Right:** you gallop +1. **Wrong:** you're held back, and the word is flagged 🔁.
   - A **live commentary feed** (time-stamped, newest first) reports every rival answer as it happens, e.g. "0:17 Verbal Velocity rushed an answer in 2s and missed ✗". Lead changes and "one step from the line" warnings are announced.
-- **🧠 Focus** (max 3) carries between races, and lost Focus costs real time.
-  - Each miss costs 1 Focus and **locks your next question for 4s**.
-  - Every missing Focus bar adds a **3s lock** before each question, so at 0 Focus every question locks for 9s while the rivals keep running.
-  - Two right answers in a row restore 1 Focus. A **Focus Booster** (500 ⚡) refills Focus and lifts the current lock.
+- **🧠 Focus** is the header's Focus Meter, and it carries between races and into Practice.
+  - A miss costs 25% and **locks your next question for 4s**; a rushed answer (under 1.5s) costs 10%.
+  - Missing Focus locks every question for up to **9s** (at 0%) while the rivals keep running.
+  - Two right answers in a row restore 25%. A **Focus Elixir** (500 ⚡) refills Focus and lifts the current lock.
 - **Balance:** CPU reading time is tuned by simulating the real-time race, including locks and about 2s spent reading feedback (`CPU.read` in `js/derby.js`):
 
   | Your pace | Races won | At ×1.5 |
   |---|---|---|
-  | 8s/question at 90% | ~91% | |
-  | 10s at 85% | ~68% | break-even |
-  | 12s at 80% | ~36% | |
+  | 8s/question at 90% | ~94% | |
+  | 10s at 85% | ~71% | break-even |
+  | 12s at 80% | ~37% | |
   | 15s at 75% | ~11% | |
 
 - **Results:** winner, payout, balance, Focus, race time, your average think time, final standings, and a **vocabulary review table** (word, meaning, synonyms, ✓/✗, or — for a question you didn't answer before a rival won).
-- **🛍️ The Stable:** reached from the intro, the results, or the Shop tab. Prices are in real Sparks, using a higher baseline than the main Shop:
-  - Jockey silks: **1,000 ⚡** (Scholar's Gold, Midnight Ink, Crimson Cadence, Emerald Essay);
-  - Mounts: **1,500 ⚡** (🦄 🦓 🐉 🦌, which race in your lane);
-  - Focus Booster and Starting Burst (start 1 step ahead): **500 ⚡** each.
-
-  Purchases need two taps. The main Shop's prices are unchanged.
+- **🛍️ Gear:** jockey silks, mounts, Focus Elixirs and Starting Bursts are sold in the High-Barrier Shop (and on the Derby's own Stable screen). Your silks color your lane and the field list, and your mount runs in your lane.
 - **Practice and sync:** answers count toward the daily goal (+5 XP each). Stats, Focus, owned gear and Bursts sync in `vocab_progress.derby`.
 - **Question checks:** `scripts/validate-content.js` builds 11,000 generated questions and checks each has 4 distinct choices and one defensible answer. Words close in meaning, or near-opposites, are never used as each other's distractors.
 
@@ -176,17 +197,17 @@ node scripts/build-clause-derby.js     # → clause-derby/index.html
 
 ## Single-file build (`dist/index.html`)
 
-The **whole SatWizz app** is also available as **one self-contained HTML file**: Practice with all 190 questions, the Vocab Vault (flashcards, sprints, Derby), the Leaderboard tab, the Shop and Profile, with every style, script and icon inline.
+The **whole SatWizz app** is also available as **one self-contained HTML file**: the header, all four tabs, the 345-question curriculum, the Vault, the Derby, the High-Barrier Shop, Profile and Leaderboard & Friends, with every style, script and icon inline.
 - **Run locally:** double-click `dist/index.html`.
 - **Host it:** upload it to any static host.
 
-Progress saves in `localStorage`, as in the regular build.
+Progress saves in `localStorage` (`satwizz.v1`), as in the regular build: Sparks, Focus, unlocked chapters, purchases, streak and Vault progress. With storage blocked, the app still plays; it just doesn't save.
 
 ```sh
 node scripts/build-single.js   # rebuild after changing index.html, css/ or js/
 ```
 
-It reads the real `index.html` and inlines everything that loads locally (24 files). Three things stay outside the file:
+It reads the real `index.html` and inlines everything that loads locally (33 files, including the shared `clause-derby/src/` question sets). Three things stay outside the file:
 - **Fonts:** Google Fonts are optional, and system fonts are used offline.
 - **Accounts:** the **Supabase client** loads from its CDN. To enable accounts, cloud sync, leaderboards and friends, fill in `js/config.js` before building, as in the regular setup. Without keys, the app runs in guest mode.
 - **Push:** **Lock In push alerts** need `sw.js` uploaded next to `index.html`, because browsers require a service worker to be its own file. In-app Lock In banners work without it. The web app manifest is left out (installing as an app needs separate files).
@@ -199,7 +220,7 @@ The SAT Vocabulary Derby also ships as **one self-contained HTML file**, with al
 
 It plays exactly like the in-app Derby:
 - the intro screen and banner → **Start Derby** → bet → the live race against seven independent CPU rivals → results and review table → the Stable;
-- the same 55 words, engine, tactics, Focus locks and prices.
+- the same 55 words, engine, tactics, Focus Meter and prices. It keeps its own Focus, separate from the app.
 
 What differs in the standalone file:
 - **Its own economy:** you start with **2,500 ⚡**. Wins pay ×1.5, and there are 3 betting races a day.
@@ -207,7 +228,7 @@ What differs in the standalone file:
 - **Saving:** balance, Focus, gear, Bursts and stats are saved in the browser's `localStorage` under `satwizz-derby.v1`. In private mode, or with storage blocked, the game still plays; it just doesn't save.
 - **No sign-in, no network:** Google Fonts are optional, and the file falls back to system fonts offline.
 
-The file is **generated** from the app's sources, so the two never drift apart. After changing `css/styles.css`, `js/themes.js`, `js/questions.js`, `js/vocab.js`, `js/derby.js` or `js/sfx.js`, rebuild it:
+The file is **generated** from the app's sources, so the two never drift apart. After changing `css/styles.css`, `js/themes.js`, `js/questions.js`, `js/focus.js`, `js/vocab.js`, `js/derby.js` or `js/sfx.js`, rebuild it:
 
 ```sh
 node scripts/build-derby.js
@@ -216,16 +237,26 @@ node scripts/build-derby.js
 ## Gamification
 
 - **Sparks ⚡.** You earn +10 per correct answer, +5 on every 3rd answer in a row, +50 per chapter (first time) and +50 for your daily goal.
-- **Focus Shields 🛡️🛡️🛡️.** You get 3 per session. Each wrong answer costs one. At zero, a **Focus Break** drawer shows the chapter's rule summary, then a 2-question review recharges all three. A Focus Refill skips the review.
-- **Daily streak 🔥.** It grows each day you hit your goal (5, 10 or 20). **Aura Shields 💠** cover a missed day.
-- **Wizz Shop.** Theme packs (100 ⚡), Aura Shields (50 ⚡, or 3 for 120), Focus Refill, Combo Saver, the Double-Spark Wager and rare avatars.
+- **Focus Meter 🧠.** 0–100%; see [Focus Meter](#focus-meter-0100) above.
+- **Lock In Streak 🔥.** It grows each day you hit your goal (5, 10 or 20). **Aura Shields 💠** cover a missed day.
+- **High-Barrier Shop.**
+
+  | Tier | Price | Items |
+  |---|---|---|
+  | Jockey & Character Skins | **1,000 ⚡** | 4 Derby jockey silks and 6 character casts (theme packs) |
+  | Custom Mounts & Avatars | **1,500 ⚡** | 4 Derby mounts and 6 rare avatars |
+  | Focus Elixir | **500 ⚡** | Focus back to 100% |
+  | Power-ups | as before | Starting Burst (500), Aura Shields (50, or 3 for 120), Combo Saver, Double-Spark Wager |
+
+  Purchases need two taps. Anything you already own stays owned. Derby wins pay your bet back ×1.5.
+- **Starting balance.** New players start with 2,500 ⚡. Existing saves keep their balance. A fresh device that signs in to an account that has played takes the account's balance, so a new browser can't top up an account.
 - **Achievements.** Wearable titles: Spark Starter, Syntax Warlock and Lightning Fast.
 - **Sound & haptics.** Web Audio effects: a crisp tap, a correct chime, a wrong thud, a combo sparkle and a chapter fanfare. There's no audio file to load. `navigator.vibrate(50)` fires on correct answers and combo milestones. Both can be turned off under Profile → Settings.
 - **Demo Mode.** Tap the SatWizz logo 5 times to unlock every chapter and max out Sparks for testing or demos. Your real progress is saved first and restored when you tap 5 times again. Nothing syncs or reaches the leaderboards while Demo Mode is on.
 
 ## Social
 
-- **Leaderboard tab.** **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.
+- **Leaderboard & Friends** (Profile → 🏆). **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.
 - **Friends.** Search by `@username` or share your invite link (`…/?invite=yourname`). Opening an invite while signed out asks you to sign in, then sends the request automatically. If both people send a request, it's accepted.
 - **Friend streaks 🔥.** A friend streak grows once per day when you and a friend both practice within 24 hours. Missing a day restarts it.
 - **Lock In 🔒.** Next to a friend who hasn't practiced today, send "*{name} told you to Lock In! Keep your 12-day streak alive.*" It arrives as a **push notification** on their devices and as an **in-app banner**, live if they have the app open. You can send it once per friend every 4 hours.
@@ -284,16 +315,18 @@ icons/                      app, maskable, Apple touch and badge icons
 css/styles.css              all styles (light + dark)
 js/config.js                Supabase URL, anon key, VAPID public key
 js/themes.js                casts and avatars
-js/questions.js             curriculum framework: chapter plan, official stems, addChapter/build API
-js/curriculum/ch1-ch10.js   one file per chapter: lesson + 20 questions with per-choice notes
+js/questions.js             curriculum framework: 7+2 chapter plan, official stems, addChapter (merging)/build API
+js/curriculum/clause.js     registers the pop-culture sets (clause-derby/src/ch1-7.js) as chapters 1-7
+js/curriculum/ch1-ch9.js    extra practice per chapter: lesson patterns + questions with per-choice notes
+js/focus.js                 Focus Meter 0-100%: misses, rushing, 2-in-a-row restore, Elixir, locks, blur/shake
 js/vocab.js                 Vocab Vault: words, flashcards, spaced-repetition tiers, sprint UI
-js/derby.js                 SAT Vocabulary Derby: real-time CPU rival engine and tactics, Focus, Stable, question generator, views
-js/rewards.js               Sparks, shop, Focus, Aura Shields, wager, badges (no DOM)
+js/derby.js                 Vocab Derby (Derby tab): real-time CPU rival engine and tactics, Stable purchases, question generator, views
+js/rewards.js               Sparks, shop, Focus Elixir, Aura Shields, wager, badges (no DOM)
 js/sfx.js                   Web Audio sound effects + vibration
 js/auth.js                  Supabase auth, cloud sync, friends, leaderboards, Lock In, push
 js/onboarding.js            sign-up / log-in modal
-js/social-view.js           Leaderboard tab: leaderboards, friend streaks, requests, invites
-js/app.js                   chapter feed, drawers, streaks, shop, profile, demo mode
+js/social-view.js           Leaderboard & Friends: leaderboards, friend streaks, requests, invites
+js/app.js                   header, 4-tab shell, chapter feed, drawers, Focus Break, streaks, shop, profile, demo mode
 scripts/validate-content.js content checks for the curriculum and vocab
 scripts/build-single.js     builds the whole app as one file: dist/index.html
 scripts/build-clause-derby.js builds SAT Wizz: Clause Derby → clause-derby/index.html
@@ -310,7 +343,7 @@ supabase/functions/lock-in  Edge Function that sends Lock In pushes
 
 `js/questions.js` holds the framework: the chapter plan (`SatWizz.CURRICULUM_PLAN`), the stems and the registration API. Each chapter file calls `SatWizz.curriculum.addChapter({ id, short, title, pause, questions })`, and `app.js` calls `SatWizz.curriculum.build()` once at startup. A chapter in the plan with no file yet shows up empty, so Phase 2 content can land one chapter file at a time. Load new chapter files after `js/questions.js` in `index.html`.
 
-Add to a chapter's `questions` array in `js/curriculum/chN.js`, then run `node scripts/validate-content.js`:
+Pop-culture questions for chapters 1–7 live in `clause-derby/src/chN.js` (see the Clause Derby section; run `node scripts/validate-clause-bank.js`). For extra practice, add to a chapter's `questions` array in `js/curriculum/chN.js`, then run `node scripts/validate-content.js`:
 
 ```js
 {

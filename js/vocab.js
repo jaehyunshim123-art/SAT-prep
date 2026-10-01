@@ -1,8 +1,8 @@
 // SatWizz Vocab Vault: high-frequency Digital SAT words in two modes:
 //   • Flashcards: a flippable, swipeable deck. Front: word, part of speech and
 //     the word in a context sentence with your cast. Back: definition,
-//     synonyms/antonyms and root. "Got It" (+5 ⚡, once per word per day) or
-//     "Review Later" (the card comes back at the end of the deck, and the word
+//     synonyms/antonyms and root. "Mastered" (+5 ⚡, once per word per day) or
+//     "Needs Review" (the card comes back at the end of the deck, and the word
 //     is flagged so your next sprint serves it first).
 //   • Daily 5-word sprint: "Words in Context" questions that drive 3
 //     spaced-repetition tiers.
@@ -993,8 +993,8 @@
       .map((x) => x.id);
   }
 
-  // Records a flashcard review. "Got It" pays once per word per day and
-  // clears the review flag; "Review Later" sets it. Tiers don't change.
+  // Records a flashcard review. "Mastered" pays once per word per day and
+  // clears the review flag; "Needs Review" sets it. Tiers don't change.
   function reviewCard(p, id, gotIt, today, now = Date.now()) {
     const s = wordState(p, id);
     s.cards += 1;
@@ -1107,7 +1107,6 @@
     let deck = null; // { ids, i, flipped, got, later, earned, requeued: Set, busy }
     let drawer = null;
     const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const derby = SW.derby.mount({ ...ctx, onExit: () => render() });
 
     const P = () => {
       const S = ctx.getState();
@@ -1118,11 +1117,16 @@
       ? SW.STEMS.meaning.replace("{word}", SW.UNDERLINE_RE.exec(w.text)[1])
       : SW.STEMS.wordChoice);
     const tierBadge = (t) => `<span class="tier t${t}">${TIERS[t].icon} ${TIERS[t].name}</span>`;
+    // Flashcard status: "Needs Review" (flagged) or "Mastered" (last card marked Mastered).
+    const cardStatus = (st) => (st.review ? "review" : st.cards > 0 ? "mastered" : null);
+    const cardChip = (st) => ({
+      review: ' <span class="fc-flag">↺ Needs Review</span>',
+      mastered: ' <span class="fc-flag ok">✓ Mastered</span>',
+    })[cardStatus(st)] || "";
 
     function render() {
       if (sprint) return renderCard();
       if (deck) return renderDeck();
-      if (derby.active()) return derby.render();
       const p = P();
       const sum = summary(p);
       const today = ctx.todayKey();
@@ -1144,7 +1148,7 @@
               <button class="mode-btn" type="button" id="deck-start">
                 <span class="mode-ico" aria-hidden="true">🃏</span>
                 <b>Flashcards</b>
-                <small>Flip &amp; swipe · ${cardBonusLeft ? `+${RULES.flashcardSparks} ⚡ per Got It` : "today's card Sparks earned"}</small>
+                <small>Flip &amp; swipe · ${cardBonusLeft ? `+${RULES.flashcardSparks} ⚡ per Mastered` : "today's card Sparks earned"}</small>
               </button>
               <button class="mode-btn primary" type="button" id="sprint-start">
                 <span class="mode-ico" aria-hidden="true">⚡</span>
@@ -1154,7 +1158,7 @@
             </div>
             <button class="mode-btn derby-btn" type="button" id="derby-start">
               <span class="mode-ico" aria-hidden="true">🏇</span>
-              <span><b>SAT Vocabulary Derby</b><small>Advanced words, 7 rivals, real bets. Wins pay ×1.5.</small></span>
+              <span><b>Vocab Derby</b><small>Advanced words, 7 rivals, real bets. Wins pay ×1.5. Opens the Derby tab.</small></span>
             </button>
             <p class="muted small">+${RULES.sparksPerCorrect} ⚡ per correct sprint word · +${RULES.masterySparks} ⚡ when a word reaches 👑 Master</p>
           </section>
@@ -1162,7 +1166,7 @@
             <h2>Your words</h2>
             ${seenWords.length ? `<ul class="word-list">${seenWords.map((w) => `
               <li><details>
-                <summary>${tierBadge(wordState(p, w.id).tier)} <b>${esc(w.word)}</b> <small>${esc(w.pos)}</small>${wordState(p, w.id).review ? ' <span class="fc-flag">🔁 Review</span>' : ""}</summary>
+                <summary>${tierBadge(wordState(p, w.id).tier)} <b>${esc(w.word)}</b> <small>${esc(w.pos)}</small>${cardChip(wordState(p, w.id))}</summary>
                 <p>${esc(w.definition)}</p>
                 <p class="muted small">≈ ${w.synonyms.map(esc).join(", ")} · ≠ ${w.antonyms.map(esc).join(", ")}</p>
                 <p class="muted small">🌱 Root: ${esc(w.root)}</p>
@@ -1172,7 +1176,7 @@
         </div>`;
       container.querySelector("#sprint-start").addEventListener("click", startSprint);
       container.querySelector("#deck-start").addEventListener("click", startDeck);
-      container.querySelector("#derby-start").addEventListener("click", () => { sprint = null; deck = null; derby.open(); });
+      container.querySelector("#derby-start").addEventListener("click", () => ctx.openDerby?.());
     }
 
     // ---------- Flashcards ----------
@@ -1207,13 +1211,13 @@
           </div>
           <div class="fc-stage">
             <div class="fc-drag">
-              <span class="fc-stamp got" aria-hidden="true">Got It ✓</span>
-              <span class="fc-stamp later" aria-hidden="true">↺ Later</span>
+              <span class="fc-stamp got" aria-hidden="true">Mastered ✓</span>
+              <span class="fc-stamp later" aria-hidden="true">↺ Review</span>
               <button type="button" class="fc${deck.flipped ? " flipped" : ""}" id="fc"
                 aria-label="${esc(w.word)}. ${deck.flipped ? "Showing the definition. Tap to show the word." : "Tap to flip for the definition."}">
                 <span class="fc-inner">
                   <span class="fc-face fc-front"${deck.flipped ? ' aria-hidden="true"' : ""}>
-                    <span class="fc-top">${tierBadge(st.tier)}${st.review ? '<span class="fc-flag">🔁 Review</span>' : ""}</span>
+                    <span class="fc-top">${tierBadge(st.tier)}${cardChip(st)}</span>
                     <span class="fc-word">${esc(w.word)}</span>
                     <span class="fc-pos">${esc(w.pos)}</span>
                     <span class="fc-context">${contextSentence(w)}</span>
@@ -1231,10 +1235,10 @@
             </div>
           </div>
           <div class="fc-actions">
-            <button class="btn ghost" type="button" id="fc-later">↺ Review Later</button>
-            <button class="btn" type="button" id="fc-got">✓ Got It${pays ? ` <small>+${RULES.flashcardSparks} ⚡</small>` : ""}</button>
+            <button class="btn ghost fc-toggle" type="button" id="fc-later" aria-pressed="${cardStatus(st) === "review"}">↺ Needs Review</button>
+            <button class="btn fc-toggle" type="button" id="fc-got" aria-pressed="${cardStatus(st) === "mastered"}">✓ Mastered${pays ? ` <small>+${RULES.flashcardSparks} ⚡</small>` : ""}</button>
           </div>
-          <p class="muted small fc-help">Swipe → Got It · ← Review Later<span class="kbd-hint"> · Space flips</span></p>
+          <p class="muted small fc-help">Swipe → Mastered · ← Needs Review<span class="kbd-hint"> · Space flips</span></p>
         </div>`;
       container.querySelector("#deck-quit").addEventListener("click", () => { deck = null; render(); });
       container.querySelector("#fc-got").addEventListener("click", () => decide(true));
@@ -1346,7 +1350,7 @@
           <section class="panel sprint-summary">
             <span class="complete-star" aria-hidden="true">🃏</span>
             <h2>Deck done!</h2>
-            <p class="muted">${deck.got} got it · ${deck.later} to review · +${deck.earned} ⚡ Sparks</p>
+            <p class="muted">${deck.got} mastered · ${deck.later} need review · +${deck.earned} ⚡ Sparks</p>
             ${flagged ? `<p class="muted small">${flagged} word${flagged === 1 ? " is" : "s are"} flagged 🔁. Your next sprint serves them first.</p>` : ""}
             <div class="stack">
               <button class="btn wide" type="button" id="deck-sprint">Test yourself: Daily Sprint</button>
@@ -1576,9 +1580,8 @@
     // busy: a sprint or deck is in progress, so background re-renders should wait.
     return {
       render,
-      openDerbyStable: () => { sprint = null; deck = null; derby.openStable(); },
       isOpen: () => Boolean(drawer),
-      busy: () => Boolean(sprint || deck || derby.racing()),
+      busy: () => Boolean(sprint || deck),
     };
   }
 

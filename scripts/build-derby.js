@@ -20,7 +20,7 @@ const safeStyle = (code) => code.replace(/<\/style/gi, "<\\/style");
 
 // Order matters: themes (pronouns, default cast) → questions (stems) →
 // derby (engine) → vocab (words; uses SatWizz.derby at call time) → sfx.
-const SOURCES = ["js/themes.js", "js/questions.js", "js/derby.js", "js/vocab.js", "js/sfx.js"];
+const SOURCES = ["js/themes.js", "js/questions.js", "js/focus.js", "js/derby.js", "js/vocab.js", "js/sfx.js"];
 
 // The standalone shell: state, HUD, toasts, celebrations and the Derby ctx.
 const SHELL = String.raw`
@@ -91,6 +91,7 @@ const SHELL = String.raw`
     sound.textContent = S.muted ? "🔇" : "🔊";
     sound.setAttribute("aria-label", S.muted ? "Sound off" : "Sound on");
     sound.setAttribute("aria-pressed", String(!S.muted));
+    SW.focus.paint(S.vocab.derby ? S.vocab.derby.focus : 100); // low-Focus blur
   }
   $("#hud-sound").addEventListener("click", () => {
     S.muted = !S.muted;
@@ -153,6 +154,7 @@ const SHELL = String.raw`
     earn: (n) => { S.sparks += n; return n; },
     recordAnswer: (ok) => { S.answered += 1; if (ok) S.correct += 1; },
     renderHud,
+    shake: () => SW.focus.shake(),
     onExit: () => derby.open(),
   });
 
