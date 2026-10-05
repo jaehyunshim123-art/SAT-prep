@@ -2802,7 +2802,65 @@ window.SatWizz.avatars = [
 (function () {
   "use strict";
   const SW = window.SatWizz;
-  const easy = (questions) => questions.map((q) => ({ ...q, level: 1 }));
+  // A one-line rule for each starter skill, shown as "Rule:" after you answer.
+  const RULES = {
+    "Finding the real verb": "Every sentence needs a real verb. -ing words and “to” words can't do that job alone.",
+    "Complete vs. fragment": "A complete sentence (IC) has a subject, a verb and a complete thought.",
+    "Skip the describing part": "Skip the who/which/that part to find the real subject and its verb.",
+    "Hanging words": "A dependent word (after, because, when…) makes a DC, which must attach to an IC.",
+    "IC, FANBOYS IC": "To join two ICs with a FANBOYS word, put a comma before it: IC, but IC.",
+    "IC; IC": "A semicolon joins two ICs, just like a period.",
+    "IC. IC": "A period can always separate two ICs.",
+    "DC, IC": "A DC that comes first is followed by a comma: DC, IC.",
+    "IC DC": "When the DC comes second, you usually don't need a comma: IC because DC.",
+    "IC; LW, IC": "However, therefore and also aren't FANBOYS: write IC; however, IC.",
+    "Compound predicate (no comma)": "One subject doing two things needs no comma before “and.”",
+    "Singular subject": "One thing takes a singular verb (often ending in -s): The cat sleeps.",
+    "Plural subject": "Two or more things take a plural verb: The friends are.",
+    "Compound subjects": "Two subjects joined by “and” are plural.",
+    "Prepositional traps": "Cross out the “of / in / on…” phrase. The subject is never inside it.",
+    "Each / One-of singular": "Each, every and one are singular.",
+    "There is / there are": "After “There,” the subject comes after the verb. Match the verb to it.",
+    "Main verb needed": "No main verb yet? The blank needs a real verb.",
+    "Main verb after a long subject": "Skip the describing part; the subject still needs its own verb.",
+    "Participle (non-verb) opener": "The sentence already has its main verb, so the opener is a describer (-ing or -ed word).",
+    "Participle (non-verb) in the middle": "The sentence already has its main verb, so the part between commas is a describer.",
+    "Participle (non-verb) describer": "The sentence already has its main verb, so the blank just describes a noun.",
+    "Infinitive (to + verb)": "A “to” word can explain why something happened; it isn't a second main verb.",
+    "Past time clue": "Finished past clues (yesterday, last year) take the simple past: walked, won.",
+    "Future time clue": "Future clues (tomorrow, next week) take “will.”",
+    "Present for habits and facts": "Habits and always-true facts use the present: drinks, boils.",
+    "Present perfect (until now)": "“Since” or “for” + a time that continues to now → has/have + verb.",
+    "Past perfect (earlier past)": "The earlier of two past events uses “had” + verb.",
+    "Tense consistency": "With no time clue, match the tense of the other verbs.",
+    "Cause/Result": "Cause → result: Therefore, As a result, So.",
+    "Contrast": "Opposite or surprise: However, But, Surprisingly.",
+    "Example": "An example of the idea before: For example, For instance.",
+    "Addition": "One more point of the same kind: In addition, Also, Moreover.",
+    "Sequence": "Steps in order: First, Next, Then, Finally.",
+    "Semicolon between ICs": "A semicolon works like a period: IC; IC.",
+    "Colon before a list": "A colon introduces a list, but only after a complete sentence.",
+    "No colon after a verb": "Never put a colon right after a verb like “needs” or “includes.”",
+    "Colon for an explanation": "After a complete sentence, a colon can introduce an explanation.",
+    "Dash pair": "Dashes come in pairs around extra information. A dash opens it, a dash closes it.",
+    "FANBOYS, not semicolon": "A FANBOYS word joining two ICs takes a comma before it, nothing after.",
+    "Non-essential appositive (comma pair)": "Extra information sits between two commas.",
+    "Non-essential appositive (a/an cue)": "“A” or “an” before a description is a clue it's extra: use a comma pair.",
+    "Essential title (no commas)": "A title right before a name takes no commas: Coach Lee.",
+    "Essential clause (no commas)": "Information that tells you WHICH one is needed, so it takes no commas.",
+    "Non-essential who clause": "A “who” part that's just extra goes between two commas.",
+    "Non-essential appositive at the end": "Extra information at the end of a sentence follows a comma.",
+    "Dangling modifier": "An opening describer must be followed right away by the thing it describes.",
+    "Parallel list": "Items in a list use the same form.",
+    "Pronoun agreement": "A singular noun (team, company) takes “its.”",
+    "Their / there / they're": "Their = belongs to them; there = a place; they're = they are.",
+    "Its vs. it's": "Its = belongs to it; it's = it is.",
+    "Plural possessive": "Plural owners: add the apostrophe after the s (players').",
+  };
+  const easy = (questions) => questions.map((q) => {
+    if (!RULES[q.skill]) throw new Error(`basics.js: no rule line for skill "${q.skill}"`);
+    return { ...q, rule: RULES[q.skill], level: 1 };
+  });
 
   // ---------- Chapter 1 (id 10): Complete Sentences ----------
   SW.curriculum.addChapter({

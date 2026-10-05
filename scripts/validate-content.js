@@ -70,7 +70,7 @@ for (const ch of SW.chapters) {
   if (ch.questions.some((q, i) => i && q.level < ch.questions[i - 1].level)) bad.push(`ch${ch.id}: questions aren't ordered easy → hard`);
   // Chapters with a pop-culture set: 25 SAT-style passages + 20 extra practice,
   // plus a benchmark question in some, and exactly one benchmark.
-  const pop = ch.questions.filter((q) => q.rule);
+  const pop = ch.questions.filter((q) => q.rule && q.level === 3);
   if (pop.length) {
     const bmExtra = ch.questions.filter((q) => q.benchmark && /-bm$/.test(q.id)).length;
     if (ch.questions.length !== starters.length + 45 + bmExtra) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want starters + 45 + benchmark)`);
