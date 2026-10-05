@@ -3175,7 +3175,7 @@ window.SatWizz.avatars = [
         { f: "The box [of pens] is", ok: true },
         { f: "The box [of pens] are", ok: false },
       ],
-      example: "The list [of {{NAME_1_POSS}} goals] is long. Cross out the brackets: “The list is long.” One list → is.",
+      example: "The list [of {{NAME_1}}'s goals] is long. Cross out the brackets: “The list is long.” One list → is.",
     },
     questions: easy([
       {
@@ -3904,7 +3904,7 @@ window.SatWizz.avatars = [
       {
         id: "e8-1", skill: "Dangling modifier",
         text: "Running to catch the bus, ______",
-        choices: ["{{NAME_1}} dropped a glove.", "a glove fell from {{NAME_1_POSS}} pocket.", "the bus left without {{NAME_1_OBJ}}.", "{{NAME_1_POSS}} glove dropped."],
+        choices: ["{{NAME_1}} dropped a glove.", "a glove fell from {{NAME_1}}'s pocket.", "the bus left without {{NAME_1}}.", "{{NAME_1}}'s glove dropped."],
         answer: 0,
         notes: [
           "{{NAME_1}} is the one running, so {{NAME_1}} must come right after the comma.",
@@ -7855,7 +7855,7 @@ window.SatWizz.curriculum.addChapter({
     },
     {
       id: "c1-14", skill: "Finding the real verb",
-      text: "The trophy sitting on {{NAME_1_POSS}} shelf ______ at {{EVENT}} two years ago.",
+      text: "The trophy sitting on {{NAME_1}}'s shelf ______ at {{EVENT}} two years ago.",
       choices: ["was won", "being won", "having been won", "to be won"],
       answer: 0,
       notes: [
@@ -8237,6 +8237,45 @@ window.SatWizz.curriculum.addChapter({
           "There's no comma after “and.”",
         ],
       },
+      {
+        id: "h6-11", skill: "No comma between subject and verb", ruleName: "No Comma Between Subject and Verb",
+        text: "The thick layer of volcanic ash that buried the ancient ______ remarkably well preserved for nearly two thousand years.",
+        choices: ["town kept it", "town, kept it", "town; kept it", "town—kept it"],
+        answer: 0,
+        rule: "Never put a single punctuation mark between a subject and its verb, even when the subject is long.",
+        notes: [
+          "The subject is “The thick layer of volcanic ash that buried the ancient town,” and its verb is “kept.” Nothing should separate them.",
+          "A single comma splits the long subject from its verb “kept.”",
+          "A semicolon needs an IC on both sides; it can't split a subject from its verb.",
+          "A single dash also cuts the subject off from its verb.",
+        ],
+      },
+      {
+        id: "h6-12", skill: "No comma between subject and verb", ruleName: "No Comma Between Subject and Verb",
+        text: "Researchers who tracked the migration of gray whales along the Pacific ______ that the animals now leave their feeding grounds nearly a week earlier than they did in the 1990s.",
+        choices: ["coast found", "coast, found", "coast: found", "coast; found"],
+        answer: 0,
+        rule: "A long subject (“Researchers who tracked…”) is still one subject. Don't separate it from its verb.",
+        notes: [
+          "“Researchers who tracked the migration… along the Pacific coast” is the subject, and “found” is its verb. No punctuation goes between them.",
+          "The “who” clause tells us which researchers, so it's needed (no commas), and a single comma can't split the subject from its verb.",
+          "A colon must follow a complete sentence, and the subject has no verb yet.",
+          "A semicolon needs an IC on both sides.",
+        ],
+      },
+      {
+        id: "h6-13", skill: "No comma between subject and verb", ruleName: "No Comma Between Subject and Verb",
+        text: "What surprised {{NAME_1}} most about the ______ how quickly the bacteria adapted to the new temperature.",
+        choices: ["results was", "results, was", "results: was", "results—was"],
+        answer: 0,
+        rule: "A whole clause can be the subject (“What surprised… the results”). Don't put punctuation between it and its verb.",
+        notes: [
+          "The subject is the clause “What surprised {{NAME_1}} most about the results,” and its verb is “was.” No punctuation between them.",
+          "A comma splits the subject clause from its verb.",
+          "A colon must follow a complete sentence, but the subject hasn't gotten its verb yet.",
+          "A single dash splits the subject from its verb.",
+        ],
+      },
     ]),
   });
 
@@ -8372,6 +8411,104 @@ window.SatWizz.curriculum.addChapter({
           "A comma would make the clause extra, as if ALL students complete it, and it has no closing comma.",
           "A comma after “who” splits the clause apart.",
           "A semicolon needs an IC on both sides.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 9 (id 8): Modifiers, Parallelism & Pronouns ----------
+  SW.curriculum.addChapter({
+    id: 8,
+    questions: hard([
+      {
+        id: "h8-1", skill: "Pronoun agreement (collective noun)",
+        text: "After months of debate, the city council finally approved ______ budget for the new public library, which is scheduled to open next spring.",
+        choices: ["its", "their", "it's", "they're"],
+        answer: 0,
+        rule: "A group noun like council, team, company or committee is singular on the SAT, so it takes “its.”",
+        notes: [
+          "One council → “its budget.”",
+          "“Their” is plural, but “the council” is one group.",
+          "“It's” means “it is”: “approved it is budget” makes no sense.",
+          "“They're” means “they are,” and it's plural.",
+        ],
+      },
+      {
+        id: "h8-2", skill: "Pronoun agreement (plural antecedent)",
+        text: "The museum's two ancient clay tablets, discovered by a farmer in 1921, are remarkably well preserved; ______ surfaces still show the marks of a writing tool.",
+        choices: ["their", "its", "it's", "there"],
+        answer: 0,
+        rule: "Find the noun the pronoun replaces. Plural (two tablets) → their; singular → its.",
+        notes: [
+          "The surfaces belong to the two tablets, which are plural → “their.”",
+          "“Its” is singular, but there are two tablets.",
+          "“It's” means “it is.”",
+          "“There” is a place, not ownership.",
+        ],
+      },
+      {
+        id: "h8-3", skill: "Irregular plural possessive",
+        text: "The ______ paintings, judged by a panel of local artists, will hang in the library lobby for a month.",
+        choices: ["children's", "childrens'", "childrens", "children"],
+        answer: 0,
+        rule: "For a plural that doesn't end in -s (children, people, women), show ownership with 's.",
+        notes: [
+          "“Children” is already plural, so the possessive is “children's.”",
+          "“Childrens” isn't a word, so “childrens'” isn't either.",
+          "“Childrens” isn't a word, and there's no apostrophe to show ownership.",
+          "“Children paintings” doesn't show that the paintings belong to the children.",
+        ],
+      },
+      {
+        id: "h8-4", skill: "Plural vs. possessive",
+        text: "Over the summer, the ______ to repaint the community center and finished the job in just two weeks.",
+        choices: ["students volunteered", "student's volunteered", "students' volunteered", "students's volunteered"],
+        answer: 0,
+        rule: "Only use an apostrophe when something belongs to someone. A plain plural (students) has no apostrophe.",
+        notes: [
+          "The students aren't owning anything here; they're just the subject → plain plural “students.”",
+          "“Student's” means something belongs to one student.",
+          "“Students'” means something belongs to the students, but nothing they own follows.",
+          "“Students's” isn't a correct form.",
+        ],
+      },
+      {
+        id: "h8-5", skill: "Its vs. it's",
+        text: "The company's newest satellite is small enough to fit in a backpack, yet ______ cameras can photograph objects on the ground as small as a coin.",
+        choices: ["its", "it's", "their", "its'"],
+        answer: 0,
+        rule: "Its = belonging to it. It's = it is. Test it: if “it is” doesn't fit, use “its.”",
+        notes: [
+          "The cameras belong to the satellite → “its cameras.”",
+          "“It is cameras” makes no sense.",
+          "“Their” is plural, but the satellite is singular.",
+          "“Its'” isn't a word.",
+        ],
+      },
+      {
+        id: "h8-6", skill: "Parallel list",
+        text: "Volunteers at the wildlife center are responsible for feeding the animals, cleaning their enclosures, and ______ any signs of illness to the staff veterinarian.",
+        choices: ["reporting", "to report", "they report", "report"],
+        answer: 0,
+        rule: "Every item in a list must have the same form. Find the pattern (feeding, cleaning…) and match it.",
+        notes: [
+          "“Feeding… cleaning… reporting” all match the -ing pattern after “responsible for.”",
+          "“To report” breaks the -ing pattern.",
+          "“They report” turns the last item into a whole clause.",
+          "“Report” breaks the pattern.",
+        ],
+      },
+      {
+        id: "h8-7", skill: "Dangling modifier",
+        text: "Having studied the ruins for more than a decade, ______",
+        choices: ["{{NAME_1}} was finally able to map the entire city.", "the entire city was finally mapped by {{NAME_1}}.", "{{NAME_1}}'s map of the entire city was finally complete.", "it was finally possible for {{NAME_1}} to map the entire city."],
+        answer: 0,
+        rule: "An opening describer must be followed immediately by the person or thing it describes.",
+        notes: [
+          "{{NAME_1}} did the studying, so {{NAME_1}} must come right after the comma.",
+          "This says the city studied the ruins.",
+          "This says the map studied the ruins.",
+          "“It” can't have studied the ruins.",
         ],
       },
     ]),

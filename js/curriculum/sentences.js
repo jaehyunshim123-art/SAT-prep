@@ -181,7 +181,7 @@ window.SatWizz.curriculum.addChapter({
     },
     {
       id: "c1-14", skill: "Finding the real verb",
-      text: "The trophy sitting on {{NAME_1_POSS}} shelf ______ at {{EVENT}} two years ago.",
+      text: "The trophy sitting on {{NAME_1}}'s shelf ______ at {{EVENT}} two years ago.",
       choices: ["was won", "being won", "having been won", "to be won"],
       answer: 0,
       notes: [

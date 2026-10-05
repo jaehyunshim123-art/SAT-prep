@@ -386,7 +386,7 @@
         { f: "The box [of pens] is", ok: true },
         { f: "The box [of pens] are", ok: false },
       ],
-      example: "The list [of {{NAME_1_POSS}} goals] is long. Cross out the brackets: “The list is long.” One list → is.",
+      example: "The list [of {{NAME_1}}'s goals] is long. Cross out the brackets: “The list is long.” One list → is.",
     },
     questions: easy([
       {
@@ -1115,7 +1115,7 @@
       {
         id: "e8-1", skill: "Dangling modifier",
         text: "Running to catch the bus, ______",
-        choices: ["{{NAME_1}} dropped a glove.", "a glove fell from {{NAME_1_POSS}} pocket.", "the bus left without {{NAME_1_OBJ}}.", "{{NAME_1_POSS}} glove dropped."],
+        choices: ["{{NAME_1}} dropped a glove.", "a glove fell from {{NAME_1}}'s pocket.", "the bus left without {{NAME_1}}.", "{{NAME_1}}'s glove dropped."],
         answer: 0,
         notes: [
           "{{NAME_1}} is the one running, so {{NAME_1}} must come right after the comma.",
