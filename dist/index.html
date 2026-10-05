@@ -7951,6 +7951,434 @@ window.SatWizz.curriculum.addChapter({
 });
 
 </script>
+<!-- The hardest questions (last in their chapters, on every test and in Challenge sets). -->
+<script>
+/* ===== js/curriculum/hard.js ===== */
+// The hardest questions (level 4) for the three chapters where strong students
+// still lose the most points: Verb or Not a Verb? (id 3), Semicolons, Colons &
+// Dashes (id 6) and Extra Information (id 7). Long passages, close answer
+// choices and the traps real high-difficulty questions use. They come last in
+// each chapter, appear on every chapter test and fill the Challenge set.
+// Every question has a rule line and a note for each choice.
+// Load after the other chapter files.
+(function () {
+  "use strict";
+  const SW = window.SatWizz;
+  const hard = (questions) => questions.map((q) => ({ ...q, level: 4 }));
+
+  // ---------- Chapter 4 (id 3): Verb or Not a Verb? ----------
+  SW.curriculum.addChapter({
+    id: 3,
+    questions: hard([
+      {
+        id: "h3-1", skill: "Main verb after a long subject",
+        text: "The archive of handwritten letters that {{NAME_1}} discovered in an abandoned farmhouse, many of them written during a single harsh winter, ______ historians a rare look at daily life in the region.",
+        choices: ["offers", "offering", "which offers", "having offered"],
+        answer: 0,
+        rule: "A long subject still needs its own main verb. Skip the describing parts to find the subject (“The archive”) and give it a verb.",
+        notes: [
+          "Skip “of handwritten letters… winter” and you get “The archive offers historians a rare look.” The subject finally gets its main verb.",
+          "“Offering” is an -ing describer. The archive never gets a main verb, so the sentence is a fragment.",
+          "“Which offers” starts another describing clause. The archive is described again but still does nothing.",
+          "“Having offered” is a describer too, so the sentence still has no main verb.",
+        ],
+      },
+      {
+        id: "h3-2", skill: "Appositive with a describer",
+        text: "Marine biologist {{NAME_2}} studies octopuses, animals ______ of changing both the color and the texture of their skin in less than a second.",
+        choices: ["capable", "are capable", "they are capable", "that are being capable"],
+        answer: 0,
+        rule: "After a complete sentence, a comma can add a noun phrase that renames something (“animals capable of…”). That phrase has no main verb of its own.",
+        notes: [
+          "“Animals capable of changing…” renames “octopuses.” The sentence already has its main verb (studies), so the add-on is just a describer.",
+          "“Animals are capable…” is a second IC joined by only a comma: a comma splice.",
+          "“They are capable…” is also a complete sentence after a comma, so it's a comma splice.",
+          "“That are being capable” is wordy and ungrammatical; “capable” doesn't take “being” here.",
+        ],
+      },
+      {
+        id: "h3-3", skill: "Participle (non-verb) opener",
+        text: "______ in 1902 to measure tiny changes in air pressure, the instrument now sits in a glass case at the town museum, where {{NAME_1}} first saw it as a child.",
+        choices: ["Designed", "Designing", "It was designed", "The instrument was designed"],
+        answer: 0,
+        rule: "When the main clause comes after the comma, the opener is a describer. Use the -ed form when the subject had the action done to it.",
+        notes: [
+          "The instrument WAS designed (someone designed it), so the -ed describer “Designed in 1902…” fits, and the main verb comes later: sits.",
+          "“Designing” would mean the instrument did the designing itself.",
+          "“It was designed…” is a full IC, so with only a comma before “the instrument now sits” this is a comma splice.",
+          "This is also a full IC followed by a comma and another IC: a comma splice.",
+        ],
+      },
+      {
+        id: "h3-4", skill: "Title + name + main verb",
+        text: "In a recent interview, conservationist ______ that restoring wetlands could reduce flooding in nearby towns by nearly a third.",
+        choices: ["{{NAME_3}} argued", "{{NAME_3}}, arguing", "{{NAME_3}}, who argued", "{{NAME_3}} arguing"],
+        answer: 0,
+        rule: "A title right before a name takes no comma, and the person still needs a main verb.",
+        notes: [
+          "“Conservationist {{NAME_3}} argued that…” gives the subject a real verb, with no comma between the title and the name.",
+          "“Arguing” is only a describer, and the comma splits the title from the name.",
+          "“Who argued” describes {{NAME_3}} but leaves the sentence without a main verb.",
+          "“Arguing” can't be the main verb, so this is a fragment.",
+        ],
+      },
+      {
+        id: "h3-5", skill: "Main verb after a long subject",
+        text: "The research team, led by engineer {{NAME_1}} and funded by a small regional grant, ______ a battery that can be recharged using only seawater.",
+        choices: ["developed", "developing", "having developed", "to develop"],
+        answer: 0,
+        rule: "Two describers between commas (“led by…,” “funded by…”) don't count as the main verb. The subject (“The research team”) still needs one.",
+        notes: [
+          "Skip the middle: “The research team developed a battery.” That's the main verb the sentence needs.",
+          "“Developing” is a describer, so the team never gets a main verb.",
+          "“Having developed” is a describer too.",
+          "“To develop” can't be the main verb of a sentence.",
+        ],
+      },
+      {
+        id: "h3-6", skill: "Main verb needed",
+        text: "To reduce the glare on its solar panels, the company ______ a thin coating inspired by the tiny bumps on a moth's eye.",
+        choices: ["applied", "applying", "to apply", "having applied"],
+        answer: 0,
+        rule: "An opening “to” phrase explains why; it isn't the main verb. The subject after the comma still needs its own verb.",
+        notes: [
+          "“The company applied a thin coating” is the IC. “To reduce the glare…” just explains why.",
+          "“Applying” leaves the company without a main verb.",
+          "“To apply” repeats the “to” form; there's still no main verb.",
+          "“Having applied” is a describer, not a main verb.",
+        ],
+      },
+      {
+        id: "h3-7", skill: "Participle (non-verb) in the middle",
+        text: "The first prototype failed after only three trials; the second, ______ with a stronger aluminum frame, survived more than two hundred.",
+        choices: ["built", "was built", "it was built", "which built"],
+        answer: 0,
+        rule: "The part between commas is extra description. If the clause already has its main verb (“survived”), the middle needs a describer, not a verb.",
+        notes: [
+          "“The second, built with a stronger frame, survived…” The main verb is “survived”; “built…” just describes the second prototype.",
+          "“Was built” adds a second main verb with nothing joining it to “survived.”",
+          "“It was built…” drops a full IC into the middle of another one.",
+          "“Which built” says the prototype did the building, which makes no sense.",
+        ],
+      },
+      {
+        id: "h3-8", skill: "Main verb after a long subject",
+        text: "Whether the ancient walls were built for defense or simply to mark a boundary ______ a question that {{NAME_2}} has spent a decade trying to answer.",
+        choices: ["remains", "remaining", "that remains", "to remain"],
+        answer: 0,
+        rule: "A whole clause can be the subject (“Whether the walls were built…”). It still needs a main verb after it.",
+        notes: [
+          "The subject is the whole “Whether…” clause, and “remains” is its main verb: “Whether X or Y remains a question.”",
+          "“Remaining” is a describer, so the sentence has no main verb.",
+          "“That remains” turns the rest into a describing clause; the subject still has no verb.",
+          "“To remain” can't be the main verb.",
+        ],
+      },
+      {
+        id: "h3-9", skill: "Participle (non-verb) describer",
+        text: "Each autumn, thousands of monarch butterflies travel south, ______ distances of up to three thousand miles to reach the forests where they spend the winter.",
+        choices: ["covering", "they cover", "covered by", "which cover"],
+        answer: 0,
+        rule: "After a complete sentence and a comma, an -ing phrase can add detail about the subject. A full IC there would be a comma splice.",
+        notes: [
+          "The IC is “thousands of monarch butterflies travel south.” “Covering distances…” adds detail about the butterflies.",
+          "“They cover…” is a complete sentence after a comma: a comma splice.",
+          "“Covered by distances” makes no sense; the butterflies cover the distances.",
+          "“Which” after “south” seems to describe the direction, and “south… cover distances” makes no sense.",
+        ],
+      },
+      {
+        id: "h3-10", skill: "Main verb after a long subject",
+        text: "The novel, which {{NAME_3}} wrote over the course of six summers and revised more than a dozen times, ______ finally published last spring to wide praise.",
+        choices: ["was", "being", "having been", "which was"],
+        answer: 0,
+        rule: "Skip the “which…” clause between the commas; the subject (“The novel”) still needs its main verb.",
+        notes: [
+          "“The novel… was finally published” gives the subject its main verb.",
+          "“Being” is an -ing form, so the novel never gets a main verb.",
+          "“Having been” is a describer, not a main verb.",
+          "“Which was” starts a second describing clause; the novel still has no main verb.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 7 (id 6): Semicolons, Colons & Dashes ----------
+  SW.curriculum.addChapter({
+    id: 6,
+    questions: hard([
+      {
+        id: "h6-1", skill: "Colon after a complete clause",
+        text: "The expedition's success depended on one piece of equipment that {{NAME_1}} had nearly left ______ hand-cranked radio that still worked after the batteries froze.",
+        choices: ["behind: a", "behind; a", "behind, and a", "behind. A"],
+        answer: 0,
+        rule: "A colon goes after a complete sentence and introduces the thing it promised (“one piece of equipment… : a radio”).",
+        notes: [
+          "The first part is a complete sentence that promises “one piece of equipment.” The colon delivers it: a radio.",
+          "A semicolon needs an IC after it, but “a hand-cranked radio that…” has no main verb.",
+          "“And a radio” makes it sound like a second, separate thing instead of the piece of equipment.",
+          "“A hand-cranked radio that still worked…” alone has no main verb, so it's a fragment.",
+        ],
+      },
+      {
+        id: "h6-2", skill: "No colon after a verb",
+        text: "The museum's new exhibit ______ ancient maps, handmade compasses, and the journals of early navigators.",
+        choices: ["features rare", "features: rare", "features; rare", "features—rare"],
+        answer: 0,
+        rule: "No colon (or semicolon, or dash) between a verb and its object. “The exhibit features” isn't a complete sentence yet.",
+        notes: [
+          "The verb “features” leads straight into its list, with no punctuation needed.",
+          "A colon can't split a verb from its object; “The exhibit features” isn't complete.",
+          "A semicolon needs ICs on both sides.",
+          "A dash here cuts the verb off from what it features.",
+        ],
+      },
+      {
+        id: "h6-3", skill: "Semicolons in a list",
+        text: "The festival's lineup included a jazz trio from the coast; a choir led by {{NAME_1}}, a retired music ______ student string quartet.",
+        choices: ["teacher; and a", "teacher, and a", "teacher and a", "teacher: and a"],
+        answer: 0,
+        rule: "When list items already contain commas, separate the items with semicolons, and keep it consistent all the way through.",
+        notes: [
+          "The list already uses a semicolon after “coast,” and the choir item contains a comma, so the last item needs a semicolon too.",
+          "A comma makes it look like “a retired music teacher and a student string quartet” are both describing {{NAME_1}}.",
+          "With no punctuation, the last item blurs into the description of {{NAME_1}}.",
+          "A colon doesn't separate list items.",
+        ],
+      },
+      {
+        id: "h6-4", skill: "Dash pair",
+        text: "{{NAME_2}}—an engineer who had never before worked on a structure longer than fifty ______ chosen to design the bridge because of {{NAME_2_POSS}} unusual approach to wind resistance.",
+        choices: ["meters—was", "meters, was", "meters; was", "meters was"],
+        answer: 0,
+        rule: "Extra information opened with a dash must be closed with a dash before the sentence continues.",
+        notes: [
+          "A dash opened the extra part after “{{NAME_2}},” so a dash closes it before the main verb “was.”",
+          "A comma can't close a part that a dash opened.",
+          "A semicolon separates the subject from its verb.",
+          "With nothing closing it, the extra information runs straight into the main verb.",
+        ],
+      },
+      {
+        id: "h6-5", skill: "Single dash before an explanation",
+        text: "After years of failed attempts, the team finally understood why the seeds would not ______ soil had been too acidic all along.",
+        choices: ["sprout—the", "sprout, the", "sprout the", "sprout, and, the"],
+        answer: 0,
+        rule: "A single dash (like a colon) can join a complete sentence to the explanation that follows it.",
+        notes: [
+          "The dash says “here's why”: the soil had been too acidic. Both sides are complete, and the dash links the explanation.",
+          "Two ICs joined by only a comma: a comma splice.",
+          "No punctuation between two ICs: a run-on.",
+          "There's no comma after “and.”",
+        ],
+      },
+      {
+        id: "h6-6", skill: "Semicolon + transition",
+        text: "The early results looked ______ the scientists insisted on repeating the experiment three more times.",
+        choices: ["promising; nevertheless,", "promising, nevertheless,", "promising nevertheless", "promising, nevertheless"],
+        answer: 0,
+        rule: "Transition words like nevertheless aren't FANBOYS. Between two ICs, put a semicolon before them and a comma after.",
+        notes: [
+          "IC; nevertheless, IC. The semicolon joins the clauses, and “nevertheless” shows the contrast.",
+          "Commas around “nevertheless” leave two ICs joined by commas: a comma splice.",
+          "No punctuation at all: a run-on.",
+          "A comma before “nevertheless” is still a comma splice.",
+        ],
+      },
+      {
+        id: "h6-7", skill: "No colon after such as",
+        text: "The recipe calls for warm ______ cinnamon, nutmeg, and a pinch of black pepper.",
+        choices: ["spices such as", "spices such as:", "spices, such as:", "spices; such as"],
+        answer: 0,
+        rule: "Never put a colon right after “such as,” “including” or a preposition; the list follows directly.",
+        notes: [
+          "“Spices such as cinnamon…” leads straight into the examples with no extra punctuation.",
+          "A colon after “such as” is never correct.",
+          "Still a colon after “such as.”",
+          "A semicolon needs ICs on both sides.",
+        ],
+      },
+      {
+        id: "h6-8", skill: "FANBOYS between ICs",
+        text: "{{NAME_3}} had rehearsed the speech dozens of ______ the microphone failed, {{NAME_3}} delivered it from memory without missing a word.",
+        choices: ["times, so when", "times; so, when", "times so when", "times, so, when"],
+        answer: 0,
+        rule: "To join two ICs with a FANBOYS word, put a comma before it, and no comma right after it.",
+        notes: [
+          "IC, so IC. The second IC just starts with a DC (“when the microphone failed”).",
+          "A semicolon before “so” and a comma after it is the wrong pattern for FANBOYS.",
+          "The two ICs need a comma before “so.”",
+          "No comma after “so” when it joins two clauses.",
+        ],
+      },
+      {
+        id: "h6-9", skill: "Matching comma pair",
+        text: "The village's oldest building, a stone mill constructed around ______ grinds grain using water from the river.",
+        choices: ["1750, still", "1750—still", "1750; still", "1750 still"],
+        answer: 0,
+        rule: "Punctuation around extra information must match: comma with comma, dash with dash.",
+        notes: [
+          "A comma opened the extra part after “building,” so a comma closes it.",
+          "A comma opened it, so a dash can't close it.",
+          "A semicolon would separate the subject from its verb “grinds.”",
+          "Without a closing comma, the extra information runs into the verb.",
+        ],
+      },
+      {
+        id: "h6-10", skill: "Colon before an explanation",
+        text: "{{NAME_1}} noticed something unusual about the old photographs in the ______ shadows pointed in two different directions.",
+        choices: ["collection: the", "collection, the", "collection the", "collection, and, the"],
+        answer: 0,
+        rule: "A colon after a complete sentence can introduce an explanation of what came before.",
+        notes: [
+          "“Something unusual” is explained after the colon: the shadows pointed two ways.",
+          "Two ICs joined by only a comma: a comma splice.",
+          "Two ICs with no punctuation: a run-on.",
+          "There's no comma after “and.”",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 8 (id 7): Extra Information ----------
+  SW.curriculum.addChapter({
+    id: 7,
+    questions: hard([
+      {
+        id: "h7-1", skill: "Essential title (no commas)",
+        text: "According to ______ the town's first library was paid for entirely with small donations from local farmers.",
+        choices: ["historian {{NAME_1}},", "historian, {{NAME_1}},", "historian, {{NAME_1}}", "historian {{NAME_1}}"],
+        answer: 0,
+        rule: "No comma between a title and a name, but an opening phrase like “According to…” ends with a comma.",
+        notes: [
+          "“Historian {{NAME_1}}” stays together, and the comma after the name ends the opening phrase.",
+          "The commas around the name treat it as extra, but the title and name belong together.",
+          "One comma splits the title from the name, and the opener has no closing comma.",
+          "The opening phrase needs a comma before the main clause starts.",
+        ],
+      },
+      {
+        id: "h7-2", skill: "Non-essential appositive (a/an cue)",
+        text: "{{NAME_2}}, a botanist who spent three years documenting rare ______ the findings in a free online guide.",
+        choices: ["orchids, published", "orchids published", "orchids; published", "orchids—published"],
+        answer: 0,
+        rule: "“A…” after a name signals extra information. Close it with the same mark that opened it.",
+        notes: [
+          "A comma opened the extra part after {{NAME_2}}, so a comma closes it before the verb “published.”",
+          "Without the closing comma, the extra part runs into the verb.",
+          "A semicolon separates the subject from its verb.",
+          "A comma opened it, so a dash can't close it.",
+        ],
+      },
+      {
+        id: "h7-3", skill: "Essential clause (which vs that)",
+        text: "The only ______ connects the two villages was closed for repairs last winter.",
+        choices: ["bridge that", "bridge, that", "bridge, which", "bridge which,"],
+        answer: 0,
+        rule: "Information that tells you WHICH one is essential: use “that” and no commas.",
+        notes: [
+          "“That connects the two villages” identifies the bridge, so it's essential: no commas.",
+          "“That” clauses never take a comma before them.",
+          "“Which” with a comma marks extra information, but here the clause is needed, and there's no closing comma.",
+          "A comma after “which” splits the clause apart.",
+        ],
+      },
+      {
+        id: "h7-4", skill: "One of a kind (non-essential)",
+        text: "The country's tallest ______ rises more than four thousand meters above sea level, attracts climbers from around the world.",
+        choices: ["mountain, which", "mountain which", "mountain that", "mountain; which"],
+        answer: 0,
+        rule: "If there's only one of something (“the tallest mountain”), describing it adds extra information: use “which” and a comma pair.",
+        notes: [
+          "There's only one tallest mountain, so the description is extra. A comma opens it, and the comma after “level” closes it.",
+          "The closing comma after “level” needs an opening comma to match.",
+          "“That” marks needed information, but then the comma after “level” wouldn't match anything.",
+          "A semicolon separates the subject from its verb “attracts.”",
+        ],
+      },
+      {
+        id: "h7-5", skill: "Non-essential which clause",
+        text: "The experiment, which {{NAME_3}} designed with help from two classmates and a retired ______ nearly a year to complete.",
+        choices: ["engineer, took", "engineer took", "engineer; took", "engineer—took"],
+        answer: 0,
+        rule: "A “which” clause between commas is extra. Close it before the main verb.",
+        notes: [
+          "A comma opened the “which…” clause, so a comma closes it before the main verb “took.”",
+          "Without a closing comma, the extra clause runs into the verb.",
+          "A semicolon separates the subject from its verb.",
+          "A comma opened it, so a dash can't close it.",
+        ],
+      },
+      {
+        id: "h7-6", skill: "Dash pair around a list",
+        text: "The three ingredients in the ______ water, and salt—have not changed in two hundred years.",
+        choices: ["bread—flour,", "bread, flour,", "bread: flour,", "bread flour,"],
+        answer: 0,
+        rule: "When extra information already contains commas, set it off with a pair of dashes so the reader can tell where it starts and ends.",
+        notes: [
+          "The list “flour, water, and salt” has commas inside it, and the closing dash after “salt” needs an opening dash to match.",
+          "A comma can't open a part that a dash closes, and extra commas make the list confusing.",
+          "A colon can't be closed by a dash before the sentence continues.",
+          "“Bread flour” changes the meaning, and nothing opens the dash pair.",
+        ],
+      },
+      {
+        id: "h7-7", skill: "Essential clause (which vs that)",
+        text: "The ______ were damaged in the flood have been carefully restored, while the rest remain in storage.",
+        choices: ["paintings that", "paintings, which", "paintings, that", "paintings which,"],
+        answer: 0,
+        rule: "If the clause tells you WHICH ones (only the damaged paintings), it's essential: “that,” no commas.",
+        notes: [
+          "Only the damaged paintings were restored, so “that were damaged in the flood” is needed information: no commas.",
+          "Commas would mean ALL the paintings were damaged, which contradicts “the rest remain in storage.”",
+          "“That” never follows a comma.",
+          "The comma after “which” splits the clause from its verb.",
+        ],
+      },
+      {
+        id: "h7-8", skill: "Dash pair",
+        text: "{{NAME_1}}—an architect known for designing homes that use almost no ______ to students about the future of building.",
+        choices: ["energy—spoke", "energy, spoke", "energy; spoke", "energy spoke"],
+        answer: 0,
+        rule: "A dash that opens extra information needs a dash to close it.",
+        notes: [
+          "A dash opened “an architect known for…,” so a dash closes it before the main verb “spoke.”",
+          "A comma can't close a part that a dash opened.",
+          "A semicolon separates the subject from its verb.",
+          "Without a closing dash, it reads as though the energy spoke.",
+        ],
+      },
+      {
+        id: "h7-9", skill: "Non-essential appositive (a/an cue)",
+        text: "For nearly a decade, scientists studied the ______ rare species found only on a single island, to learn how it survives long droughts.",
+        choices: ["lizard, a", "lizard a", "lizard; a", "lizard: a"],
+        answer: 0,
+        rule: "“A…” after a noun signals extra information. A comma opens it, and the comma after “island” closes it.",
+        notes: [
+          "“A rare species found only on a single island” renames the lizard. It's extra, so a comma pair surrounds it.",
+          "Without the opening comma, the closing comma after “island” has nothing to match.",
+          "A semicolon needs an IC after it.",
+          "A colon could introduce it, but then the comma after “island” wouldn't match anything.",
+        ],
+      },
+      {
+        id: "h7-10", skill: "Essential clause (no commas)",
+        text: "______ complete the summer reading list will receive extra credit in the fall.",
+        choices: ["Students who", "Students, who", "Students who,", "Students; who"],
+        answer: 0,
+        rule: "A “who” clause that tells you WHICH people is essential: no commas.",
+        notes: [
+          "Only the students who finish the list get credit, so “who complete…” is needed information: no commas.",
+          "A comma would make the clause extra, as if ALL students complete it, and it has no closing comma.",
+          "A comma after “who” splits the clause apart.",
+          "A semicolon needs an IC on both sides.",
+        ],
+      },
+    ]),
+  });
+})();
+
+</script>
 <!-- Question generator: thousands of extra questions per chapter, never repeated. -->
 <script>
 /* ===== js/curriculum/gen/core.js ===== */
@@ -17320,6 +17748,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       const t = S.tests[ch.id];
       const ps = S.practiceSets[ch.id];
       const got = Math.min(correctIn(ch.id).length, ch.questions.length);
+      const cs = S.practiceSets[scoreKey("challenge", ch.id)];
       const state = !open ? "🔒 Locked"
         : t?.passed ? `✓ Passed · best ${t.best}/${t.n}`
         : t ? `Best ${t.best}/${t.n} · need ${passMark(t.n)}`
@@ -17334,11 +17763,12 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           ${open ? `
           <div class="ch-progress">
             <span class="bar" aria-hidden="true"><i style="width:${(got / ch.questions.length) * 100}%"></i></span>
-            <small class="muted">${got}/${ch.questions.length} core questions right${ps ? ` · last practice set ${ps.last}/${ps.n}` : ""}</small>
+            <small class="muted">${got}/${ch.questions.length} core questions right${ps ? ` · last practice set ${ps.last}/${ps.n}` : ""}${cs ? ` · 🔥 challenge best ${cs.best}/${cs.n}` : ""}</small>
           </div>
           <div class="ch-actions">
             <button class="btn" type="button" data-learn="${ch.id}">📖 Learn & practice</button>
             <button class="btn ghost" type="button" data-set="${ch.id}">✏️ Practice set (${TEST_LEN})</button>
+            <button class="btn ghost" type="button" data-challenge="${ch.id}">🔥 Challenge (${TEST_LEN})</button>
             ${testReady(ch)
               ? `<button class="btn ghost test-btn" type="button" data-test="${ch.id}">🎯 Review for Understanding (${TEST_LEN})</button>`
               : `<button class="btn ghost test-btn" type="button" data-test="${ch.id}" aria-disabled="true" disabled>🔒 Test opens after ${testNeed(ch)} more right answer${testNeed(ch) === 1 ? "" : "s"}</button>`}
@@ -17351,7 +17781,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           <button class="theme-toggle" type="button" id="theme-toggle" aria-label="${effectiveTheme() === "dark" ? "Switch to light mode" : "Switch to dark mode"}" title="${effectiveTheme() === "dark" ? "Light mode" : "Dark mode"}">${effectiveTheme() === "dark" ? "☀️" : "🌙"}</button>
           <span class="label-sm">Digital SAT grammar · ${passed} of ${core.length} chapters passed</span>
           <h2>${S.name ? `Welcome back, ${esc(S.name)}` : "Your chapters"}</h2>
-          <p class="muted">Start with Chapter 1 and go in order. In each chapter, read the lesson, answer <b>more than half</b> of the questions correctly to open the <b>Review for Understanding</b> test, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter.</p>
+          <p class="muted">Start with Chapter 1 and go in order. In each chapter, read the lesson, answer <b>more than half</b> of the questions correctly to open the <b>Review for Understanding</b> test, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter. Want a tougher workout? Try the 🔥 Challenge sets: each chapter's hardest questions.</p>
           <div class="dash-focus">${FOCUS.meterHtml(S.focus)}<small class="muted">${S.focus < FOCUS.RULES.max ? `Full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus recharges to 100% every hour"}</small></div>
         </section>
         <div class="dash-grid">${core.map(card).join("")}</div>
@@ -17375,6 +17805,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     }));
     dash.querySelectorAll("[data-set]").forEach((b) => b.addEventListener("click", () => startRun("practice", Number(b.dataset.set))));
     dash.querySelectorAll("[data-test]").forEach((b) => b.addEventListener("click", () => startRun("test", Number(b.dataset.test))));
+    dash.querySelectorAll("[data-challenge]").forEach((b) => b.addEventListener("click", () => startRun("challenge", Number(b.dataset.challenge))));
   }
 
   // Learn & practice: the chapter's lesson card and question feed. Coming back
@@ -17399,12 +17830,18 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
   // A test: the chapter's benchmark question, then core questions (missed and
   // not-yet-right first), then fresh generated ones from the no-repeat stream,
   // so every retake is different.
+  // Tests are SAT-level only: no easy starters (level 1), and every test
+  // includes the hardest questions (the benchmark plus level 4 / SAT-style).
+  const HARD_PER_TEST = 3;
   function pickTest(ch) {
     const ids = [];
     const add = (id) => { if (id && BY_ID[id] && !ids.includes(id) && ids.length < TEST_LEN) ids.push(id); };
     const bm = ch.questions.find((q) => q.benchmark);
     if (bm) add(bm.id);
-    const core = ch.questions.filter((q) => !q.benchmark);
+    const top = Math.max(...ch.questions.map((q) => q.level));
+    const hardest = ch.questions.filter((q) => !q.benchmark && q.level >= Math.max(3, top));
+    for (const q of shuffle(hardest)) { if (ids.length >= HARD_PER_TEST) break; add(q.id); }
+    const core = ch.questions.filter((q) => !q.benchmark && q.level >= 2);
     const got = new Set(correctIn(ch.id));
     const missed = core.filter((q) => S.missed.includes(q.id));
     const fresh = core.filter((q) => !got.has(q.id) && !S.missed.includes(q.id));
@@ -17416,8 +17853,27 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     }
     for (let k = 0; ids.length < TEST_LEN && ch.pool.length && k < 40; k++) add(nextGenId(ch.id));
     for (const q of shuffle(core)) add(q.id);
-    return [ids[0], ...shuffle(ids.slice(1))];
+    return bm ? [ids[0], ...shuffle(ids.slice(1))] : shuffle(ids);
   }
+  // A Challenge set: the chapter's hardest questions (highest level first,
+  // benchmark included), topped up with SAT-style generated ones.
+  function pickChallenge(ch) {
+    const ids = [];
+    const add = (id) => { if (id && BY_ID[id] && !ids.includes(id) && ids.length < TEST_LEN) ids.push(id); };
+    const byLevel = [...new Set(ch.questions.map((q) => q.level))].sort((a, b) => b - a);
+    const bm = ch.questions.find((q) => q.benchmark);
+    if (bm) add(bm.id);
+    for (const lv of byLevel) {
+      if (lv < 2) break;
+      for (const q of shuffle(ch.questions.filter((x) => x.level === lv))) add(q.id);
+    }
+    for (let k = 0; ids.length < TEST_LEN && ch.pool.length && k < 40; k++) add(nextGenId(ch.id));
+    return shuffle(ids);
+  }
+  // Score records: tests by chapter id; practice sets by chapter id, and
+  // Challenge sets as "c<id>" in the same (synced) practice-set book.
+  const scoreKey = (mode, chId) => (mode === "challenge" ? `c${chId}` : chId);
+
   // A practice set: this chapter's missed questions first, then fresh ones.
   function pickPractice(ch) {
     const ids = [];
@@ -17437,7 +17893,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       return;
     }
     sfx.play("tap");
-    const ids = mode === "test" ? pickTest(ch) : pickPractice(ch);
+    const ids = mode === "test" ? pickTest(ch) : mode === "challenge" ? pickChallenge(ch) : pickPractice(ch);
     run = {
       mode,
       chId,
@@ -17451,7 +17907,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
 
   const runTitle = (r) => {
     const ch = chapterById(r.chId);
-    return `${r.mode === "test" ? "Review for Understanding" : "Practice set"} · ${ch.bonus ? "Bonus" : `Ch ${ch.num}`}`;
+    return `${r.mode === "test" ? "Review for Understanding" : r.mode === "challenge" ? "🔥 Challenge" : "Practice set"} · ${ch.bonus ? "Bonus" : `Ch ${ch.num}`}`;
   };
 
   function renderTest() {
@@ -17567,8 +18023,9 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     const n = r.items.length;
     const pass = score >= passMark(n);
     const book = r.mode === "test" ? S.tests : S.practiceSets;
-    const prev = book[ch.id];
-    book[ch.id] = {
+    const key = scoreKey(r.mode, ch.id);
+    const prev = book[key];
+    book[key] = {
       best: Math.max(prev?.best || 0, score),
       last: score,
       n,
@@ -17617,6 +18074,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     if (isTest && r.unlocked) note = `🔓 ${r.unlocked.bonus ? "Bonus chapter" : `Chapter ${r.unlocked.num}`} unlocked: <b>${esc(r.unlocked.title.replace(/^Bonus: /, ""))}</b>`;
     else if (isTest && r.pass) note = next ? `${next.bonus ? "The bonus chapter" : `Chapter ${next.num}`} is open.` : "You've passed every chapter test.";
     else if (isTest) note = `You need ${passMark(r.n)}/${r.n} (${Math.round(PASS_SHARE * 100)}%) to unlock ${next ? (next.bonus ? "the bonus chapter" : `Chapter ${next.num}`) : "the next chapter"}. Review the rules below, then retake: every retake has new questions.`;
+    else if (r.mode === "challenge") note = r.pass ? "🔥 Challenge passed: these are the chapter's hardest questions." : "Challenge sets are the chapter's hardest questions. Read every explanation below, then try again.";
     else note = r.pass ? "Nice set. When you're ready, take the Review for Understanding." : "Practice sets don't unlock chapters. Review the misses below and keep going.";
     const letter = (it, ci) => "ABCD"[it.order.indexOf(ci)];
     const ans = (it, ci) => `<span class="ans-letter">${letter(it, ci)}</span> ${fill(it.q.choices[ci], it.cast, false)}`;
@@ -17630,7 +18088,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           <small class="diag-earn">+${fmt(r.earned)} ⚡ · Focus ${S.focus}%</small>
         </section>
         <div class="diag-actions">
-          <button class="btn" type="button" data-retake>↻ ${isTest ? "Retake test" : "New practice set"}</button>
+          <button class="btn" type="button" data-retake>↻ ${isTest ? "Retake test" : r.mode === "challenge" ? "New challenge" : "New practice set"}</button>
           ${next && isUnlocked(next.id) ? `<button class="btn ghost" type="button" data-next-ch="${next.id}">${next.bonus ? "Bonus chapter" : `Chapter ${next.num}`} →</button>` : ""}
           ${!isTest && testReady(ch) ? `<button class="btn ghost" type="button" data-test-now>🎯 Take the test</button>` : ""}
           <button class="btn ghost" type="button" data-dash>🏠 Dashboard</button>
@@ -17744,7 +18202,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       <section class="help-sec" id="help-play">
         <h3>How to Play SatWizz</h3>
         <ul class="help-list">
-          <li><b>🏠 Chapters.</b> Learn each chapter's rules in <i>Learn &amp; practice</i>, try a <i>Practice set</i>, then take the 10-question <b>Review for Understanding</b>. The test opens once you've answered more than half of the chapter's questions correctly; score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter. After every set, the Diagnostic screen explains each answer.</li>
+          <li><b>🏠 Chapters.</b> Learn each chapter's rules in <i>Learn &amp; practice</i>, try a <i>Practice set</i>, then take the 10-question <b>Review for Understanding</b>. The test opens once you've answered more than half of the chapter's questions correctly; score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter. Tests use SAT-level questions only, including each chapter's hardest. Want a tougher workout? A <b>🔥 Challenge</b> set is 10 of the chapter's hardest questions. After every set, the Diagnostic screen explains each answer.</li>
           <li><b>🧠 Focus (0–100%).</b> A miss costs ${FOCUS.RULES.miss}%, rushing (under 3s) costs ${FOCUS.RULES.rush}%. Two right in a row gives +${FOCUS.RULES.restore}%. It refills to 100% every hour, or right away with a 🧪 Focus Elixir. Low Focus outlines the question in orange or red, and in the Derby it locks your answers for a few seconds.</li>
           <li><b>⚡ Sparks.</b> +${RULES.sparksPerCorrect} per right answer, bonuses for combos, your daily goal and chapter milestones. Spend them in the 🛍️ Shop or bet them in the 🐎 Derby.</li>
           <li><b>🔥 Lock In Streak.</b> Meet your daily goal (${S.goal} questions) every day. Aura Shields 💠 cover a missed day.</li>

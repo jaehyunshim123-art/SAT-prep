@@ -32,6 +32,9 @@ Every chapter runs **easy → hard**:
 1. **Easy starters** (`js/curriculum/basics.js`, level 1): 8–12 short, everyday sentences with plain-English explanations, in teaching order. This file also holds the plain-English lesson each chapter shows.
 2. **Extra practice** (`js/curriculum/chN.js` and `js/curriculum/sentences.js`, level 2), shuffled.
 3. **SAT-style passages** (`clause-derby/src/chN.js`, shared with Clause Derby, level 3), shuffled, including each chapter's benchmark.
+4. **Hardest questions** (`js/curriculum/hard.js`, level 4): 10 more each in Chapters 4, 7 and 8 (Verb or Not a Verb?, Semicolons/Colons/Dashes, Extra Information), where strong students lose the most points. They have long passages and close answer choices, and each one has a rule line and a note for every choice.
+
+The aim: easy enough to start from scratch, and hard enough at the top to master Digital SAT grammar.
 
 After the core set, the feed keeps going with generated questions (chapters 2–8).
 
@@ -48,7 +51,8 @@ Facts tied to real historical people (radium, penicillin) were reworded to stay 
 Each chapter opens with an **Explanation Pause** lesson card in plain English (key terms in bold): the chapter's rules, ✓/✗ pattern chips and a worked example. After each answer a **slide-up drawer** shows the rule being tested, why the right answer works and why every other choice fails. A wrong answer comes back two cards later marked "↺ Try again".
 
 - **The test opens after a majority:** a chapter's **Review for Understanding** test stays locked until you've answered **more than half** of the chapter's questions correctly (17 of 32 in Chapter 1). The Dashboard card says how many more you need. Practice sets are always open.
-- **Unlocking:** score **7/10 (70%)** or better on the test to unlock the next chapter. Practice alone doesn't unlock chapters; chapters you had already unlocked stay open.
+- **Unlocking:** score **7/10 (70%)** or better on the test to unlock the next chapter.
+- **🔥 Challenge sets:** every chapter card has a Challenge button. It's 10 of the chapter's hardest questions (highest level first, the benchmark included, topped up with generated ones), with the same Diagnostic screen and explanations. It never unlocks anything; scores sync as `c<chapter id>` in the practice-set record, and the card shows your best. Practice alone doesn't unlock chapters; chapters you had already unlocked stay open.
 - **Complete:** a chapter is complete once every question has been answered correctly. The first completion earns **+50 ⚡**.
 
 | # | Chapter | What it covers | Questions |
@@ -77,7 +81,7 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 
 ## Dashboard, tests and the Diagnostic screen
 
-- **Review for Understanding (10 questions):** the chapter's **benchmark** question first (where it has one), then 5 core questions (missed and not-yet-right first), then 4 fresh generated ones from the no-repeat stream, so every retake is different. One question at a time (A–D, or keys A–D / 1–4, → and ←), number dots to jump around, and **no answers shown until you submit**. It opens once more than half of the chapter is right. **7/10 passes** and unlocks the next chapter (+50 ⚡ the first time).
+- **Review for Understanding (10 questions), SAT-level only:** no easy starters. The chapter's **benchmark** question comes first (where it has one), and every test includes at least **3 of the chapter's hardest questions** (the benchmark plus level 4, or SAT-style passages). Then come core questions (missed and not-yet-right first), then 4 fresh generated ones from the no-repeat stream, so every retake is different. One question at a time (A–D, or keys A–D / 1–4, → and ←), number dots to jump around, and **no answers shown until you submit**. It opens once more than half of the chapter is right. **7/10 passes** and unlocks the next chapter (+50 ⚡ the first time).
 - **Practice set (10 questions):** this chapter's missed questions first, then fresh ones. Same screens; it never unlocks anything.
 - **Answers count:** each answer counts toward the daily goal, stats, the missed list, Sparks (+10 per right answer) and Focus (misses, rushing under 3s, 2 in a row).
 - **Diagnostic Feedback screen:** opens automatically on submit. A **PASS / FAIL** banner with the score %, then an item-by-item review: the passage with the right answer filled in, **your answer vs. the correct one**, the **rule's name** (e.g. "Terminal Boundary Rule", "Restrictive Title Rule", "Dash Pair Rule") and a short explanation (the rule line, then why the right answer works; on a miss, why your choice fails). Buttons: Retake (new questions), the next chapter, Dashboard.

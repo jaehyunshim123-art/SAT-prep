@@ -20,6 +20,7 @@ for (let i = 1; i <= 7; i++) require(`${repo}/clause-derby/src/ch${i}.js`);
 require(`${repo}/js/curriculum/clause.js`);
 for (let i = 1; i <= 9; i++) require(`${repo}/js/curriculum/ch${i}.js`);
 require(`${repo}/js/curriculum/sentences.js`);
+require(`${repo}/js/curriculum/hard.js`);
 require(`${repo}/js/curriculum/gen/core.js`);
 for (let i = 1; i <= 7; i++) require(`${repo}/js/curriculum/gen/ch${i}.js`);
 require(`${repo}/js/curriculum/rules.js`);
@@ -73,9 +74,12 @@ for (const ch of SW.chapters) {
   const pop = ch.questions.filter((q) => q.rule && q.level === 3);
   if (pop.length) {
     const bmExtra = ch.questions.filter((q) => q.benchmark && /-bm$/.test(q.id)).length;
-    if (ch.questions.length !== starters.length + 45 + bmExtra) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want starters + 45 + benchmark)`);
+    const hardest = ch.questions.filter((q) => q.level === 4).length;
+    if (ch.questions.length !== starters.length + 45 + bmExtra + hardest) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want starters + 45 + benchmark + hard)`);
     if (ch.questions.filter((q) => q.benchmark).length !== 1) bad.push(`ch${ch.id}: needs exactly one benchmark`);
   }
+  // Hard questions (level 4) need a rule line like the SAT-style passages.
+  if (ch.questions.some((q) => q.level === 4 && !q.rule)) bad.push(`ch${ch.id}: hard questions need a rule line`);
   if (ch.questions.length - starters.length < 20) bad.push(`ch${ch.id}: needs at least 20 practice questions after the starters`);
   // The lesson defines a term before the chapter (or an earlier one) uses it.
   const taught = SW.chapters.slice(0, SW.chapters.indexOf(ch) + 1).map((c) => [c.pause.summary, ...c.pause.rules].join(" ")).join(" ");

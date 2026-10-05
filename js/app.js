@@ -1618,6 +1618,7 @@
       const t = S.tests[ch.id];
       const ps = S.practiceSets[ch.id];
       const got = Math.min(correctIn(ch.id).length, ch.questions.length);
+      const cs = S.practiceSets[scoreKey("challenge", ch.id)];
       const state = !open ? "🔒 Locked"
         : t?.passed ? `✓ Passed · best ${t.best}/${t.n}`
         : t ? `Best ${t.best}/${t.n} · need ${passMark(t.n)}`
@@ -1632,11 +1633,12 @@
           ${open ? `
           <div class="ch-progress">
             <span class="bar" aria-hidden="true"><i style="width:${(got / ch.questions.length) * 100}%"></i></span>
-            <small class="muted">${got}/${ch.questions.length} core questions right${ps ? ` · last practice set ${ps.last}/${ps.n}` : ""}</small>
+            <small class="muted">${got}/${ch.questions.length} core questions right${ps ? ` · last practice set ${ps.last}/${ps.n}` : ""}${cs ? ` · 🔥 challenge best ${cs.best}/${cs.n}` : ""}</small>
           </div>
           <div class="ch-actions">
             <button class="btn" type="button" data-learn="${ch.id}">📖 Learn & practice</button>
             <button class="btn ghost" type="button" data-set="${ch.id}">✏️ Practice set (${TEST_LEN})</button>
+            <button class="btn ghost" type="button" data-challenge="${ch.id}">🔥 Challenge (${TEST_LEN})</button>
             ${testReady(ch)
               ? `<button class="btn ghost test-btn" type="button" data-test="${ch.id}">🎯 Review for Understanding (${TEST_LEN})</button>`
               : `<button class="btn ghost test-btn" type="button" data-test="${ch.id}" aria-disabled="true" disabled>🔒 Test opens after ${testNeed(ch)} more right answer${testNeed(ch) === 1 ? "" : "s"}</button>`}
@@ -1649,7 +1651,7 @@
           <button class="theme-toggle" type="button" id="theme-toggle" aria-label="${effectiveTheme() === "dark" ? "Switch to light mode" : "Switch to dark mode"}" title="${effectiveTheme() === "dark" ? "Light mode" : "Dark mode"}">${effectiveTheme() === "dark" ? "☀️" : "🌙"}</button>
           <span class="label-sm">Digital SAT grammar · ${passed} of ${core.length} chapters passed</span>
           <h2>${S.name ? `Welcome back, ${esc(S.name)}` : "Your chapters"}</h2>
-          <p class="muted">Start with Chapter 1 and go in order. In each chapter, read the lesson, answer <b>more than half</b> of the questions correctly to open the <b>Review for Understanding</b> test, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter.</p>
+          <p class="muted">Start with Chapter 1 and go in order. In each chapter, read the lesson, answer <b>more than half</b> of the questions correctly to open the <b>Review for Understanding</b> test, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter. Want a tougher workout? Try the 🔥 Challenge sets: each chapter's hardest questions.</p>
           <div class="dash-focus">${FOCUS.meterHtml(S.focus)}<small class="muted">${S.focus < FOCUS.RULES.max ? `Full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus recharges to 100% every hour"}</small></div>
         </section>
         <div class="dash-grid">${core.map(card).join("")}</div>
@@ -1673,6 +1675,7 @@
     }));
     dash.querySelectorAll("[data-set]").forEach((b) => b.addEventListener("click", () => startRun("practice", Number(b.dataset.set))));
     dash.querySelectorAll("[data-test]").forEach((b) => b.addEventListener("click", () => startRun("test", Number(b.dataset.test))));
+    dash.querySelectorAll("[data-challenge]").forEach((b) => b.addEventListener("click", () => startRun("challenge", Number(b.dataset.challenge))));
   }
 
   // Learn & practice: the chapter's lesson card and question feed. Coming back
@@ -1697,12 +1700,18 @@
   // A test: the chapter's benchmark question, then core questions (missed and
   // not-yet-right first), then fresh generated ones from the no-repeat stream,
   // so every retake is different.
+  // Tests are SAT-level only: no easy starters (level 1), and every test
+  // includes the hardest questions (the benchmark plus level 4 / SAT-style).
+  const HARD_PER_TEST = 3;
   function pickTest(ch) {
     const ids = [];
     const add = (id) => { if (id && BY_ID[id] && !ids.includes(id) && ids.length < TEST_LEN) ids.push(id); };
     const bm = ch.questions.find((q) => q.benchmark);
     if (bm) add(bm.id);
-    const core = ch.questions.filter((q) => !q.benchmark);
+    const top = Math.max(...ch.questions.map((q) => q.level));
+    const hardest = ch.questions.filter((q) => !q.benchmark && q.level >= Math.max(3, top));
+    for (const q of shuffle(hardest)) { if (ids.length >= HARD_PER_TEST) break; add(q.id); }
+    const core = ch.questions.filter((q) => !q.benchmark && q.level >= 2);
     const got = new Set(correctIn(ch.id));
     const missed = core.filter((q) => S.missed.includes(q.id));
     const fresh = core.filter((q) => !got.has(q.id) && !S.missed.includes(q.id));
@@ -1714,8 +1723,27 @@
     }
     for (let k = 0; ids.length < TEST_LEN && ch.pool.length && k < 40; k++) add(nextGenId(ch.id));
     for (const q of shuffle(core)) add(q.id);
-    return [ids[0], ...shuffle(ids.slice(1))];
+    return bm ? [ids[0], ...shuffle(ids.slice(1))] : shuffle(ids);
   }
+  // A Challenge set: the chapter's hardest questions (highest level first,
+  // benchmark included), topped up with SAT-style generated ones.
+  function pickChallenge(ch) {
+    const ids = [];
+    const add = (id) => { if (id && BY_ID[id] && !ids.includes(id) && ids.length < TEST_LEN) ids.push(id); };
+    const byLevel = [...new Set(ch.questions.map((q) => q.level))].sort((a, b) => b - a);
+    const bm = ch.questions.find((q) => q.benchmark);
+    if (bm) add(bm.id);
+    for (const lv of byLevel) {
+      if (lv < 2) break;
+      for (const q of shuffle(ch.questions.filter((x) => x.level === lv))) add(q.id);
+    }
+    for (let k = 0; ids.length < TEST_LEN && ch.pool.length && k < 40; k++) add(nextGenId(ch.id));
+    return shuffle(ids);
+  }
+  // Score records: tests by chapter id; practice sets by chapter id, and
+  // Challenge sets as "c<id>" in the same (synced) practice-set book.
+  const scoreKey = (mode, chId) => (mode === "challenge" ? `c${chId}` : chId);
+
   // A practice set: this chapter's missed questions first, then fresh ones.
   function pickPractice(ch) {
     const ids = [];
@@ -1735,7 +1763,7 @@
       return;
     }
     sfx.play("tap");
-    const ids = mode === "test" ? pickTest(ch) : pickPractice(ch);
+    const ids = mode === "test" ? pickTest(ch) : mode === "challenge" ? pickChallenge(ch) : pickPractice(ch);
     run = {
       mode,
       chId,
@@ -1749,7 +1777,7 @@
 
   const runTitle = (r) => {
     const ch = chapterById(r.chId);
-    return `${r.mode === "test" ? "Review for Understanding" : "Practice set"} · ${ch.bonus ? "Bonus" : `Ch ${ch.num}`}`;
+    return `${r.mode === "test" ? "Review for Understanding" : r.mode === "challenge" ? "🔥 Challenge" : "Practice set"} · ${ch.bonus ? "Bonus" : `Ch ${ch.num}`}`;
   };
 
   function renderTest() {
@@ -1865,8 +1893,9 @@
     const n = r.items.length;
     const pass = score >= passMark(n);
     const book = r.mode === "test" ? S.tests : S.practiceSets;
-    const prev = book[ch.id];
-    book[ch.id] = {
+    const key = scoreKey(r.mode, ch.id);
+    const prev = book[key];
+    book[key] = {
       best: Math.max(prev?.best || 0, score),
       last: score,
       n,
@@ -1915,6 +1944,7 @@
     if (isTest && r.unlocked) note = `🔓 ${r.unlocked.bonus ? "Bonus chapter" : `Chapter ${r.unlocked.num}`} unlocked: <b>${esc(r.unlocked.title.replace(/^Bonus: /, ""))}</b>`;
     else if (isTest && r.pass) note = next ? `${next.bonus ? "The bonus chapter" : `Chapter ${next.num}`} is open.` : "You've passed every chapter test.";
     else if (isTest) note = `You need ${passMark(r.n)}/${r.n} (${Math.round(PASS_SHARE * 100)}%) to unlock ${next ? (next.bonus ? "the bonus chapter" : `Chapter ${next.num}`) : "the next chapter"}. Review the rules below, then retake: every retake has new questions.`;
+    else if (r.mode === "challenge") note = r.pass ? "🔥 Challenge passed: these are the chapter's hardest questions." : "Challenge sets are the chapter's hardest questions. Read every explanation below, then try again.";
     else note = r.pass ? "Nice set. When you're ready, take the Review for Understanding." : "Practice sets don't unlock chapters. Review the misses below and keep going.";
     const letter = (it, ci) => "ABCD"[it.order.indexOf(ci)];
     const ans = (it, ci) => `<span class="ans-letter">${letter(it, ci)}</span> ${fill(it.q.choices[ci], it.cast, false)}`;
@@ -1928,7 +1958,7 @@
           <small class="diag-earn">+${fmt(r.earned)} ⚡ · Focus ${S.focus}%</small>
         </section>
         <div class="diag-actions">
-          <button class="btn" type="button" data-retake>↻ ${isTest ? "Retake test" : "New practice set"}</button>
+          <button class="btn" type="button" data-retake>↻ ${isTest ? "Retake test" : r.mode === "challenge" ? "New challenge" : "New practice set"}</button>
           ${next && isUnlocked(next.id) ? `<button class="btn ghost" type="button" data-next-ch="${next.id}">${next.bonus ? "Bonus chapter" : `Chapter ${next.num}`} →</button>` : ""}
           ${!isTest && testReady(ch) ? `<button class="btn ghost" type="button" data-test-now>🎯 Take the test</button>` : ""}
           <button class="btn ghost" type="button" data-dash>🏠 Dashboard</button>
@@ -2042,7 +2072,7 @@
       <section class="help-sec" id="help-play">
         <h3>How to Play SatWizz</h3>
         <ul class="help-list">
-          <li><b>🏠 Chapters.</b> Learn each chapter's rules in <i>Learn &amp; practice</i>, try a <i>Practice set</i>, then take the 10-question <b>Review for Understanding</b>. The test opens once you've answered more than half of the chapter's questions correctly; score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter. After every set, the Diagnostic screen explains each answer.</li>
+          <li><b>🏠 Chapters.</b> Learn each chapter's rules in <i>Learn &amp; practice</i>, try a <i>Practice set</i>, then take the 10-question <b>Review for Understanding</b>. The test opens once you've answered more than half of the chapter's questions correctly; score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter. Tests use SAT-level questions only, including each chapter's hardest. Want a tougher workout? A <b>🔥 Challenge</b> set is 10 of the chapter's hardest questions. After every set, the Diagnostic screen explains each answer.</li>
           <li><b>🧠 Focus (0–100%).</b> A miss costs ${FOCUS.RULES.miss}%, rushing (under 3s) costs ${FOCUS.RULES.rush}%. Two right in a row gives +${FOCUS.RULES.restore}%. It refills to 100% every hour, or right away with a 🧪 Focus Elixir. Low Focus outlines the question in orange or red, and in the Derby it locks your answers for a few seconds.</li>
           <li><b>⚡ Sparks.</b> +${RULES.sparksPerCorrect} per right answer, bonuses for combos, your daily goal and chapter milestones. Spend them in the 🛍️ Shop or bet them in the 🐎 Derby.</li>
           <li><b>🔥 Lock In Streak.</b> Meet your daily goal (${S.goal} questions) every day. Aura Shields 💠 cover a missed day.</li>
