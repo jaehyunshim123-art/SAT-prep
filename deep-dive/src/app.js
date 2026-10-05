@@ -26,7 +26,7 @@
   const creature = (id) => DD.CREATURES.find((c) => c.id === id);
   const destination = (id) => DD.DESTINATIONS.find((d) => d.id === id);
 
-  const SPEED = Math.max(1, Number(new URLSearchParams(location.search).get("speed")) || 1);
+  const SPEED = Math.max(1, Number(new URLSearchParams(location.search).get("speed")) || DD.defaultSpeed || 1);
   const DRIFT_WARN_MS = 10000; // away longer than this → "your sub drifted" note
 
   const app = $("#app");
@@ -63,7 +63,7 @@
     document.documentElement.style.setProperty("--water-top", top);
     document.documentElement.style.setProperty("--water-bottom", bottom);
     document.documentElement.style.setProperty("--light", String(Math.max(0, 1 - depthT(m) / 0.6)));
-    $("#theme-color").setAttribute("content", top);
+    $("#theme-color")?.setAttribute("content", top);
   }
 
   // ---------- Dive engine ----------
@@ -217,7 +217,7 @@
           <input id="task" maxlength="80" placeholder="e.g. Chapter 4 biology notes">
         </label>
         <button class="primary" id="go">Start dive</button>
-        ${SPEED > 1 ? `<p class="dev">Dev speed: ${SPEED}×</p>` : ""}
+        ${SPEED > 1 ? `<p class="dev">Running ${SPEED}× faster for testing</p>` : ""}
       </main>`;
 
     app.querySelectorAll(".dest").forEach((b) => b.addEventListener("click", () => {
@@ -262,8 +262,14 @@
         </div>
         <div id="sightings" class="sightings" aria-live="polite"></div>
       </main>`;
-    $("#surface").addEventListener("click", () => {
-      if (confirm("Surface now? Your dive will end here and count as unfinished.")) endDive(false);
+    // Two taps to surface, so a stray tap doesn't end the dive.
+    let armed = null;
+    $("#surface").addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      if (armed) { clearTimeout(armed); endDive(false); return; }
+      btn.textContent = "Tap again to surface (dive ends unfinished)";
+      btn.classList.add("armed");
+      armed = setTimeout(() => { armed = null; btn.textContent = "Surface early"; btn.classList.remove("armed"); }, 3000);
     });
     startTicker();
   }

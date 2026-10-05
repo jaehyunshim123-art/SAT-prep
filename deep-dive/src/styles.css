@@ -82,6 +82,7 @@ h1, h2 { font-family: var(--display); margin: 0; }
 .primary:hover { filter: brightness(1.06); }
 .ghost { background: transparent; border: 1.5px solid var(--glass-line); }
 .ghost:hover { border-color: var(--ink); }
+.ghost.armed { border-color: var(--gold); color: var(--gold); }
 .row { display: flex; gap: 10px; }
 .dev { text-align: center; color: var(--muted); font-size: 12px; }
 
