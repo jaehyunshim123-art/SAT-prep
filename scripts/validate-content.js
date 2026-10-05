@@ -14,10 +14,12 @@ const repo = require("path").resolve(__dirname, "..");
 global.window = {};
 require(`${repo}/js/themes.js`);
 require(`${repo}/js/questions.js`);
+require(`${repo}/js/curriculum/basics.js`);
 require(`${repo}/clause-derby/src/bank.js`);
 for (let i = 1; i <= 7; i++) require(`${repo}/clause-derby/src/ch${i}.js`);
 require(`${repo}/js/curriculum/clause.js`);
 for (let i = 1; i <= 9; i++) require(`${repo}/js/curriculum/ch${i}.js`);
+require(`${repo}/js/curriculum/sentences.js`);
 require(`${repo}/js/curriculum/gen/core.js`);
 for (let i = 1; i <= 7; i++) require(`${repo}/js/curriculum/gen/ch${i}.js`);
 require(`${repo}/js/curriculum/rules.js`);
@@ -61,12 +63,26 @@ for (const ch of SW.chapters) {
   if (!ch.questions.length) { console.log(`note: chapter ${ch.id} has no questions yet (Phase 2)`); continue; }
   const pauseText = [ch.pause.summary, ch.pause.example, ...ch.pause.rules, ...ch.pause.patterns.map((p) => p.f)].join(" ");
   if (pauseText.replace(TOKEN, "").includes("{{")) bad.push(`ch${ch.id} pause: unknown placeholder`);
-  // Core chapters: 25 pop-culture questions (with a rule line) + 20 extra practice.
-  // 45 = 25 pop-culture + 20 extra, plus a benchmark question in some chapters.
-  const bmExtra = ch.questions.filter((q) => q.benchmark && /-bm$/.test(q.id)).length;
-  if (!ch.bonus && ch.questions.length !== 45 + bmExtra) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want 45 + benchmark)`);
-  if (!ch.bonus && ch.questions.filter((q) => q.benchmark).length !== 1) bad.push(`ch${ch.id}: needs exactly one benchmark`);
-  if (!ch.bonus && ch.questions.slice(0, 25).some((q) => !q.rule)) bad.push(`ch${ch.id}: pop-culture set should lead`);
+  // Every chapter starts gentle: 8+ easy starters (level 1) come first, and
+  // the questions never get easier as you go (level 1 → 2 → 3).
+  const starters = ch.questions.filter((q) => q.level === 1);
+  if (starters.length < 8) bad.push(`ch${ch.id}: needs at least 8 easy starter questions (has ${starters.length})`);
+  if (ch.questions.some((q, i) => i && q.level < ch.questions[i - 1].level)) bad.push(`ch${ch.id}: questions aren't ordered easy → hard`);
+  // Chapters with a pop-culture set: 25 SAT-style passages + 20 extra practice,
+  // plus a benchmark question in some, and exactly one benchmark.
+  const pop = ch.questions.filter((q) => q.rule);
+  if (pop.length) {
+    const bmExtra = ch.questions.filter((q) => q.benchmark && /-bm$/.test(q.id)).length;
+    if (ch.questions.length !== starters.length + 45 + bmExtra) bad.push(`ch${ch.id}: ${ch.questions.length} questions (want starters + 45 + benchmark)`);
+    if (ch.questions.filter((q) => q.benchmark).length !== 1) bad.push(`ch${ch.id}: needs exactly one benchmark`);
+  }
+  if (ch.questions.length - starters.length < 20) bad.push(`ch${ch.id}: needs at least 20 practice questions after the starters`);
+  // The lesson defines a term before the chapter (or an earlier one) uses it.
+  const taught = SW.chapters.slice(0, SW.chapters.indexOf(ch) + 1).map((c) => [c.pause.summary, ...c.pause.rules].join(" ")).join(" ");
+  for (const [term, re] of [["IC", /\bIC\b/], ["DC", /\bDC\b/], ["FANBOYS", /FANBOYS/]]) {
+    const lesson = [ch.pause.summary, ...ch.pause.rules, ch.pause.example].join(" ");
+    if (re.test(lesson) && !new RegExp(`\\*\\*[^*]*\\(${term}\\)\\*\\*|\\*\\*${term}\\*\\* =`).test(taught)) bad.push(`ch${ch.id}: lesson uses ${term} before it's defined`);
+  }
   if (!ch.pause.patterns.length || !ch.pause.example) bad.push(`ch${ch.id}: lesson needs patterns and an example`);
   for (const q of ch.questions) {
     checkCommon(q.id, q, []);

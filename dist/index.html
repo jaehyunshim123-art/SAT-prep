@@ -2370,6 +2370,9 @@ kbd {
 .consent { display: flex; gap: 10px; align-items: flex-start; text-align: left; font-size: 0.84rem; line-height: 1.45; color: var(--muted); cursor: pointer; }
 .consent input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--volt); }
 
+/* Opening screen: the sign-in box on a solid background, not over the app. */
+.modal-backdrop.welcome { background: var(--bg); }
+
 </style>
 </head>
 <body>
@@ -2598,7 +2601,7 @@ window.SatWizz.avatars = [
 // SatWizz curriculum framework.
 //
 // Loaded BEFORE the chapter files. It defines:
-//   • CURRICULUM_PLAN: the 7-chapter sequence (plus two bonus chapters)
+//   • CURRICULUM_PLAN: the 9-chapter sequence, in the order students take it
 //   • STEMS: the official Digital SAT question stems
 //   • SatWizz.curriculum.addChapter(): how a chapter file registers itself
 //   • SatWizz.curriculum.build(): called once by the app after every chapter
@@ -2648,28 +2651,36 @@ window.SatWizz.avatars = [
 
   const SW = (window.SatWizz = window.SatWizz || {});
 
-  // The 7-chapter sequence, then two bonus chapters. Chapters unlock in this order.
-  // Each core chapter leads with its pop-culture set (clause-derby/src/chN.js,
-  // registered by js/curriculum/clause.js), then the extra practice in
-  // js/curriculum/chN.js.
+  // The 9 chapters in the order students take them; they unlock in this
+  // order and are numbered by it (ch.num, "Chapter 1…9"). The `id` is only an
+  // internal key that never changes, so saved progress and synced accounts
+  // keep working: Complete Sentences was added in front later, so it's id 10.
+  // Every chapter runs easy → hard: the plain-English starters
+  // (js/curriculum/basics.js, level 1), the extra practice
+  // (js/curriculum/chN.js, level 2), then the SAT-style passages
+  // (clause-derby/src/chN.js via js/curriculum/clause.js, level 3).
   SW.CURRICULUM_PLAN = [
-    { id: 1, short: "Clause Connectors", title: "Independent Clause Connectors & Sentence Boundaries" },
+    { id: 10, short: "Complete Sentences", title: "Complete Sentences: Subjects, Verbs & Fragments" },
+    { id: 1, short: "Joining Sentences", title: "Joining Sentences: Periods, Semicolons & FANBOYS" },
     { id: 2, short: "Subject-Verb Agreement", title: "Subject-Verb Agreement" },
-    { id: 3, short: "Verb vs. Non-Verb", title: "Verb vs. Non-Verb Identification (Appositives)" },
-    { id: 4, short: "Verb Tenses", title: "Verb Tenses & Aspect" },
-    { id: 5, short: "Logical Transitions", title: "Logical Transitions" },
-    { id: 6, short: "Semicolons, Dashes, Colons", title: "Punctuation Fundamentals (Semicolon, Dash, Colon)" },
-    { id: 7, short: "Appositives", title: "Appositives & Non-Essential Clauses" },
-    { id: 8, short: "Modifiers & Parallelism", title: "Bonus: Modifiers & Parallelism", bonus: true },
-    { id: 9, short: "Pronouns & Possessives", title: "Bonus: Pronouns & Possessives", bonus: true },
+    { id: 3, short: "Verb or Not a Verb?", title: "Verb or Not a Verb? (Main Verbs vs. Describers)" },
+    { id: 4, short: "Verb Tenses", title: "Verb Tenses: Matching the Time" },
+    { id: 5, short: "Transitions", title: "Transitions: How Ideas Connect" },
+    { id: 6, short: "Semicolons, Colons, Dashes", title: "Semicolons, Colons & Dashes" },
+    { id: 7, short: "Extra Information", title: "Extra Information: Appositives & Commas" },
+    { id: 8, short: "Modifiers & Pronouns", title: "Modifiers, Parallelism & Pronouns" },
   ];
+  // Chapter 9 used to be a separate bonus chapter (Pronouns & Possessives);
+  // its questions now live in id 8. Old saves move with this map.
+  SW.MERGED_CHAPTERS = { 9: 8 };
 
   // Saves from before the 7-chapter curriculum (SAVE_VERSION < 3) used ids 1-10:
   // old → new chapter id. Old chapter 1 (complete sentences) was retired.
   SW.LEGACY_CHAPTER_MAP = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9 };
 
-  // Share of a chapter's questions you need right to unlock the next one.
-  SW.UNLOCK_SHARE = 0.6;
+  // A chapter's Review for Understanding test opens once you've answered
+  // more than half of its questions correctly ("a majority").
+  SW.testReadyAt = (ch) => Math.floor(ch.questions.length / 2) + 1;
 
   // Official Digital SAT question stems. {word} is filled for vocab "meaning" items.
   SW.STEMS = {
@@ -2727,6 +2738,7 @@ window.SatWizz.avatars = [
     // practice): questions are appended, and the first registration's title
     // and lesson win. Lesson patterns/example missing from it are filled in.
     addChapter(def) {
+      def = { ...def, id: SW.MERGED_CHAPTERS[def.id] || def.id };
       const plan = SW.CURRICULUM_PLAN.find((p) => p.id === def.id);
       if (!plan) console.warn(`SatWizz: chapter ${def.id} isn't in CURRICULUM_PLAN`);
       const prev = registered.find((c) => c.id === def.id);
@@ -2748,17 +2760,1187 @@ window.SatWizz.avatars = [
       const byId = new Map(registered.map((c) => [c.id, c]));
       SW.chapters = SW.CURRICULUM_PLAN
         .map((p) => byId.get(p.id) || { ...p, pause: null, questions: [] })
-        .concat(registered.filter((c) => !SW.CURRICULUM_PLAN.some((p) => p.id === c.id)))
-        .sort((a, b) => a.id - b.id);
+        .concat(registered.filter((c) => !SW.CURRICULUM_PLAN.some((p) => p.id === c.id)));
+      SW.chapters.forEach((ch, i) => {
+        ch.num = i + 1;
+        // Easy → hard. Starters are level 1; SAT-style passages (with a rule
+        // line) default to 3, everything else to 2. Stable within a level.
+        const level = (q) => q.level || (q.rule ? 3 : 2);
+        ch.questions = ch.questions.map((q, k) => [q, k]).sort((a, b) => level(a[0]) - level(b[0]) || a[1] - b[1]).map(([q]) => Object.assign(q, { level: level(q) }));
+      });
       // Generated pools (js/curriculum/gen/): thousands of extra questions per
       // chapter, served after the core set and never repeated (see app.js).
       for (const ch of SW.chapters) ch.pool = SW.gen ? SW.gen.pool(ch.id).map((q) => Object.assign(q, { chapterId: ch.id })) : [];
       SW.questions = SW.chapters.flatMap((ch) => [...ch.questions.map((q) => Object.assign(q, { chapterId: ch.id })), ...ch.pool]);
       SW.chapterById = (id) => SW.chapters.find((c) => c.id === id);
+      // Order-based neighbours: the chapter a test unlocks, and the one before.
+      SW.nextChapter = (ch) => SW.chapters[SW.chapters.indexOf(ch) + 1] || null;
+      SW.prevChapter = (ch) => SW.chapters[SW.chapters.indexOf(ch) - 1] || null;
+      SW.FIRST_CHAPTER = SW.chapters[0].id;
       SW.CORE_CHAPTERS = SW.chapters.filter((c) => !c.bonus).length;
       return SW.chapters;
     },
   };
+})();
+
+</script>
+<!-- Plain-English lessons + easy starter questions for every chapter (load before the other chapter files). -->
+<script>
+/* ===== js/curriculum/basics.js ===== */
+// The gentle start for every chapter, written for students around a 1000 SAT
+// score: a plain-English lesson (loaded first, so it's the lesson each
+// chapter shows) and 8-12 easy starter questions with short sentences.
+// Starters are `level: 1`; the chapter's other practice is level 2 and the
+// SAT-style passages (clause-derby/src/) are level 3, so every chapter runs
+// easy → hard (see SatWizz.curriculum.build).
+//
+// Terms are defined before they're used: Chapter 1 teaches subject, verb,
+// independent clause (IC), dependent clause (DC), fragment and FANBOYS, and
+// later lessons only use words already taught (with a quick reminder).
+//
+// Load after js/questions.js and BEFORE js/curriculum/clause.js.
+(function () {
+  "use strict";
+  const SW = window.SatWizz;
+  const easy = (questions) => questions.map((q) => ({ ...q, level: 1 }));
+
+  // ---------- Chapter 1 (id 10): Complete Sentences ----------
+  SW.curriculum.addChapter({
+    id: 10,
+    pause: {
+      summary: "Every grammar question on the SAT builds on one idea: a complete sentence needs a subject, a verb, and a complete thought. This chapter also teaches the words the rest of SatWizz uses, so take a minute with each one.",
+      rules: [
+        "**Subject** = who or what the sentence is about. **Verb** = what the subject does or is (runs, is, studied). “{{NAME_1}} studied.” has both.",
+        "**Independent clause (IC)** = a complete sentence: subject + verb + complete thought. It can stand alone. “{{NAME_1}} won the race.”",
+        "**Dependent clause (DC)** = has a subject and a verb but CAN'T stand alone, because it starts with a **dependent word** like because, although, when, if, since, while, after or unless. “Because {{NAME_1}} won the race” leaves you waiting for more.",
+        "**Fragment** = words that look like a sentence but aren't one: no verb, an -ing word instead of a verb, or a DC all by itself.",
+        "-ing words (running) and “to” words (to run) are NOT verbs on their own. “{{NAME_2}} running every morning.” is a fragment. “{{NAME_2}} runs every morning.” is a sentence.",
+        "Who, which and that usually start a describing part. Skip it to find the real sentence: “The coach [who helped {{NAME_3}}] smiled.” → “The coach smiled.”",
+        "**FANBOYS** = the 7 joining words: For, And, Nor, But, Or, Yet, So. You'll use them in Chapter 2 to join two ICs.",
+      ],
+      patterns: [
+        { f: "{{NAME_1}} studied.", ok: true },
+        { f: "Although {{NAME_1}} studied.", ok: false },
+        { f: "{{NAME_1}} studying.", ok: false },
+        { f: "Because it rained, {{NAME_1}} stayed in.", ok: true },
+      ],
+      example: "IC: “{{NAME_1}} passed the test.” DC: “because the test was easy.” Together: “{{NAME_1}} passed the test because the test was easy.” The IC can stand alone; the DC can't.",
+    },
+    questions: easy([
+      {
+        id: "e10-1", skill: "Finding the real verb",
+        text: "{{NAME_1}} ______ to school every day.",
+        choices: ["walks", "walking", "to walk", "having walked"],
+        answer: 0,
+        notes: [
+          "“Walks” is a real verb, so “{{NAME_1}} walks to school every day” is a complete sentence.",
+          "“Walking” is an -ing word. It can't be the verb by itself, so this is a fragment.",
+          "“To walk” is a “to” word. It can't be the main verb.",
+          "“Having walked” is an -ing form, so the sentence still has no real verb.",
+        ],
+      },
+      {
+        id: "e10-2", skill: "Finding the real verb",
+        text: "The dog ______ loudly at the mail carrier.",
+        choices: ["barked", "barking", "to bark", "having barked"],
+        answer: 0,
+        notes: [
+          "Subject (the dog) + verb (barked) + complete thought. That's an IC.",
+          "“The dog barking loudly” has no real verb. It's a fragment.",
+          "“To bark” can't be the main verb of a sentence.",
+          "“Having barked” is an -ing form, not a full verb.",
+        ],
+      },
+      {
+        id: "e10-3", skill: "Finding the real verb",
+        text: "{{NAME_2}} ______ a great book last night.",
+        choices: ["read", "reading", "to read", "having read"],
+        answer: 0,
+        notes: [
+          "“{{NAME_2}} read a great book last night” has a subject and a real verb.",
+          "“Reading” is an -ing word, so the sentence is a fragment.",
+          "“To read” is a “to” word. It can't be the main verb.",
+          "“Having read” still isn't a full verb, so the thought is incomplete.",
+        ],
+      },
+      {
+        id: "e10-4", skill: "Finding the real verb",
+        text: "The students ______ tired after the long test.",
+        choices: ["were", "being", "to be", "having been"],
+        answer: 0,
+        notes: [
+          "“Were” is a verb (a form of “to be”), so “The students were tired” is complete.",
+          "“Being” is an -ing word. “The students being tired” is a fragment.",
+          "“To be” can't be the main verb.",
+          "“Having been” is an -ing form, so there's still no real verb.",
+        ],
+      },
+      {
+        id: "e10-5", skill: "Complete vs. fragment",
+        text: "After lunch, ______",
+        choices: ["{{NAME_1}} played soccer.", "{{NAME_1}} playing soccer.", "because {{NAME_1}} played soccer.", "which was soccer."],
+        answer: 0,
+        notes: [
+          "“{{NAME_1}} played soccer” is an IC: subject + verb + complete thought.",
+          "“Playing” is an -ing word, so there's no real verb.",
+          "“Because” makes it a DC. Two pieces that can't stand alone still don't make a sentence.",
+          "“Which was soccer” is only a describing part. There's no IC anywhere.",
+        ],
+      },
+      {
+        id: "e10-6", skill: "Complete vs. fragment",
+        text: "Because it was raining, ______",
+        choices: ["the game was canceled.", "the game being canceled.", "which canceled the game.", "since the game was canceled."],
+        answer: 0,
+        notes: [
+          "“Because it was raining” is a DC, so it needs an IC after it. “The game was canceled” is an IC.",
+          "“Being canceled” is an -ing form, so there's still no real verb.",
+          "“Which canceled the game” is a describing part, not an IC.",
+          "“Since” starts another DC. Two DCs together are still a fragment.",
+        ],
+      },
+      {
+        id: "e10-7", skill: "Skip the describing part",
+        text: "The pizza that {{NAME_2}} ordered ______ cold.",
+        choices: ["was", "being", "to be", "that was"],
+        answer: 0,
+        notes: [
+          "Skip “that {{NAME_2}} ordered.” The real sentence is “The pizza was cold.”",
+          "“Being” is an -ing word, not a verb.",
+          "“To be” can't be the main verb.",
+          "“That was” adds another describing part. The pizza still never gets its own verb.",
+        ],
+      },
+      {
+        id: "e10-8", skill: "Skip the describing part",
+        text: "{{NAME_1}}, who loves music, ______ the guitar.",
+        choices: ["plays", "playing", "who plays", "to play"],
+        answer: 0,
+        notes: [
+          "Skip “who loves music.” The real sentence is “{{NAME_1}} plays the guitar.”",
+          "“Playing” is an -ing word, so the sentence has no verb.",
+          "“Who plays” is another describing part. {{NAME_1}} still never does anything.",
+          "“To play” can't be the main verb.",
+        ],
+      },
+      {
+        id: "e10-9", skill: "Complete vs. fragment",
+        text: "The bus was late. ______",
+        choices: ["{{NAME_3}} missed the first class.", "Missing the first class.", "Because {{NAME_3}} missed the first class.", "Which made {{NAME_3}} miss the first class."],
+        answer: 0,
+        notes: [
+          "“{{NAME_3}} missed the first class” has a subject, a verb and a complete thought.",
+          "“Missing the first class” has no subject and no real verb. It's a fragment.",
+          "“Because…” is a DC standing alone, so it's a fragment.",
+          "A sentence can't start with “Which…” like this. It's only a describing part.",
+        ],
+      },
+      {
+        id: "e10-10", skill: "Finding the real verb",
+        text: "When the bell rang, the students ______ the room.",
+        choices: ["left", "leaving", "to leave", "who left"],
+        answer: 0,
+        notes: [
+          "“When the bell rang” is a DC. “The students left the room” is the IC it needs.",
+          "“Leaving” is an -ing word, so the IC has no verb.",
+          "“To leave” can't be the main verb.",
+          "“Who left” is a describing part, so there's still no IC.",
+        ],
+      },
+      {
+        id: "e10-11", skill: "Finding the real verb",
+        text: "The phone on the table ______ suddenly.",
+        choices: ["rang", "ringing", "to ring", "having rung"],
+        answer: 0,
+        notes: [
+          "“The phone rang suddenly” is complete. “On the table” just tells where the phone is.",
+          "“Ringing” is an -ing word, so it's a fragment.",
+          "“To ring” can't be the main verb.",
+          "“Having rung” is an -ing form, not a real verb.",
+        ],
+      },
+      {
+        id: "e10-12", skill: "Hanging words",
+        text: "______ {{NAME_2}} finished the homework, {{NAME_2}} watched a movie.",
+        choices: ["After", "Finished", "Finishing", "{{NAME_2}} finished it and"],
+        answer: 0,
+        notes: [
+          "“After {{NAME_2}} finished the homework” is a DC, and the comma connects it to the IC “{{NAME_2}} watched a movie.” ✓",
+          "“Finished {{NAME_2}} finished…” doesn't make sense.",
+          "“Finishing {{NAME_2}} finished…” doesn't make sense either.",
+          "This repeats the action and leaves a messy, broken sentence.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 2 (id 1): Joining Sentences ----------
+  SW.curriculum.addChapter({
+    id: 1,
+    pause: {
+      summary: "Two complete sentences (two ICs) can't be glued together with just a comma. There are three safe ways to join them, and the SAT tests them constantly.",
+      rules: [
+        "Quick review: an **IC** is a complete sentence (subject + verb + complete thought). A **DC** starts with a word like because, although or when and can't stand alone.",
+        "Safe way 1, a period: “The rain stopped. The game started.”",
+        "Safe way 2, a semicolon (;), which works just like a period: “The rain stopped; the game started.”",
+        "Safe way 3, a comma + a FANBOYS word (For, And, Nor, But, Or, Yet, So): “The rain stopped, so the game started.”",
+        "Never: IC, IC. Two sentences with only a comma between them is a **comma splice**, the most common SAT trap.",
+        "However, therefore and also are NOT FANBOYS. Between two ICs they need a semicolon or a period: “IC; however, IC.”",
+        "DC first? Put a comma after it: “Because it rained, the game stopped.” DC second? Usually no comma: “The game stopped because it rained.”",
+      ],
+      patterns: [
+        { f: "IC. IC", ok: true },
+        { f: "IC; IC", ok: true },
+        { f: "IC, and IC", ok: true },
+        { f: "IC, IC", ok: false },
+        { f: "IC, however, IC", ok: false },
+      ],
+      example: "“The rain stopped, the game continued.” ✗ comma splice → “The rain stopped, so the game continued.” ✓",
+    },
+    questions: easy([
+      {
+        id: "e1-1", skill: "IC, FANBOYS IC",
+        text: "{{NAME_1}} was ______ {{NAME_2}} shared a sandwich.",
+        choices: ["hungry, so", "hungry,", "hungry so", "hungry, therefore"],
+        answer: 0,
+        notes: [
+          "Two ICs joined by a comma + “so” (a FANBOYS word). That's safe way 3.",
+          "A comma alone between two ICs is a comma splice.",
+          "A FANBOYS word joining two ICs needs a comma before it.",
+          "“Therefore” isn't a FANBOYS word, so a comma before it is still a comma splice.",
+        ],
+      },
+      {
+        id: "e1-2", skill: "IC; IC",
+        text: "The sun came ______ snow began to melt.",
+        choices: ["out; the", "out, the", "out the", "out, and, the"],
+        answer: 0,
+        notes: [
+          "A semicolon joins two ICs, just like a period would.",
+          "Comma splice: a comma alone can't join two ICs.",
+          "No punctuation at all crashes two ICs together (a run-on).",
+          "There's no comma after “and” when it joins two ICs.",
+        ],
+      },
+      {
+        id: "e1-3", skill: "IC. IC",
+        text: "The movie ended at ______ walked home together.",
+        choices: ["nine. Then we", "nine, then we", "nine then we", "nine, and, then we"],
+        answer: 0,
+        notes: [
+          "A period ends the first IC, and “Then we walked home together” is a new sentence.",
+          "“Then” isn't a FANBOYS word, so this is a comma splice.",
+          "No punctuation makes a run-on.",
+          "There's no comma after “and.”",
+        ],
+      },
+      {
+        id: "e1-4", skill: "IC, FANBOYS IC",
+        text: "{{NAME_2}} wanted to play ______ started to rain.",
+        choices: ["outside, but it", "outside, it", "outside but, it", "outside; but, it"],
+        answer: 0,
+        notes: [
+          "Comma + “but” joins the two ICs and shows the surprise.",
+          "Comma splice: two ICs with only a comma.",
+          "The comma goes before “but,” not after it.",
+          "A FANBOYS word doesn't take a semicolon before it and a comma after it.",
+        ],
+      },
+      {
+        id: "e1-5", skill: "DC, IC",
+        text: "Because the bus was ______ walked to school.",
+        choices: ["late, {{NAME_3}}", "late; {{NAME_3}}", "late. {{NAME_3}}", "late, and {{NAME_3}}"],
+        answer: 0,
+        notes: [
+          "“Because the bus was late” is a DC. A DC that comes first gets a comma before the IC.",
+          "A semicolon needs an IC on BOTH sides, and “Because…” is a DC.",
+          "The period leaves “Because the bus was late.” alone as a fragment.",
+          "“And” can't join a DC to an IC here.",
+        ],
+      },
+      {
+        id: "e1-6", skill: "IC DC",
+        text: "{{NAME_1}} stayed ______ was raining.",
+        choices: ["inside because it", "inside; because it", "inside. Because it", "inside, so because it"],
+        answer: 0,
+        notes: [
+          "IC + DC: when the DC comes second, you usually don't need any punctuation.",
+          "A semicolon needs an IC after it, but “because it was raining” is a DC.",
+          "The period leaves “Because it was raining.” as a fragment.",
+          "“So because” doesn't make sense.",
+        ],
+      },
+      {
+        id: "e1-7", skill: "IC; LW, IC",
+        text: "The test was ______ {{NAME_2}} finished early.",
+        choices: ["hard; however,", "hard, however,", "hard however", "hard, however"],
+        answer: 0,
+        notes: [
+          "“However” isn't a FANBOYS word, so the two ICs need a semicolon before it (and a comma after).",
+          "Commas around “however” still leave a comma splice.",
+          "With no punctuation, this is a run-on.",
+          "A comma before “however” is a comma splice.",
+        ],
+      },
+      {
+        id: "e1-8", skill: "Compound predicate (no comma)",
+        text: "{{NAME_3}} opened the ______ the new puppy.",
+        choices: ["door and greeted", "door, and greeted", "door; and greeted", "door. And greeted"],
+        answer: 0,
+        notes: [
+          "One subject ({{NAME_3}}) doing two things (opened, greeted). No second IC, so no comma.",
+          "Comma + “and” is for joining two ICs, but “greeted the new puppy” has no subject.",
+          "A semicolon needs an IC on both sides.",
+          "The period leaves “And greeted the new puppy.” with no subject, a fragment.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 3 (id 2): Subject-Verb Agreement ----------
+  SW.curriculum.addChapter({
+    id: 2,
+    pause: {
+      summary: "The verb has to match its subject. One thing → a singular verb (is, was, has, runs). Two or more → a plural verb (are, were, have, run).",
+      rules: [
+        "Find the subject first: ask “who or what is doing this?”",
+        "Watch out: singular verbs often END in -s (runs, plays). Plural verbs often don't (run, play). It's the opposite of nouns.",
+        "Cross out the middle. Phrases like “of the books” or “in the box” sit between the subject and the verb, but they're never the subject: “The box [of pens] is full.”",
+        "Two subjects joined by “and” are plural: “{{NAME_1}} and {{NAME_2}} are friends.”",
+        "Each, every and one are singular: “Each of the players is ready.”",
+        "“There is / There are”: the subject comes AFTER the verb. “There are three apples.”",
+        "Shortcut: if three answer choices are plural and one is singular (or the other way around), check the odd one out first.",
+      ],
+      patterns: [
+        { f: "The dog barks.", ok: true },
+        { f: "The dogs barks.", ok: false },
+        { f: "The box [of pens] is", ok: true },
+        { f: "The box [of pens] are", ok: false },
+      ],
+      example: "The list [of {{NAME_1_POSS}} goals] is long. Cross out the brackets: “The list is long.” One list → is.",
+    },
+    questions: easy([
+      {
+        id: "e2-1", skill: "Singular subject",
+        text: "The cat ______ on the windowsill every afternoon.",
+        choices: ["sleeps", "sleep", "are sleeping", "have slept"],
+        answer: 0,
+        notes: [
+          "One cat → singular verb “sleeps.”",
+          "“Sleep” is plural. It would match “cats.”",
+          "“Are sleeping” is plural.",
+          "“Have slept” is plural (singular would be “has slept”).",
+        ],
+      },
+      {
+        id: "e2-2", skill: "Plural subject",
+        text: "My friends ______ at the park right now.",
+        choices: ["are", "is", "was", "has been"],
+        answer: 0,
+        notes: [
+          "“Friends” is plural → “are.”",
+          "“Is” is singular.",
+          "“Was” is singular (and past).",
+          "“Has been” is singular.",
+        ],
+      },
+      {
+        id: "e2-3", skill: "Compound subjects",
+        text: "{{NAME_1}} and {{NAME_2}} ______ in the school band.",
+        choices: ["play", "plays", "is playing", "has played"],
+        answer: 0,
+        notes: [
+          "Two people joined by “and” → plural verb “play.”",
+          "“Plays” is singular, but there are two people.",
+          "“Is playing” is singular.",
+          "“Has played” is singular.",
+        ],
+      },
+      {
+        id: "e2-4", skill: "Prepositional traps",
+        text: "The box of pencils ______ on the desk.",
+        choices: ["is", "are", "were", "have been"],
+        answer: 0,
+        notes: [
+          "Cross out “of pencils.” The subject is “box,” which is singular → “is.”",
+          "“Are” matches “pencils,” but that's the trap. Pencils isn't the subject.",
+          "“Were” is plural.",
+          "“Have been” is plural.",
+        ],
+      },
+      {
+        id: "e2-5", skill: "Each / One-of singular",
+        text: "Each of the students ______ a laptop.",
+        choices: ["has", "have", "are having", "were having"],
+        answer: 0,
+        notes: [
+          "“Each” is singular → “has.” Cross out “of the students.”",
+          "“Have” is plural.",
+          "“Are having” is plural.",
+          "“Were having” is plural.",
+        ],
+      },
+      {
+        id: "e2-6", skill: "There is / there are",
+        text: "There ______ three cookies left in the jar.",
+        choices: ["are", "is", "was", "has been"],
+        answer: 0,
+        notes: [
+          "The subject comes after the verb: “three cookies,” which is plural → “are.”",
+          "“Is” is singular.",
+          "“Was” is singular.",
+          "“Has been” is singular.",
+        ],
+      },
+      {
+        id: "e2-7", skill: "Prepositional traps",
+        text: "The books on the top shelf ______ very old.",
+        choices: ["are", "is", "was", "has been"],
+        answer: 0,
+        notes: [
+          "Cross out “on the top shelf.” “Books” is plural → “are.”",
+          "“Is” matches “shelf,” the trap word.",
+          "“Was” is singular.",
+          "“Has been” is singular.",
+        ],
+      },
+      {
+        id: "e2-8", skill: "Prepositional traps",
+        text: "The leader of the hiking groups ______ the map.",
+        choices: ["carries", "carry", "are carrying", "have carried"],
+        answer: 0,
+        notes: [
+          "Cross out “of the hiking groups.” One leader → “carries.”",
+          "“Carry” is plural. It matches “groups,” the trap.",
+          "“Are carrying” is plural.",
+          "“Have carried” is plural.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 4 (id 3): Verb or Not a Verb? ----------
+  SW.curriculum.addChapter({
+    id: 3,
+    pause: {
+      summary: "Some blanks need a real verb (the main action). Others need a describing word that is NOT a verb, like an -ing word, an -ed word or a “to” word. The question to ask: does this sentence already have its main verb?",
+      rules: [
+        "Every IC needs a subject and a main verb. Find the subject, then look for its verb.",
+        "No main verb yet? The blank must be a real verb: “The players ______ hard.” → practice.",
+        "Already has a main verb? Then the blank is extra description, so use an -ing word, an -ed word or a “to” word: “{{NAME_1}}, hoping to win, practiced daily.” (The main verb is “practiced.”)",
+        "-ing words (hoping) and “to” words (to win) can never be the main verb on their own.",
+        "Long subjects hide the verb: “The scientist who studies sharks ______ in Florida.” The subject is “scientist,” and it still needs a verb: lives.",
+      ],
+      patterns: [
+        { f: "{{NAME_1}} hopes to win.", ok: true },
+        { f: "{{NAME_1}} hoping to win.", ok: false },
+        { f: "Hoping to win, {{NAME_1}} practiced.", ok: true },
+        { f: "Hoped to win, {{NAME_1}} practiced.", ok: false },
+      ],
+      example: "“{{NAME_2}}, ______ the bus, ran faster.” The main verb is already there (ran), so the blank is a describer: “seeing the bus.”",
+    },
+    questions: easy([
+      {
+        id: "e3-1", skill: "Main verb needed",
+        text: "{{NAME_1}} ______ soccer every Saturday.",
+        choices: ["plays", "playing", "to play", "having played"],
+        answer: 0,
+        notes: [
+          "The sentence has no verb yet, so it needs a real verb: “plays.”",
+          "“Playing” can't be the main verb by itself.",
+          "“To play” can't be the main verb.",
+          "“Having played” isn't a full verb.",
+        ],
+      },
+      {
+        id: "e3-2", skill: "Participle (non-verb) opener",
+        text: "______ the bell, the students hurried to class.",
+        choices: ["Hearing", "Heard", "They heard", "Hears"],
+        answer: 0,
+        notes: [
+          "The main verb is “hurried,” so the opener is a describer: “Hearing the bell.”",
+          "“Heard the bell” doesn't work as an opener for the students here.",
+          "“They heard the bell, the students hurried” is two ICs with a comma, a comma splice.",
+          "“Hears” is a verb with no subject of its own.",
+        ],
+      },
+      {
+        id: "e3-3", skill: "Participle (non-verb) in the middle",
+        text: "{{NAME_2}}, ______ to finish the project, stayed up late.",
+        choices: ["hoping", "hoped", "hopes", "was hoping"],
+        answer: 0,
+        notes: [
+          "The main verb is “stayed.” The part between the commas is extra description, so use “hoping.”",
+          "“Hoped” makes the middle part read like a second main verb.",
+          "“Hopes” is a main verb, but the sentence already has one (stayed).",
+          "“Was hoping” is also a main verb. Two main verbs without “and” don't work.",
+        ],
+      },
+      {
+        id: "e3-4", skill: "Participle (non-verb) describer",
+        text: "The bike ______ in the garage belongs to {{NAME_3}}.",
+        choices: ["parked", "is parked", "was parked", "parks"],
+        answer: 0,
+        notes: [
+          "The main verb is “belongs.” “Parked in the garage” just describes the bike.",
+          "“Is parked” would be a second main verb.",
+          "“Was parked” would be a second main verb.",
+          "“Parks” is a main verb, and bikes don't park themselves.",
+        ],
+      },
+      {
+        id: "e3-5", skill: "Main verb needed",
+        text: "The coach ______ the team a short speech before the game.",
+        choices: ["gave", "giving", "to give", "having given"],
+        answer: 0,
+        notes: [
+          "No main verb yet, so it needs one: “The coach gave…”",
+          "“Giving” isn't a real verb on its own.",
+          "“To give” can't be the main verb.",
+          "“Having given” isn't a full verb.",
+        ],
+      },
+      {
+        id: "e3-6", skill: "Infinitive (to + verb)",
+        text: "{{NAME_1}} went to the library ______ for the test.",
+        choices: ["to study", "studies", "studied", "is studying"],
+        answer: 0,
+        notes: [
+          "The main verb is “went.” “To study” explains why.",
+          "“Studies” would be a second main verb with nothing joining it.",
+          "“Studied” would be a second main verb.",
+          "“Is studying” would be a second main verb.",
+        ],
+      },
+      {
+        id: "e3-7", skill: "Main verb after a long subject",
+        text: "The scientist who studies sharks ______ in a small town by the sea.",
+        choices: ["lives", "living", "to live", "who lives"],
+        answer: 0,
+        notes: [
+          "Skip “who studies sharks.” “The scientist lives in a small town” needs the real verb “lives.”",
+          "“Living” isn't a main verb.",
+          "“To live” isn't a main verb.",
+          "“Who lives” is another describing part. The scientist still has no verb.",
+        ],
+      },
+      {
+        id: "e3-8", skill: "Participle (non-verb) opener",
+        text: "______ by the long hike, {{NAME_2}} fell asleep early.",
+        choices: ["Tired", "Tires", "Was tired", "Is tiring"],
+        answer: 0,
+        notes: [
+          "The main verb is “fell.” “Tired by the long hike” describes {{NAME_2}}.",
+          "“Tires” is a verb with no subject.",
+          "“Was tired” has no subject and creates a second main verb.",
+          "“Is tiring” has no subject and doesn't fit.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 5 (id 4): Verb Tenses ----------
+  SW.curriculum.addChapter({
+    id: 4,
+    pause: {
+      summary: "Tense tells you WHEN something happens. Look for a time clue in the sentence, then pick the verb that matches it.",
+      rules: [
+        "Past (finished): yesterday, last year, in 2010, ago → walked, was, went.",
+        "Present (now, or always true): every day, usually, now → walks, is, goes.",
+        "Future (later): tomorrow, next week, soon → will walk.",
+        "Present perfect (has/have + verb) = started in the past and still true now: since 2020, for three years, so far. “{{NAME_1}} has lived here since 2020.”",
+        "Past perfect (had + verb) = happened BEFORE another past event: “The movie had started when {{NAME_1}} arrived.”",
+        "No time clue? Match the tense of the other verbs around the blank.",
+      ],
+      patterns: [
+        { f: "Yesterday, {{NAME_1}} walked", ok: true },
+        { f: "Yesterday, {{NAME_1}} walks", ok: false },
+        { f: "Since 2020, {{NAME_1}} has lived", ok: true },
+        { f: "Tomorrow, {{NAME_1}} went", ok: false },
+      ],
+      example: "“Last summer, {{NAME_2}} ______ to the beach.” The clue “last summer” means finished past → went.",
+    },
+    questions: easy([
+      {
+        id: "e4-1", skill: "Past time clue",
+        text: "Yesterday, {{NAME_1}} ______ a new bike.",
+        choices: ["bought", "buys", "will buy", "is buying"],
+        answer: 0,
+        notes: [
+          "“Yesterday” is finished past → “bought.”",
+          "“Buys” is present, but yesterday is over.",
+          "“Will buy” is future.",
+          "“Is buying” is happening now.",
+        ],
+      },
+      {
+        id: "e4-2", skill: "Future time clue",
+        text: "Tomorrow, the class ______ a trip to the museum.",
+        choices: ["will take", "took", "has taken", "had taken"],
+        answer: 0,
+        notes: [
+          "“Tomorrow” is the future → “will take.”",
+          "“Took” is past.",
+          "“Has taken” means it already happened.",
+          "“Had taken” is past perfect, for events before another past event.",
+        ],
+      },
+      {
+        id: "e4-3", skill: "Present for habits and facts",
+        text: "Every morning, {{NAME_2}} ______ a glass of orange juice.",
+        choices: ["drinks", "drank", "will have drunk", "had drunk"],
+        answer: 0,
+        notes: [
+          "“Every morning” is a habit → present “drinks.”",
+          "“Drank” is a single finished past event.",
+          "“Will have drunk” is a future deadline tense.",
+          "“Had drunk” is past perfect.",
+        ],
+      },
+      {
+        id: "e4-4", skill: "Present perfect (until now)",
+        text: "{{NAME_3}} ______ in this town since 2018.",
+        choices: ["has lived", "lives", "will live", "is living"],
+        answer: 0,
+        notes: [
+          "“Since 2018” means it started in the past and is still true → “has lived.”",
+          "“Lives” doesn't work with “since.”",
+          "“Will live” is future.",
+          "“Is living since” isn't correct English.",
+        ],
+      },
+      {
+        id: "e4-5", skill: "Past perfect (earlier past)",
+        text: "By the time we arrived, the movie ______ already started.",
+        choices: ["had", "has", "will have", "is"],
+        answer: 0,
+        notes: [
+          "The movie started BEFORE we arrived (another past event) → past perfect “had started.”",
+          "“Has started” is for things still connected to now, but this story is in the past.",
+          "“Will have” is future.",
+          "“Is started” isn't the right form.",
+        ],
+      },
+      {
+        id: "e4-6", skill: "Past time clue",
+        text: "Last year, {{NAME_1}} ______ the school science fair.",
+        choices: ["won", "wins", "will win", "has won"],
+        answer: 0,
+        notes: [
+          "“Last year” is finished past → “won.”",
+          "“Wins” is present.",
+          "“Will win” is future.",
+          "“Has won” can't be used with a finished time like “last year.”",
+        ],
+      },
+      {
+        id: "e4-7", skill: "Present for habits and facts",
+        text: "Water ______ at 100 degrees Celsius.",
+        choices: ["boils", "boiled", "will have boiled", "had boiled"],
+        answer: 0,
+        notes: [
+          "A fact that's always true uses the present → “boils.”",
+          "“Boiled” makes it sound like it happened once.",
+          "“Will have boiled” is a future deadline.",
+          "“Had boiled” is past perfect.",
+        ],
+      },
+      {
+        id: "e4-8", skill: "Tense consistency",
+        text: "{{NAME_2}} opened the door and ______ inside.",
+        choices: ["walked", "walks", "will walk", "has walked"],
+        answer: 0,
+        notes: [
+          "“Opened” is past, so the second action matches: “walked.”",
+          "“Walks” switches to present.",
+          "“Will walk” switches to future.",
+          "“Has walked” doesn't match “opened.”",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 6 (id 5): Transitions ----------
+  SW.curriculum.addChapter({
+    id: 5,
+    pause: {
+      summary: "A transition word shows how two ideas connect. Read the sentence before the blank and the one after, then decide: are they opposite, adding on, cause and result, or an example?",
+      rules: [
+        "Opposite or surprise → However, But, Yet, On the other hand, Nevertheless.",
+        "Adding more of the same → Also, In addition, Moreover, Furthermore.",
+        "Cause → result → So, Therefore, As a result, Thus, Consequently.",
+        "Giving an example → For example, For instance.",
+        "Time order → First, Then, Next, Finally, Later.",
+        "Trick: say the connection in your own words first (“but…”, “and also…”, “so…”), then pick the choice that means the same thing.",
+      ],
+      patterns: [
+        { f: "It rained. However, we played.", ok: true },
+        { f: "It rained. Therefore, we played.", ok: false },
+        { f: "It rained. As a result, the game was canceled.", ok: true },
+      ],
+      example: "“{{NAME_1}} studied all week. ______, {{NAME_1}} aced the test.” Studying CAUSED the good score → As a result.",
+    },
+    questions: easy([
+      {
+        id: "e5-1", skill: "Cause/Result", kind: "transition",
+        text: "{{NAME_1}} studied every night for a month. ______, {{NAME_1}} got a perfect score.",
+        choices: ["As a result", "However", "For example", "Instead"],
+        answer: 0,
+        notes: [
+          "Studying caused the perfect score: cause → result.",
+          "“However” signals an opposite, but these ideas agree.",
+          "The perfect score isn't an example of studying.",
+          "“Instead” means one thing replaced another. Nothing was replaced.",
+        ],
+      },
+      {
+        id: "e5-2", skill: "Contrast", kind: "transition",
+        text: "The weather report said it would be sunny. ______, it rained all day.",
+        choices: ["However", "Therefore", "For instance", "Similarly"],
+        answer: 0,
+        notes: [
+          "Sunny was expected, but it rained: a surprise/opposite → However.",
+          "“Therefore” means result. The forecast didn't cause the rain.",
+          "The rain isn't an example of the forecast.",
+          "“Similarly” means the ideas are alike. They're opposite.",
+        ],
+      },
+      {
+        id: "e5-3", skill: "Example", kind: "transition",
+        text: "{{NAME_2}} loves outdoor sports. ______, {{NAME_2}} goes hiking and biking every weekend.",
+        choices: ["For example", "However", "Nevertheless", "In contrast"],
+        answer: 0,
+        notes: [
+          "Hiking and biking are examples of outdoor sports.",
+          "“However” signals an opposite, but the ideas agree.",
+          "“Nevertheless” means “in spite of that.” There's nothing to overcome.",
+          "“In contrast” signals a difference. The second sentence supports the first.",
+        ],
+      },
+      {
+        id: "e5-4", skill: "Sequence", kind: "transition",
+        text: "First, mix the flour and sugar. ______, add the eggs.",
+        choices: ["Next", "However", "For example", "As a result"],
+        answer: 0,
+        notes: [
+          "These are steps in order: First… Next…",
+          "Adding eggs isn't the opposite of mixing flour.",
+          "Adding eggs isn't an example of mixing flour.",
+          "Mixing flour doesn't cause you to add eggs.",
+        ],
+      },
+      {
+        id: "e5-5", skill: "Addition", kind: "transition",
+        text: "The museum is free on Sundays. ______, it offers free tours for students.",
+        choices: ["In addition", "However", "Instead", "Therefore"],
+        answer: 0,
+        notes: [
+          "Free tours are one more good thing about the museum → In addition.",
+          "“However” signals an opposite, but both ideas are good things.",
+          "“Instead” means a replacement. The tours don't replace free Sundays.",
+          "Being free on Sundays doesn't cause the free tours.",
+        ],
+      },
+      {
+        id: "e5-6", skill: "Cause/Result", kind: "transition",
+        text: "The road was covered in ice. ______, the school buses stayed home.",
+        choices: ["Therefore", "However", "For example", "Similarly"],
+        answer: 0,
+        notes: [
+          "The ice caused the buses to stay home → Therefore.",
+          "There's no surprise or opposite here.",
+          "The buses staying home isn't an example of ice.",
+          "The two ideas aren't alike. One causes the other.",
+        ],
+      },
+      {
+        id: "e5-7", skill: "Contrast", kind: "transition",
+        text: "{{NAME_3}} expected the movie to be boring. ______, it turned out to be exciting.",
+        choices: ["Surprisingly", "Moreover", "For instance", "Therefore"],
+        answer: 0,
+        notes: [
+          "Boring was expected, but it was exciting: a surprise → Surprisingly.",
+          "“Moreover” adds a similar idea. These ideas are opposite.",
+          "The second sentence isn't an example of the first.",
+          "Expecting boredom didn't cause the movie to be exciting.",
+        ],
+      },
+      {
+        id: "e5-8", skill: "Example", kind: "transition",
+        text: "Some animals sleep through the whole winter. Bears, ______, can sleep for months without eating.",
+        choices: ["for example", "however", "in contrast", "nevertheless"],
+        answer: 0,
+        notes: [
+          "Bears are one example of animals that sleep all winter.",
+          "“However” signals an opposite, but bears fit the first idea.",
+          "“In contrast” signals a difference. Bears are the same, not different.",
+          "“Nevertheless” means “in spite of that.” Nothing is being overcome.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 7 (id 6): Semicolons, Colons & Dashes ----------
+  SW.curriculum.addChapter({
+    id: 6,
+    pause: {
+      summary: "Three punctuation marks the SAT loves: the semicolon (;), the colon (:) and the dash (—). Each one has one simple job.",
+      rules: [
+        "Semicolon (;) = a period. Use it only between two ICs: “It rained; we stayed in.”",
+        "Colon (:) = “here it is.” It goes after a complete sentence and introduces a list, an example or an explanation: “{{NAME_1}} packed three things: water, snacks, and a map.”",
+        "The part BEFORE a colon must be a complete sentence. ✗ “The recipe needs: eggs and milk.” (“The recipe needs” isn't complete.)",
+        "A pair of dashes works like a pair of commas around extra information: “My cousin—who lives in Canada—is visiting.”",
+        "Don't mix: if a dash opens the extra part, a dash must close it, not a comma.",
+      ],
+      patterns: [
+        { f: "IC; IC", ok: true },
+        { f: "IC: list", ok: true },
+        { f: "needs: eggs, milk", ok: false },
+        { f: "—extra info—", ok: true },
+        { f: "—extra info,", ok: false },
+      ],
+      example: "{{NAME_2}} brought one thing to the game: a lucky hat. (“{{NAME_2}} brought one thing to the game” is complete, so the colon works.)",
+    },
+    questions: easy([
+      {
+        id: "e6-1", skill: "Semicolon between ICs",
+        text: "The store was ______ went home.",
+        choices: ["closed; we", "closed, we", "closed we", "closed: and we"],
+        answer: 0,
+        notes: [
+          "“The store was closed” and “we went home” are both ICs. A semicolon joins them.",
+          "Comma splice: two ICs with only a comma.",
+          "Run-on: two ICs with no punctuation.",
+          "A colon doesn't go before “and” like this.",
+        ],
+      },
+      {
+        id: "e6-2", skill: "Colon before a list",
+        text: "{{NAME_1}} packed three things for the ______ snacks, and a map.",
+        choices: ["trip: water,", "trip; water,", "trip, water,", "trip and water,"],
+        answer: 0,
+        notes: [
+          "“{{NAME_1}} packed three things for the trip” is complete, so a colon introduces the list.",
+          "A semicolon needs an IC after it, but “water, snacks, and a map” is just a list.",
+          "A comma makes “trip, water, snacks” look like one long list.",
+          "“Trip and water” makes the trip one of the three things.",
+        ],
+      },
+      {
+        id: "e6-3", skill: "No colon after a verb",
+        text: "The recipe ______ flour, and milk.",
+        choices: ["needs eggs,", "needs: eggs,", "needs; eggs,", "needs—eggs,"],
+        answer: 0,
+        notes: [
+          "“The recipe needs” isn't a complete sentence, so no colon. The list follows the verb directly.",
+          "A colon can't come right after a verb like “needs.”",
+          "A semicolon needs an IC on both sides.",
+          "A single dash after “needs” breaks the sentence for no reason.",
+        ],
+      },
+      {
+        id: "e6-4", skill: "Dash pair",
+        text: "My cousin—who lives in ______ visiting next week.",
+        choices: ["Canada—is", "Canada, is", "Canada; is", "Canada is"],
+        answer: 0,
+        notes: [
+          "A dash opened the extra part, so a dash closes it.",
+          "A comma can't close a part that a dash opened.",
+          "A semicolon splits the subject from its verb.",
+          "With nothing closing the extra part, the sentence is confusing.",
+        ],
+      },
+      {
+        id: "e6-5", skill: "Colon for an explanation",
+        text: "{{NAME_3}} had one goal for the ______ finish first.",
+        choices: ["race: to", "race; to", "race, and to", "race. To"],
+        answer: 0,
+        notes: [
+          "The first part is complete, and the colon says “here's the goal.”",
+          "A semicolon needs an IC after it, but “to finish first” isn't one.",
+          "“And to finish first” doesn't connect to anything.",
+          "“To finish first.” alone is a fragment.",
+        ],
+      },
+      {
+        id: "e6-6", skill: "FANBOYS, not semicolon",
+        text: "The game was ______ the fans stayed until the end.",
+        choices: ["long, but", "long; but,", "long but;", "long: but,"],
+        answer: 0,
+        notes: [
+          "Two ICs joined by a comma + “but” (a FANBOYS word).",
+          "A FANBOYS word doesn't take a comma after it here.",
+          "A semicolon after “but” makes no sense.",
+          "A colon doesn't introduce “but.”",
+        ],
+      },
+      {
+        id: "e6-7", skill: "Colon before a list",
+        text: "The museum has two famous ______ dinosaur skeleton and a giant whale model.",
+        choices: ["exhibits: a", "exhibits; a", "exhibits, and a", "exhibits. A"],
+        answer: 0,
+        notes: [
+          "The first part is complete, and the colon introduces the two exhibits.",
+          "A semicolon needs an IC after it, but the rest is just a list.",
+          "“And” makes it sound like a third item, not the two exhibits.",
+          "“A dinosaur skeleton and a giant whale model.” alone has no verb, a fragment.",
+        ],
+      },
+      {
+        id: "e6-8", skill: "Dash pair",
+        text: "The final question—the hardest one on the ______ {{NAME_2}} ten minutes.",
+        choices: ["test—took", "test, took", "test; took", "test: took"],
+        answer: 0,
+        notes: [
+          "A dash opened the extra part, so a dash closes it before the verb “took.”",
+          "A comma can't close a part that a dash opened.",
+          "A semicolon would separate the subject from its verb.",
+          "A colon would separate the subject from its verb.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 8 (id 7): Extra Information (Appositives) ----------
+  SW.curriculum.addChapter({
+    id: 7,
+    pause: {
+      summary: "Some parts of a sentence are just extra information. If you can take a part out and the sentence still makes sense, put commas (or dashes) around it. If you need that part to know WHO or WHICH, don't use commas.",
+      rules: [
+        "Cover-up test: cover the part. Still a complete, clear sentence? Then it's extra, so put two commas (or two dashes) around it.",
+        "“My dog, a golden retriever, loves swimming.” → “My dog loves swimming.” still works, so the commas are right.",
+        "Needed information gets NO commas: “The students who finished early may leave.” (Which students? The ones who finished early.)",
+        "Titles before names get no commas: “author {{NAME_2}},” “coach {{NAME_3}}.”",
+        "“A” or “an” before a description is a clue that it's extra: “{{NAME_1}}, an artist from the city, painted the mural.”",
+        "Commas come in pairs: if one comma opens the extra part, another one must close it.",
+      ],
+      patterns: [
+        { f: "My dog, a golden retriever, loves", ok: true },
+        { f: "My dog, a golden retriever loves", ok: false },
+        { f: "Coach {{NAME_2}} said", ok: true },
+        { f: "Coach, {{NAME_2}}, said", ok: false },
+      ],
+      example: "{{NAME_1}}, a student at {{LOCATION}}, won the prize. Cover the middle: “{{NAME_1}} won the prize.” ✓ So the commas are right.",
+    },
+    questions: easy([
+      {
+        id: "e7-1", skill: "Non-essential appositive (comma pair)",
+        text: "My dog, a golden ______ to swim.",
+        choices: ["retriever, loves", "retriever loves", "retriever; loves", "retriever: loves"],
+        answer: 0,
+        notes: [
+          "“A golden retriever” is extra. One comma opened it, so another comma closes it.",
+          "Without the closing comma, the extra part runs into the verb.",
+          "A semicolon would cut the subject off from its verb.",
+          "A colon would cut the subject off from its verb.",
+        ],
+      },
+      {
+        id: "e7-2", skill: "Non-essential appositive (a/an cue)",
+        text: "{{NAME_1}}, an artist from the ______ the mural.",
+        choices: ["city, painted", "city painted", "city; painted", "city—painted"],
+        answer: 0,
+        notes: [
+          "“An artist from the city” is extra (notice the “an”). Close it with a comma.",
+          "The extra part needs a closing comma.",
+          "A semicolon splits the subject from its verb.",
+          "A comma opened the extra part, so a dash can't close it.",
+        ],
+      },
+      {
+        id: "e7-3", skill: "Essential title (no commas)",
+        text: "______ told the team to rest before the game.",
+        choices: ["Coach {{NAME_2}}", "Coach, {{NAME_2}},", "Coach, {{NAME_2}}", "Coach {{NAME_2}},"],
+        answer: 0,
+        notes: [
+          "A title right before a name takes no commas: “Coach {{NAME_2}} told…”",
+          "Commas around the name treat it as extra, but the title and name go together.",
+          "One comma after “Coach” wrongly separates the title from the name.",
+          "A comma between the subject and the verb “told” is wrong.",
+        ],
+      },
+      {
+        id: "e7-4", skill: "Non-essential appositive (comma pair)",
+        text: "Mount Everest, the tallest mountain in the ______ in Asia.",
+        choices: ["world, is", "world is", "world—is", "world; is"],
+        answer: 0,
+        notes: [
+          "“The tallest mountain in the world” is extra. A comma opened it, so a comma closes it.",
+          "Without a closing comma, the extra part runs into the verb.",
+          "A comma opened the extra part, so a dash can't close it.",
+          "A semicolon splits the subject from its verb.",
+        ],
+      },
+      {
+        id: "e7-5", skill: "Essential clause (no commas)",
+        text: "The ______ finished early may leave.",
+        choices: ["students who", "students, who", "students who,", "students; who"],
+        answer: 0,
+        notes: [
+          "“Who finished early” tells us WHICH students, so it's needed: no commas.",
+          "Commas would mean ALL the students finished early, which changes the meaning.",
+          "A comma after “who” splits the clause apart.",
+          "A semicolon needs an IC on both sides.",
+        ],
+      },
+      {
+        id: "e7-6", skill: "Non-essential who clause",
+        text: "{{NAME_3}}, who loves ______ the chess club.",
+        choices: ["puzzles, joined", "puzzles joined", "puzzles; joined", "puzzles: joined"],
+        answer: 0,
+        notes: [
+          "“Who loves puzzles” is extra. A comma opened it, so a comma closes it.",
+          "The extra part needs a closing comma.",
+          "A semicolon splits the subject from its verb.",
+          "A colon splits the subject from its verb.",
+        ],
+      },
+      {
+        id: "e7-7", skill: "Dash pair",
+        text: "Our teacher—a former ______ us stories about flying.",
+        choices: ["pilot—told", "pilot, told", "pilot told", "pilot; told"],
+        answer: 0,
+        notes: [
+          "A dash opened the extra part, so a dash closes it.",
+          "A comma can't close a part that a dash opened.",
+          "The extra part needs to be closed.",
+          "A semicolon splits the subject from its verb.",
+        ],
+      },
+      {
+        id: "e7-8", skill: "Non-essential appositive at the end",
+        text: "Last summer, {{NAME_1}} visited ______ capital of France.",
+        choices: ["Paris, the", "Paris the", "Paris; the", "Paris. The"],
+        answer: 0,
+        notes: [
+          "“The capital of France” is extra information about Paris, so a comma sets it off.",
+          "Without a comma, the extra part crashes into the name.",
+          "A semicolon needs an IC after it.",
+          "“The capital of France.” alone is a fragment.",
+        ],
+      },
+    ]),
+  });
+
+  // ---------- Chapter 9 (id 8): Modifiers, Parallelism & Pronouns ----------
+  SW.curriculum.addChapter({
+    id: 8,
+    pause: {
+      summary: "Three final rules: a describing phrase must sit right next to the thing it describes, items in a list must match, and pronouns must match the noun they replace.",
+      rules: [
+        "Modifiers: an opening phrase like “Running to class,” describes the very next noun. ✓ “Running to class, {{NAME_1}} dropped a book.” ✗ “Running to class, the book fell.” (Books don't run!)",
+        "Parallelism: items in a list use the same form. ✓ “swimming, biking, and running” ✗ “swimming, biking, and to run.”",
+        "Pronouns: a singular noun gets a singular pronoun (it, its); a plural noun gets a plural one (they, their). “The team won its game.”",
+        "Its vs. it's: its = belongs to it; it's = it is. Their / there / they're: their = belongs to them, there = a place, they're = they are.",
+        "Apostrophes show ownership: one student's book, two students' books.",
+      ],
+      patterns: [
+        { f: "Walking home, {{NAME_1}} saw a fox.", ok: true },
+        { f: "Walking home, a fox was seen.", ok: false },
+        { f: "to read, to write, and to draw", ok: true },
+        { f: "reading, writing, and to draw", ok: false },
+      ],
+      example: "“The company lost ______ biggest client.” One company → its.",
+    },
+    questions: easy([
+      {
+        id: "e8-1", skill: "Dangling modifier",
+        text: "Running to catch the bus, ______",
+        choices: ["{{NAME_1}} dropped a glove.", "a glove fell from {{NAME_1_POSS}} pocket.", "the bus left without {{NAME_1_OBJ}}.", "{{NAME_1_POSS}} glove dropped."],
+        answer: 0,
+        notes: [
+          "{{NAME_1}} is the one running, so {{NAME_1}} must come right after the comma.",
+          "This says the glove was running to catch the bus.",
+          "This says the bus was running to catch itself.",
+          "This says the glove was running.",
+        ],
+      },
+      {
+        id: "e8-2", skill: "Parallel list",
+        text: "{{NAME_2}} likes swimming, biking, and ______",
+        choices: ["hiking.", "to hike.", "hikes.", "hiked."],
+        answer: 0,
+        notes: [
+          "The list uses -ing words (swimming, biking), so the last item matches: hiking.",
+          "“To hike” doesn't match the -ing pattern.",
+          "“Hikes” doesn't match the pattern.",
+          "“Hiked” doesn't match the pattern.",
+        ],
+      },
+      {
+        id: "e8-3", skill: "Pronoun agreement",
+        text: "The team celebrated ______ big win.",
+        choices: ["its", "it's", "its'", "it is"],
+        answer: 0,
+        notes: [
+          "One team → “its” (belongs to it).",
+          "“It's” means “it is.” “The team celebrated it is big win” makes no sense.",
+          "“Its'” isn't a word.",
+          "“It is big win” makes no sense.",
+        ],
+      },
+      {
+        id: "e8-4", skill: "Their / there / they're",
+        text: "The students forgot ______ books at home.",
+        choices: ["their", "there", "they're", "its"],
+        answer: 0,
+        notes: [
+          "The books belong to the students → “their.”",
+          "“There” is a place.",
+          "“They're” means “they are.”",
+          "“Its” is singular, but “students” is plural.",
+        ],
+      },
+      {
+        id: "e8-5", skill: "Its vs. it's",
+        text: "The dog stayed in ______ warm house during the storm.",
+        choices: ["its", "it's", "its'", "it is"],
+        answer: 0,
+        notes: [
+          "The house belongs to the dog → “its.”",
+          "“It's” means “it is.”",
+          "“Its'” isn't a word.",
+          "“It is warm house” makes no sense here.",
+        ],
+      },
+      {
+        id: "e8-6", skill: "Parallel list",
+        text: "{{NAME_3}} wants to travel, to learn new languages, and ______ new friends.",
+        choices: ["to make", "making", "makes", "made"],
+        answer: 0,
+        notes: [
+          "The list uses “to” words (to travel, to learn), so the last item matches: to make.",
+          "“Making” breaks the pattern.",
+          "“Makes” breaks the pattern.",
+          "“Made” breaks the pattern.",
+        ],
+      },
+      {
+        id: "e8-7", skill: "Plural possessive",
+        text: "Both ______ jackets were left in the gym.",
+        choices: ["players'", "player's", "players", "players's"],
+        answer: 0,
+        notes: [
+          "“Both” means more than one player, and the jackets belong to them → players'.",
+          "“Player's” is for one player.",
+          "“Players” with no apostrophe doesn't show ownership.",
+          "“Players's” isn't the right form.",
+        ],
+      },
+      {
+        id: "e8-8", skill: "Dangling modifier",
+        text: "Covered in mud, ______",
+        choices: ["the dog needed a bath.", "{{NAME_1}} gave the dog a bath.", "a bath was what the dog needed.", "the bath was given to the dog."],
+        answer: 0,
+        notes: [
+          "The dog is the one covered in mud, so “the dog” comes right after the comma.",
+          "This says {{NAME_1}} was covered in mud.",
+          "This says the bath was covered in mud.",
+          "This also says the bath was covered in mud.",
+        ],
+      },
+    ]),
+  });
 })();
 
 </script>
@@ -6430,6 +7612,287 @@ window.SatWizz.curriculum.addChapter({
 });
 
 </script>
+<script>
+/* ===== js/curriculum/sentences.js ===== */
+// Chapter 1 (practice, after the easy starters in js/curriculum/basics.js):
+// Complete Sentences. Plain language: a full sentence needs a subject, a verb
+// and a complete thought; everything else is a fragment.
+// Internal chapter id 10: it was added in front of the existing chapters, and
+// ids never change so saved progress keeps working (display numbers come from
+// CURRICULUM_PLAN order).
+// Each question's `notes` line up with `choices`: why each one works or fails.
+window.SatWizz.curriculum.addChapter({
+  id: 10,
+  questions: [
+    {
+      id: "c1-1", skill: "Finding the real verb",
+      text: "The telescope that {{NAME_1}} built last summer ______ sharp images of Saturn's rings.",
+      choices: ["captures", "capturing", "which captures", "that captures"],
+      answer: 0,
+      notes: [
+        "“The telescope … captures sharp images” has a subject and a real verb, so the thought is complete.",
+        "“Capturing” is an -ing word, not a full verb. The telescope never actually does anything, so it's a fragment.",
+        "“Which captures” turns the ending into another description. We still never learn what the telescope does.",
+        "“That captures” just adds another description. The sentence still has no main action.",
+      ],
+    },
+    {
+      id: "c1-2", skill: "Finding the real verb",
+      text: "{{NAME_2}}, who had never performed at {{LOCATION}} before, ______ nervous but ready.",
+      choices: ["felt", "feeling", "who felt", "having felt"],
+      answer: 0,
+      notes: [
+        "Skip the middle description and you get “{{NAME_2}} felt nervous but ready.” That's a complete sentence.",
+        "“{{NAME_2}} feeling nervous” has no real verb. It's a fragment.",
+        "“Who felt” is another description. {{NAME_2}} still never does anything.",
+        "“Having felt” is an -ing form, so there's still no main verb.",
+      ],
+    },
+    {
+      id: "c1-3", skill: "Finding the real verb",
+      text: "The notebook that {{NAME_1}} carried to every practice ______ filled with sketches, formulas, and reminders.",
+      choices: ["was", "being", "having been", "to be"],
+      answer: 0,
+      notes: [
+        "“The notebook … was filled” gives the subject a real verb and finishes the thought.",
+        "“Being” can't act as the main verb, so the sentence is left hanging.",
+        "“Having been” is an -ing form. There's still no main verb.",
+        "“To be” is a “to” form. It can't be the main verb.",
+      ],
+    },
+    {
+      id: "c1-4", skill: "Complete vs. fragment",
+      text: "After months of preparation for {{EVENT}}, ______",
+      choices: [
+        "{{NAME_3}} finally felt confident.",
+        "{{NAME_3}}, who finally felt confident.",
+        "{{NAME_3}} finally feeling confident.",
+        "which gave {{NAME_3}} confidence at last.",
+      ],
+      answer: 0,
+      notes: [
+        "Subject ({{NAME_3}}) + verb (felt) + complete thought. This is a full sentence.",
+        "“{{NAME_3}}, who felt confident” only describes {{NAME_3}}. We never find out what {{NAME_3}} does.",
+        "“Feeling” is an -ing word, so there's no real verb.",
+        "“Which gave…” has nothing to point back to and leaves the thought hanging.",
+      ],
+    },
+    {
+      id: "c1-5", skill: "Finding the real verb",
+      text: "The coach whose drills {{NAME_2}} practiced every morning ______ a former champion.",
+      choices: ["was", "being", "who was", "whose career was"],
+      answer: 0,
+      notes: [
+        "Strip out the middle description and you get “The coach was a former champion.” That's complete.",
+        "“Being” isn't a real verb here, so the sentence stays incomplete.",
+        "“Who was” adds another description instead of finishing the sentence.",
+        "“Whose career was” starts yet another description. The coach still has no verb.",
+      ],
+    },
+    {
+      id: "c1-6", skill: "Finding the real verb",
+      text: "The old arena where {{NAME_1}} first watched {{EVENT}} ______ torn down last year.",
+      choices: ["was", "being", "that was", "which was"],
+      answer: 0,
+      notes: [
+        "The core sentence is “The old arena was torn down last year.” It's complete.",
+        "“Being torn down” has no real verb.",
+        "“That was torn down” turns the ending into a description, so the arena still has no verb.",
+        "“Which was torn down” also just describes. The sentence never finishes.",
+      ],
+    },
+    {
+      id: "c1-7", skill: "Complete vs. fragment",
+      text: "{{NAME_2}} arrived at {{LOCATION}} early. ______ to review {{SKILL}} before anyone else showed up.",
+      choices: ["{{NAME_2}} wanted", "Wanting", "Because {{NAME_2}} wanted", "Which allowed {{NAME_2}}"],
+      answer: 0,
+      notes: [
+        "“{{NAME_2}} wanted to review…” has a subject and a verb and stands on its own.",
+        "“Wanting to review…” has no subject and no real verb. It's a fragment.",
+        "“Because…” is a hanging word. The second sentence never finishes the thought.",
+        "“Which allowed…” can't start a sentence by itself. It leaves you waiting.",
+      ],
+    },
+    {
+      id: "c1-8", skill: "Hanging words",
+      text: "Although {{NAME_1}} was tired after {{EVENT}}, ______",
+      choices: [
+        "{{NAME_1}} still went for a run.",
+        "still going for a run.",
+        "because a run always helped.",
+        "and a run always helped.",
+      ],
+      answer: 0,
+      notes: [
+        "“Although…” needs a full sentence after the comma. “{{NAME_1}} still went for a run” completes it.",
+        "“Still going for a run” has no subject or real verb, so the whole thing is a fragment.",
+        "“Because…” is another hanging word. Now there are two unfinished thoughts and no sentence.",
+        "“Although … and” uses two connecting words for one idea, and the thought still doesn't land.",
+      ],
+    },
+    {
+      id: "c1-9", skill: "Hanging words",
+      text: "{{NAME_2}} stayed at {{LOCATION}} until midnight. ______ the final draft was finished.",
+      choices: ["By then,", "Because", "Although", "While"],
+      answer: 0,
+      notes: [
+        "“By then, the final draft was finished.” is a complete sentence. “By then” just adds timing.",
+        "“Because the final draft was finished.” leaves you asking: because of that, what happened?",
+        "“Although the final draft was finished.” is a hanging thought. What happened anyway?",
+        "“While the final draft was finished.” is unfinished. While that happened, what else happened?",
+      ],
+    },
+    {
+      id: "c1-10", skill: "Finding the real verb",
+      text: "The best part of {{EVENT}} ______ the moment {{NAME_3}} crossed the finish line.",
+      choices: ["was", "being", "which was", "that was"],
+      answer: 0,
+      notes: [
+        "“The best part … was the moment…” gives the subject a real verb.",
+        "“Being” isn't a real verb, so the sentence is left hanging.",
+        "“Which was” turns the rest into a description of {{EVENT}}. “The best part” never gets a verb.",
+        "“That was” also describes instead of finishing the sentence.",
+      ],
+    },
+    {
+      id: "c1-11", skill: "Finding the real verb",
+      text: "Every morning, {{NAME_1}} ______ twenty minutes on {{SKILL}}.",
+      choices: ["spends", "spending", "to spend", "who spends"],
+      answer: 0,
+      notes: [
+        "“{{NAME_1}} spends twenty minutes” has a subject and a real verb. It's complete.",
+        "“{{NAME_1}} spending…” is an -ing form with no real verb.",
+        "“{{NAME_1}} to spend…” uses a “to” form, which can't be the main verb.",
+        "“{{NAME_1}} who spends…” only describes {{NAME_1}}. The sentence never says what {{NAME_1}} does.",
+      ],
+    },
+    {
+      id: "c1-12", skill: "Hanging words",
+      text: "{{NAME_3}} forgot {{NAME_3_POSS}} notes at home. ______ still gave a flawless presentation.",
+      choices: ["Luckily, {{NAME_3}}", "Luckily, which {{NAME_3}}", "Although {{NAME_3}}", "Because {{NAME_3}}"],
+      answer: 0,
+      notes: [
+        "“Luckily, {{NAME_3}} still gave a flawless presentation.” is a complete sentence.",
+        "“Which” doesn't belong here. It breaks the sentence and leaves it unfinished.",
+        "“Although {{NAME_3}} still gave…” is a hanging thought with nothing to finish it.",
+        "“Because {{NAME_3}} still gave…” is also a hanging thought. It needs another part to complete it.",
+      ],
+    },
+    {
+      id: "c1-13", skill: "Hanging words",
+      text: "When the lights at {{LOCATION}} finally came on, ______",
+      choices: [
+        "the crowd cheered.",
+        "the crowd cheering.",
+        "because the crowd cheered.",
+        "which made the crowd cheer.",
+      ],
+      answer: 0,
+      notes: [
+        "“When…” sets up the timing, and “the crowd cheered” completes the thought.",
+        "“Cheering” is an -ing word, so the crowd never really does anything.",
+        "Adding “because” creates a second hanging thought. There's still no full sentence.",
+        "“Which made…” points back to nothing clear and leaves the sentence unfinished.",
+      ],
+    },
+    {
+      id: "c1-14", skill: "Finding the real verb",
+      text: "The trophy sitting on {{NAME_1_POSS}} shelf ______ at {{EVENT}} two years ago.",
+      choices: ["was won", "being won", "having been won", "to be won"],
+      answer: 0,
+      notes: [
+        "“The trophy … was won two years ago” has a real verb, so the sentence is complete.",
+        "“Being won” is an -ing form. There's no real verb.",
+        "“Having been won” is still an -ing form, so the thought is incomplete.",
+        "“To be won” is a “to” form and can't be the main verb.",
+      ],
+    },
+    {
+      id: "c1-15", skill: "Complete vs. fragment",
+      text: "{{NAME_2}} practiced {{SKILL}} every day for a month. ______ improved faster than anyone expected.",
+      choices: ["As a result, {{NAME_2}}", "As a result of {{NAME_2}}", "Because {{NAME_2}}", "While {{NAME_2}}"],
+      answer: 0,
+      notes: [
+        "“As a result, {{NAME_2}} improved…” has a subject and a verb and completes the thought.",
+        "“As a result of {{NAME_2}} improved…” takes away the subject. Nobody is doing the improving.",
+        "“Because {{NAME_2}} improved…” is a hanging thought. Because of that, what happened?",
+        "“While {{NAME_2}} improved…” is also unfinished. It needs another part.",
+      ],
+    },
+    {
+      id: "c1-16", skill: "Hanging words",
+      text: "Since {{EVENT}} was only a week away, ______",
+      choices: [
+        "{{NAME_1}} and {{NAME_2}} practiced every night.",
+        "{{NAME_1}} and {{NAME_2}} practicing every night.",
+        "so {{NAME_1}} and {{NAME_2}} practiced every night.",
+        "which meant nightly practice for {{NAME_1}} and {{NAME_2}}.",
+      ],
+      answer: 0,
+      notes: [
+        "“Since…” needs a full sentence after it, and “{{NAME_1}} and {{NAME_2}} practiced every night” is one.",
+        "“Practicing” isn't a real verb, so the sentence never finishes.",
+        "“Since … so …” uses two connecting words for one idea. Pick one.",
+        "“Which meant…” doesn't give a subject and verb, so the thought still hangs.",
+      ],
+    },
+    {
+      id: "c1-17", skill: "Finding the real verb",
+      text: "The volunteers at {{LOCATION}}, most of them students from nearby schools, ______ the event possible.",
+      choices: ["made", "making", "who made", "having made"],
+      answer: 0,
+      notes: [
+        "Skip the middle part and you get “The volunteers made the event possible.” That's complete.",
+        "“Making” is an -ing word. The volunteers never actually do anything.",
+        "“Who made” is a description, so the volunteers still need a verb.",
+        "“Having made” is an -ing form. There's still no real verb.",
+      ],
+    },
+    {
+      id: "c1-18", skill: "Hanging words",
+      text: "{{NAME_3}} wanted to try {{SKILL}}. ______ a beginner's class started the next week.",
+      choices: ["Luckily,", "Because", "Although", "Which meant"],
+      answer: 0,
+      notes: [
+        "“Luckily, a beginner's class started the next week.” is complete. “Luckily” just adds feeling.",
+        "“Because a beginner's class started…” leaves the reader waiting for the result.",
+        "“Although a beginner's class started…” is unfinished. What happened anyway?",
+        "“Which meant a beginner's class started…” can't stand alone as a sentence.",
+      ],
+    },
+    {
+      id: "c1-19", skill: "Finding the real verb",
+      text: "The reason {{NAME_1}} arrived early ______ simple: the doors opened at seven.",
+      choices: ["was", "being", "because", "which was"],
+      answer: 0,
+      notes: [
+        "“The reason … was simple” gives the subject a real verb and finishes the thought.",
+        "“Being simple” has no real verb.",
+        "“Because simple” isn't grammatical. The subject still has no verb.",
+        "“Which was simple” only describes. “The reason” never gets its own verb.",
+      ],
+    },
+    {
+      id: "c1-20", skill: "Hanging words",
+      text: "Unless {{NAME_2}} finishes the essay tonight, ______",
+      choices: [
+        "the deadline will pass.",
+        "the deadline passing.",
+        "because the deadline is tomorrow.",
+        "which would be a problem.",
+      ],
+      answer: 0,
+      notes: [
+        "“Unless…” sets up a condition, and “the deadline will pass” completes the thought.",
+        "“The deadline passing” has no real verb.",
+        "“Because…” adds a second hanging thought instead of finishing the first.",
+        "“Which would be a problem” doesn't give a full subject-and-verb sentence. The thought still hangs.",
+      ],
+    },
+  ],
+});
+
+</script>
 <!-- Question generator: thousands of extra questions per chapter, never repeated. -->
 <script>
 /* ===== js/curriculum/gen/core.js ===== */
@@ -7543,6 +9006,12 @@ window.SatWizz.curriculum.addChapter({
 
   // [skill pattern, rule name], first match wins, per chapter.
   const TABLE = {
+    10: [
+      [/real verb/i, "Main Verb Rule"],
+      [/describing/i, "Skip the Describer"],
+      [/Hanging/i, "Dependent Word Rule"],
+      [/fragment/i, "Complete Sentence Rule"],
+    ],
     1: [
       [/^IC\. /, "Terminal Boundary Rule"],
       [/^IC; (however|nevertheless|then)|; LW/, "Semicolon + Conjunctive Adverb"],
@@ -7572,6 +9041,7 @@ window.SatWizz.curriculum.addChapter({
       [/Appositive/i, "Appositive + Modifier Rule"],
       [/Participle|Non-verb|Reduced/i, "Participle Modifier (Non-Verb)"],
       [/main verb|Main verb/i, "Main Verb Rule"],
+      [/Infinitive/i, "Infinitive Describer (to + verb)"],
     ],
     4: [
       [/Past perfect/i, "Past Perfect Sequence"],
@@ -7635,7 +9105,7 @@ window.SatWizz.curriculum.addChapter({
     let rule = q.rule;
     if (!rule) {
       const ch = SW.chapterById && SW.chapterById(q.chapterId || q.chapter);
-      rule = ch && ch.pause && ch.pause.summary;
+      rule = ch && ch.pause && ch.pause.summary.replace(/\*\*/g, "");
     }
     return [rule, why].filter(Boolean).join(" ");
   };
@@ -12118,10 +13588,11 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
   const obj = (x) => (x && typeof x === "object" ? x : {});
   const tests = (s) => Object.values(obj(s.tests));
   const coreIds = () => (SW.chapters || []).filter((c) => !c.bonus).map((c) => c.id);
-  const bonusIds = () => (SW.chapters || []).filter((c) => c.bonus).map((c) => c.id);
+  // The last chapter in the plan (Modifiers, Parallelism & Pronouns).
+  const finalIds = () => (SW.chapters || []).slice(-1).map((c) => c.id);
   const testsPassed = (s) => coreIds().filter((id) => obj(s.tests)[id]?.passed).length;
   const coreComplete = (s) => coreIds().filter((id) => (s.completedChapters || []).includes(id)).length;
-  const bonusComplete = (s) => bonusIds().filter((id) => (s.completedChapters || []).includes(id)).length;
+  const finalComplete = (s) => finalIds().filter((id) => (s.completedChapters || []).includes(id)).length;
   const practiceSets = (s) => Object.values(obj(s.practiceSets)).reduce((n, p) => n + (p.attempts || 0), 0);
   const comebacks = (s) => tests(s).filter((t) => t.passed && (t.attempts || 0) > 1).length;
   const goalDays = (s) => Object.values(obj(s.days)).filter((d) => d && d.done).length;
@@ -12149,14 +13620,14 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
 
   const LIST = [
     // ---------- Curriculum (10) ----------
-    count("gatekeeper", "curriculum", "🚪", "Gatekeeper", "Pass your first Review for Understanding (8/10 or better).", testsPassed, 1, "tests passed"),
+    count("gatekeeper", "curriculum", "🚪", "Gatekeeper", "Pass your first Review for Understanding (7/10 or better).", testsPassed, 1, "tests passed"),
     count("halfway-there", "curriculum", "🧭", "Halfway There", "Pass 4 chapter tests.", testsPassed, 4, "tests passed"),
-    count("grammar-graduate", "curriculum", "🎓", "Grammar Graduate", "Pass all 7 chapter tests.", testsPassed, 7, "tests passed"),
+    count("grammar-graduate", "curriculum", "🎓", "Grammar Graduate", "Pass all 9 chapter tests.", testsPassed, 9, "tests passed"),
     count("flawless", "curriculum", "💎", "Flawless", "Score 10/10 on a test or practice set.", (s) => s.flawless, 1, "flawless runs"),
     count("flawless-ten", "curriculum", "👑", "Flawless ×10", "Score 10/10 on ten tests or practice sets.", (s) => s.flawless, 10, "flawless runs"),
     count("chapter-champion", "curriculum", "⭐", "Chapter Champion", "Answer every core question in a chapter correctly.", coreComplete, 1, "chapters complete"),
-    count("completionist", "curriculum", "🌟", "Completionist", "Complete all 7 core chapters.", coreComplete, 7, "chapters complete"),
-    count("bonus-hunter", "curriculum", "🎁", "Bonus Hunter", "Complete a bonus chapter.", bonusComplete, 1, "bonus chapters"),
+    count("completionist", "curriculum", "🌟", "Completionist", "Complete all 9 chapters.", coreComplete, 9, "chapters complete"),
+    count("bonus-hunter", "curriculum", "🎁", "Finish Line", "Answer every question in the final chapter (Chapter 9).", finalComplete, 1, "final chapter"),
     count("drill-sergeant", "curriculum", "📋", "Drill Sergeant", "Finish 10 practice sets.", practiceSets, 10, "practice sets"),
     count("comeback", "curriculum", "🔁", "Comeback Kid", "Pass a chapter test after failing it.", comebacks, 1, "comebacks"),
 
@@ -13584,6 +15055,11 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
   const auth = () => SW.auth;
 
   const COPY = {
+    // The opening screen for new visitors.
+    welcome: {
+      title: "Welcome to SatWizz 👋",
+      body: "Free Digital SAT grammar and vocab practice. Sign in to keep your streak, Sparks and progress on every device, or jump straight in as a guest.",
+    },
     save: {
       title: "Save your progress",
       body: "Create a free account to keep your streak, XP and cast on every device.",
@@ -13659,7 +15135,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     const copy = COPY[opts.reason] || COPY.save;
     const ready = auth() && auth().available();
     root = document.createElement("div");
-    root.className = "modal-backdrop";
+    root.className = `modal-backdrop${opts.reason === "welcome" ? " welcome" : ""}`;
     root.innerHTML = `
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-body">
         <div class="modal-brand">Sat<span>Wizz</span></div>
@@ -13691,11 +15167,13 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           <button class="btn wide" type="submit" id="auth-submit"></button>
         </form>
         <button class="linkbtn" type="button" id="auth-guest">Continue as Guest</button>
-        <p class="fine">As a guest, progress is saved in this browser only.</p>
+        <p class="fine">As a guest, progress is saved in this browser only. You can sign in any time from Profile.</p>
       </div>`;
     document.body.append(root);
 
-    root.addEventListener("mousedown", (e) => { if (e.target === root) continueAsGuest(); });
+    // The opening screen only closes through its buttons; the other prompts
+    // also close by tapping outside.
+    root.addEventListener("mousedown", (e) => { if (e.target === root && opts.reason !== "welcome") continueAsGuest(); });
     root.querySelector("#tab-signup").addEventListener("click", () => setMode("signup"));
     root.querySelector("#tab-login").addEventListener("click", () => setMode("login"));
     root.querySelector("#auth-guest").addEventListener("click", continueAsGuest);
@@ -14176,7 +15654,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
   const chapterById = SW.chapterById;
   const CORE_CHAPTERS = SW.CORE_CHAPTERS;
   const REVIEW_ID = "review"; // mixed review of completed chapters
-  const SAVE_VERSION = 3; // 3: 7-chapter curriculum, Focus 0-100%
+  const SAVE_VERSION = 4; // 3: 7-chapter curriculum, Focus 0-100% · 4: 9 chapters (Complete Sentences first, bonus 9 merged into 8)
   const auth = SW.auth;
   const onboarding = SW.onboarding;
   const sfx = SW.sfx;
@@ -14221,8 +15699,8 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     missed: [], // question ids answered wrong and not yet fixed
     guest: false, // chose "Continue as Guest", so don't prompt again on a combo
     // curriculum
-    chapterId: 1, // current chapter (1-10) or "review"
-    unlockedChapters: [1],
+    chapterId: SW.FIRST_CHAPTER, // current chapter id (see CURRICULUM_PLAN) or "review"
+    unlockedChapters: [SW.FIRST_CHAPTER],
     completedChapters: [],
     chapterCorrect: {}, // chapterId -> question ids answered correctly
     // gamification
@@ -14247,7 +15725,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     derbyChapter: null, // unit the Derby races on (defaults to the current chapter)
     genSeed: 0, // per-player seed: question casts and the no-repeat order of generated questions
     genCursor: {}, // chapterId -> how many generated questions you've been served
-    // Review for Understanding tests (8/10 unlocks the next chapter) and
+    // Review for Understanding tests (7/10 unlocks the next chapter) and
     // practice sets: chapterId -> { best, last, n, passed, attempts, at }
     tests: {},
     practiceSets: {},
@@ -14296,19 +15774,40 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       s.focus = FOCUS.RULES.max;
       s.focusStreak = 0;
     }
+    // Before v4 the Pronouns & Possessives bonus (id 9) was its own chapter;
+    // its questions now live in Modifiers, Parallelism & Pronouns (id 8).
+    if ((saved.v || 1) < 4) {
+      const merge = (id) => SW.MERGED_CHAPTERS[id] || id;
+      s.unlockedChapters = (s.unlockedChapters || []).map(merge);
+      // The merged chapter is bigger now, so finishing the old bonus 9 alone doesn't complete it.
+      s.completedChapters = (s.completedChapters || []).filter((id) => !SW.MERGED_CHAPTERS[id]);
+      const cc = { ...(s.chapterCorrect || {}) };
+      for (const [from, to] of Object.entries(SW.MERGED_CHAPTERS)) {
+        if (cc[from]) cc[to] = [...new Set([...(cc[to] || []), ...cc[from]])];
+        delete cc[from];
+        for (const book of [s.tests, s.practiceSets]) {
+          if (book && book[from] && !book[to]) book[to] = book[from];
+          if (book) delete book[from];
+        }
+      }
+      s.chapterCorrect = cc;
+      if (s.chapterId !== REVIEW_ID) s.chapterId = merge(s.chapterId);
+    }
     s.focus = FOCUS.clamp(s.focus);
     // Drop question ids that no longer exist and old filters.
     s.missed = s.missed.filter((id) => BY_ID[id]);
     delete s.filter;
     delete s.focusDay;
     const validChapter = (id) => Number.isInteger(id) && chapterById(id);
-    s.unlockedChapters = [...new Set([1, ...(s.unlockedChapters || []).filter(validChapter)])];
+    // The first chapter is always open. (Players from before v4 keep every
+    // chapter they had, and the new Chapter 1 opens for them too.)
+    s.unlockedChapters = [...new Set([SW.FIRST_CHAPTER, ...(s.unlockedChapters || []).filter(validChapter)])];
     s.completedChapters = [...new Set((s.completedChapters || []).filter(validChapter))];
     if (!s.chapterCorrect || typeof s.chapterCorrect !== "object") s.chapterCorrect = {};
     if (!s.tests || typeof s.tests !== "object") s.tests = {};
     if (!s.practiceSets || typeof s.practiceSets !== "object") s.practiceSets = {};
     if (!s.badgeAt || typeof s.badgeAt !== "object") s.badgeAt = {};
-    if (s.chapterId !== REVIEW_ID && !s.unlockedChapters.includes(s.chapterId)) s.chapterId = 1;
+    if (s.chapterId !== REVIEW_ID && !s.unlockedChapters.includes(s.chapterId)) s.chapterId = SW.FIRST_CHAPTER;
     // Packs that used to be free stay free for anyone who played before v2,
     // and anyone already using a cast that became paid keeps it.
     if ((saved.v || 1) < 2) {
@@ -14435,6 +15934,9 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     });
   }
 
+  // Lesson text marks key terms as **term** (bold), after filling and escaping.
+  const bold = (html) => html.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+
   const castNames = (t) => `${t.people.slice(0, 3).map((p) => p.name).join(", ")} + ${t.people.length - 3} more`;
 
   // Free casts first, then packs by price.
@@ -14505,19 +16007,26 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
   const isComplete = (chId) => S.completedChapters.includes(chId);
   // Mixed review opens once any core chapter is complete.
   const reviewOpen = () => S.completedChapters.some((id) => !chapterById(id).bonus);
+  // The Review for Understanding test opens once you've answered a majority
+  // (more than half) of the chapter's questions correctly.
+  const coreIds = new Map(CHAPTERS.map((ch) => [ch.id, new Set(ch.questions.map((q) => q.id))]));
+  const solvedIn = (ch) => correctIn(ch.id).filter((id) => coreIds.get(ch.id).has(id)).length;
+  const testNeed = (ch) => Math.max(0, SW.testReadyAt(ch) - solvedIn(ch));
+  const testReady = (ch) => testNeed(ch) === 0 || Boolean(S.tests[ch.id]?.passed) || S.demo;
 
   function buildQueue() {
     const ch = currentChapter();
     if (ch) {
       const done = new Set(correctIn(ch.id));
       // In progress: only what's left. Replay of a finished chapter: everything.
-      // The pop-culture set (questions with a rule line) comes first, then the
-      // extra practice, each shuffled.
+      // Easy → hard: the level-1 starters in their teaching order, then the
+      // extra practice (level 2) and the SAT-style passages (level 3), each
+      // shuffled.
       // A finished chapter skips straight to fresh generated questions.
       // (Bonus chapters have no generated pool, so they replay their core set.)
       const stream = isComplete(ch.id) && ch.pool.length > 0;
       const left = stream ? [] : ch.questions.filter((q) => isComplete(ch.id) || !done.has(q.id));
-      queue = [...shuffle(left.filter((q) => q.rule)), ...shuffle(left.filter((q) => !q.rule))]
+      queue = [...left.filter((q) => q.level === 1), ...shuffle(left.filter((q) => q.level === 2)), ...shuffle(left.filter((q) => q.level >= 3))]
         .map((q) => ({ id: q.id, isRetry: false }));
     } else {
       queue = [];
@@ -14713,7 +16222,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
   // ---------- Derby question source: grammar from your unit ----------
   function derbyChapter() {
     const pick = [S.derbyChapter, S.chapterId].find((id) => Number.isInteger(id) && isUnlocked(id));
-    return chapterById(pick || 1);
+    return chapterById(pick || SW.FIRST_CHAPTER);
   }
   function grammarSource() {
     return {
@@ -14750,7 +16259,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
         return {
           id,
           cast: castFor(id),
-          meta: `${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${ch.short}`,
+          meta: `${ch.bonus ? "Bonus" : `Ch ${ch.num}`} · ${ch.short}`,
           passage: q.text,
           stem: SW.stemFor(q),
           choices: order.map((i) => q.choices[i]),
@@ -14795,7 +16304,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       unitHtml() {
         const cur = derbyChapter();
         const opts = CHAPTERS.filter((c) => isUnlocked(c.id))
-          .map((c) => `<option value="${c.id}" ${c.id === cur.id ? "selected" : ""}>${c.bonus ? "Bonus" : `Ch ${c.id}`} · ${esc(c.short)}</option>`).join("");
+          .map((c) => `<option value="${c.id}" ${c.id === cur.id ? "selected" : ""}>${c.bonus ? "Bonus" : `Ch ${c.num}`} · ${esc(c.short)}</option>`).join("");
         return `<label class="unit-pick"><span class="label-sm">Racing on</span><select class="select" id="derby-unit">${opts}</select></label>`;
       },
       wireUnit(el, rerender) {
@@ -14932,11 +16441,11 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     }
     const done = Math.min(correctIn(ch.id).length, ch.questions.length);
     bar.innerHTML = `
-      <span class="ch-num">${ch.bonus ? "Bonus" : `Ch ${ch.id}`}</span>
+      <span class="ch-num">${ch.bonus ? "Bonus" : `Ch ${ch.num}`}</span>
       <span class="ch-title">${esc(ch.short)}</span>
       <span class="ch-count">${isComplete(ch.id) ? "✓" : `${done}/${ch.questions.length}`}</span>
       <span class="ch-caret" aria-hidden="true">▾</span>`;
-    bar.setAttribute("aria-label", `Chapter ${ch.id}: ${ch.title}. ${done} of ${ch.questions.length} correct. Choose a chapter`);
+    bar.setAttribute("aria-label", `Chapter ${ch.num}: ${ch.title}. ${done} of ${ch.questions.length} correct. Choose a chapter`);
   }
 
   // ---------- Feed ----------
@@ -15012,7 +16521,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       renderHud(["sparks"]);
       setTimeout(() => sfx.play("complete"), 400);
       sfx.buzz(50);
-      celebrate("⭐", `Chapter ${ch.id} complete!`, `+${RULES.chapterSparks} ⚡ Sparks`);
+      celebrate("⭐", `Chapter ${ch.num} complete!`, `+${RULES.chapterSparks} ⚡ Sparks`);
     }
     feed.querySelector(".sentinel")?.remove();
     feed.append(completeCard(ch, firstTime));
@@ -15020,10 +16529,10 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
   }
 
   // The next chapter opens when this one's Review for Understanding test is
-  // passed (8/10 or better; see the tests section below).
+  // passed (7/10 or better; see the tests section below).
   const lockNote = (ch) => {
-    const prev = chapterById(ch.id - 1);
-    return prev ? `Score ${passMark(TEST_LEN)}/${TEST_LEN} on ${prev.bonus ? "the bonus chapter's" : `Chapter ${prev.id}'s`} Review for Understanding to unlock` : "";
+    const prev = SW.prevChapter(ch);
+    return prev ? `Score ${passMark(TEST_LEN)}/${TEST_LEN} on ${prev.bonus ? "the bonus chapter's" : `Chapter ${prev.num}'s`} Review for Understanding to unlock` : "";
   };
 
   // "Explanation Pause": the lesson card that opens each chapter.
@@ -15032,14 +16541,14 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     const cast = castOf();
     card.innerHTML = `
       <div class="card-inner pause-card">
-        <div class="meta"><span class="domain">${ch.bonus ? "Bonus chapter" : `Chapter ${ch.id} of ${CORE_CHAPTERS}`}</span><span>Explanation Pause</span></div>
+        <div class="meta"><span class="domain">${ch.bonus ? "Bonus chapter" : `Chapter ${ch.num} of ${CORE_CHAPTERS}`}</span><span>Explanation Pause</span></div>
         <h2>${esc(ch.title)}</h2>
-        <p class="pause-summary">${fill(ch.pause.summary, cast)}</p>
-        <ul class="rule-list">${ch.pause.rules.map((r) => `<li>${fill(r, cast)}</li>`).join("")}</ul>
+        <p class="pause-summary">${bold(fill(ch.pause.summary, cast))}</p>
+        <ul class="rule-list">${ch.pause.rules.map((r) => `<li>${bold(fill(r, cast))}</li>`).join("")}</ul>
         <div class="patterns" aria-label="Patterns">
           ${ch.pause.patterns.map((p) => `<span class="pattern ${p.ok ? "ok" : "no"}"><b aria-hidden="true">${p.ok ? "✓" : "✗"}</b> ${fill(p.f, cast, false)}<span class="sr-only">${p.ok ? " (correct)" : " (incorrect)"}</span></span>`).join("")}
         </div>
-        <p class="pause-example"><span class="label-sm">Example</span><span>${fill(ch.pause.example, cast)}</span></p>
+        <p class="pause-example"><span class="label-sm">Example</span><span>${bold(fill(ch.pause.example, cast))}</span></p>
         <button class="btn wide next-row" type="button">Start practice ↓</button>
       </div>`;
     card.querySelector(".btn").addEventListener("click", () => scrollToNext(card));
@@ -15048,26 +16557,26 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
 
   function completeCard(ch, firstTime) {
     const card = h("section", { class: "card complete" });
-    const next = chapterById(ch.id + 1);
+    const next = SW.nextChapter(ch);
     const finishedCore = CHAPTERS.filter((c) => !c.bonus).every((c) => isComplete(c.id));
     let heading;
     let body;
     let actions = "";
     if (next && !isUnlocked(next.id)) {
-      heading = `${ch.bonus ? "Bonus chapter" : `Chapter ${ch.id}`} complete`;
+      heading = `${ch.bonus ? "Bonus chapter" : `Chapter ${ch.num}`} complete`;
       body = `Score ${passMark(TEST_LEN)}/${TEST_LEN} on the Review for Understanding test to unlock <b>${esc(next.title)}</b>.`;
       actions = `<button class="btn wide" type="button" data-test>Take the Review for Understanding →</button>`;
     } else if (next && !next.bonus) {
-      heading = `Chapter ${ch.id} complete`;
+      heading = `Chapter ${ch.num} complete`;
       body = `Next up: <b>${esc(next.title)}</b>.`;
-      actions = `<button class="btn wide" type="button" data-go="${next.id}">Start Chapter ${next.id} →</button>`;
+      actions = `<button class="btn wide" type="button" data-go="${next.id}">Start Chapter ${next.num} →</button>`;
     } else if (finishedCore) {
       heading = ch.bonus ? "Bonus chapter complete" : "Curriculum complete";
       body = "You've worked through every chapter. Keep your skills sharp with mixed review.";
       if (next) actions += `<button class="btn wide" type="button" data-go="${next.id}">Bonus: ${esc(next.short)} →</button>`;
       actions += `<button class="btn ${next ? "ghost " : ""}wide" type="button" data-go="${REVIEW_ID}">Mixed review →</button>`;
     } else {
-      heading = `${ch.bonus ? "Bonus chapter" : `Chapter ${ch.id}`} complete`;
+      heading = `${ch.bonus ? "Bonus chapter" : `Chapter ${ch.num}`} complete`;
       body = "Pick your next chapter from the chapter list.";
       actions = `<button class="btn wide" type="button" data-drawer>Open chapters</button>`;
     }
@@ -15156,7 +16665,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       <div class="card-inner bb">
         <div class="bb-top">
           <span class="bb-num" aria-label="Question ${esc(card._label)}">${esc(card._label)}</span>
-          <span class="bb-meta">${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(q.skill)}</span>
+          <span class="bb-meta">${ch.bonus ? "Bonus" : `Ch ${ch.num}`} · ${esc(q.skill)}</span>
           ${card._isRetry ? '<span class="retry-tag">↺ Try again</span>' : ""}
         </div>
         <div class="bb-passage"><p class="passage">${renderPassage(q.text, cast)}</p></div>
@@ -15534,7 +17043,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       <p class="muted">Here's the rule summary for this chapter. Then get ${REVIEW_LENGTH} review questions right in a row to win back ${FOCUS.RULES.restore}% Focus.</p>
       ${FOCUS.meterHtml(S.focus)}
       <article class="tip-card">
-        <span class="label-sm">${ch.bonus ? "Bonus" : `Chapter ${ch.id}`} · ${esc(ch.short)}</span>
+        <span class="label-sm">${ch.bonus ? "Bonus" : `Chapter ${ch.num}`} · ${esc(ch.short)}</span>
         <ul class="rule-list">${ch.pause.rules.map((r) => `<li>${fill(r, cast, false)}</li>`).join("")}</ul>
         ${ch.pause.example ? `<p class="tip-ex">${fill(ch.pause.example, cast, false)}</p>` : ""}
       </article>
@@ -15646,7 +17155,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
         <button type="button" class="chapter-row${done ? " done" : ""}${current ? " current" : ""}" data-ch="${ch.id}" ${unlocked ? "" : "disabled"}>
           <span class="ch-status" aria-hidden="true">${status}</span>
           <span class="ch-info">
-            <b>${ch.bonus ? "Bonus" : `${ch.id}.`} ${esc(ch.title)}</b>
+            <b>${ch.bonus ? "Bonus" : `${ch.num}.`} ${esc(ch.title)}</b>
             <small>${sub}</small>
             ${unlocked && !done ? `<span class="bar" aria-hidden="true"><i style="width:${(got / ch.questions.length) * 100}%"></i></span>` : ""}
           </span>
@@ -15760,7 +17269,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       return `
         <article class="ch-card${open ? "" : " locked"}${t?.passed ? " passed" : ""}${S.chapterId === ch.id ? " current" : ""}" data-ch="${ch.id}">
           <div class="ch-card-top">
-            <span class="ch-badge">${ch.bonus ? "Bonus" : `Ch ${ch.id}`}</span>
+            <span class="ch-badge">${ch.bonus ? "Bonus" : `Ch ${ch.num}`}</span>
             <span class="ch-state">${state}</span>
           </div>
           <h3>${esc(ch.title.replace(/^Bonus: /, ""))}</h3>
@@ -15772,7 +17281,9 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           <div class="ch-actions">
             <button class="btn" type="button" data-learn="${ch.id}">📖 Learn & practice</button>
             <button class="btn ghost" type="button" data-set="${ch.id}">✏️ Practice set (${TEST_LEN})</button>
-            <button class="btn ghost test-btn" type="button" data-test="${ch.id}">🎯 Review for Understanding (${TEST_LEN})</button>
+            ${testReady(ch)
+              ? `<button class="btn ghost test-btn" type="button" data-test="${ch.id}">🎯 Review for Understanding (${TEST_LEN})</button>`
+              : `<button class="btn ghost test-btn" type="button" data-test="${ch.id}" aria-disabled="true" disabled>🔒 Test opens after ${testNeed(ch)} more right answer${testNeed(ch) === 1 ? "" : "s"}</button>`}
           </div>` : `<p class="lock-note">🔒 ${esc(lockNote(ch))}.</p>`}
         </article>`;
     };
@@ -15782,7 +17293,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           <button class="theme-toggle" type="button" id="theme-toggle" aria-label="${effectiveTheme() === "dark" ? "Switch to light mode" : "Switch to dark mode"}" title="${effectiveTheme() === "dark" ? "Light mode" : "Dark mode"}">${effectiveTheme() === "dark" ? "☀️" : "🌙"}</button>
           <span class="label-sm">Digital SAT grammar · ${passed} of ${core.length} chapters passed</span>
           <h2>${S.name ? `Welcome back, ${esc(S.name)}` : "Your chapters"}</h2>
-          <p class="muted">Learn each rule, practice, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> or better on the chapter's <b>Review for Understanding</b> to unlock the next one.</p>
+          <p class="muted">Start with Chapter 1 and go in order. In each chapter, read the lesson, answer <b>more than half</b> of the questions correctly to open the <b>Review for Understanding</b> test, then score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter.</p>
           <div class="dash-focus">${FOCUS.meterHtml(S.focus)}<small class="muted">${S.focus < FOCUS.RULES.max ? `Full recharge in ${FOCUS.nextRechargeMin(S)} min` : "Focus recharges to 100% every hour"}</small></div>
         </section>
         <div class="dash-grid">${core.map(card).join("")}</div>
@@ -15817,10 +17328,10 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
 
   // ---------- Review for Understanding tests & practice sets ----------
   // Ten questions, one at a time, with no feedback until you submit. Then the
-  // Diagnostic screen: PASS/FAIL at 80%, the score, and every item with your
+  // Diagnostic screen: PASS/FAIL at 70%, the score, and every item with your
   // answer, the right one, the rule's name and a short explanation.
   const TEST_LEN = 10;
-  const PASS_SHARE = 0.8;
+  const PASS_SHARE = 0.7;
   const passMark = (n) => Math.ceil(n * PASS_SHARE);
   const testView = $("#view-test");
   const diagView = $("#view-diag");
@@ -15863,6 +17374,10 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
   function startRun(mode, chId) {
     const ch = chapterById(chId);
     if (!ch || !isUnlocked(chId)) return;
+    if (mode === "test" && !testReady(ch)) {
+      toast(`Answer ${testNeed(ch)} more of this chapter's questions correctly to open the test.`);
+      return;
+    }
     sfx.play("tap");
     const ids = mode === "test" ? pickTest(ch) : pickPractice(ch);
     run = {
@@ -15878,7 +17393,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
 
   const runTitle = (r) => {
     const ch = chapterById(r.chId);
-    return `${r.mode === "test" ? "Review for Understanding" : "Practice set"} · ${ch.bonus ? "Bonus" : `Ch ${ch.id}`}`;
+    return `${r.mode === "test" ? "Review for Understanding" : "Practice set"} · ${ch.bonus ? "Bonus" : `Ch ${ch.num}`}`;
   };
 
   function renderTest() {
@@ -15904,7 +17419,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           <div class="card-inner bb">
             <div class="bb-top">
               <span class="bb-num" aria-label="Question ${run.i + 1} of ${n}">${run.i + 1}</span>
-              <span class="bb-meta">${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(q.skill)}</span>
+              <span class="bb-meta">${ch.bonus ? "Bonus" : `Ch ${ch.num}`} · ${esc(q.skill)}</span>
             </div>
             <div class="bb-passage"><p class="passage">${renderPassage(q.text, it.cast)}</p></div>
             <p class="bb-stem">${esc(SW.stemFor(q))}</p>
@@ -16003,10 +17518,10 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       attempts: (prev?.attempts || 0) + 1,
       at: Date.now(),
     };
-    // Passing the test unlocks the next chapter (Chapter 7 opens the bonus ones).
+    // Passing the test unlocks the next chapter in the plan's order.
     let unlocked = null;
     if (r.mode === "test" && pass) {
-      const next = chapterById(ch.id + 1);
+      const next = SW.nextChapter(ch);
       if (next && !isUnlocked(next.id)) {
         S.unlockedChapters.push(next.id);
         unlocked = next;
@@ -16026,7 +17541,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     if (r.mode === "test" && FOCUS.level(S.focus) === "critical") shake();
     show("diag");
     renderDiag();
-    if (unlocked) celebrate("🔓", `${unlocked.bonus ? "Bonus chapter" : `Chapter ${unlocked.id}`} unlocked!`, `${score}/${n} on the Review for Understanding`);
+    if (unlocked) celebrate("🔓", `${unlocked.bonus ? "Bonus chapter" : `Chapter ${unlocked.num}`} unlocked!`, `${score}/${n} on the Review for Understanding`);
     if (goal) celebrateGoal(goal);
     announceBadges(newBadges);
   }
@@ -16036,14 +17551,14 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     const r = lastResult;
     if (!r) { show("dash"); return; }
     const ch = chapterById(r.chId);
-    const next = chapterById(r.chId + 1);
+    const next = SW.nextChapter(ch);
     const pct = Math.round((r.score / r.n) * 100);
     const isTest = r.mode === "test";
     const status = r.pass ? "PASS" : "FAIL";
     let note;
-    if (isTest && r.unlocked) note = `🔓 ${r.unlocked.bonus ? "Bonus chapter" : `Chapter ${r.unlocked.id}`} unlocked: <b>${esc(r.unlocked.title.replace(/^Bonus: /, ""))}</b>`;
-    else if (isTest && r.pass) note = next ? `${next.bonus ? "The bonus chapter" : `Chapter ${next.id}`} is open.` : "You've passed every chapter test.";
-    else if (isTest) note = `You need ${passMark(r.n)}/${r.n} (80%) to unlock ${next ? (next.bonus ? "the bonus chapter" : `Chapter ${next.id}`) : "the next chapter"}. Review the rules below, then retake: every retake has new questions.`;
+    if (isTest && r.unlocked) note = `🔓 ${r.unlocked.bonus ? "Bonus chapter" : `Chapter ${r.unlocked.num}`} unlocked: <b>${esc(r.unlocked.title.replace(/^Bonus: /, ""))}</b>`;
+    else if (isTest && r.pass) note = next ? `${next.bonus ? "The bonus chapter" : `Chapter ${next.num}`} is open.` : "You've passed every chapter test.";
+    else if (isTest) note = `You need ${passMark(r.n)}/${r.n} (${Math.round(PASS_SHARE * 100)}%) to unlock ${next ? (next.bonus ? "the bonus chapter" : `Chapter ${next.num}`) : "the next chapter"}. Review the rules below, then retake: every retake has new questions.`;
     else note = r.pass ? "Nice set. When you're ready, take the Review for Understanding." : "Practice sets don't unlock chapters. Review the misses below and keep going.";
     const letter = (it, ci) => "ABCD"[it.order.indexOf(ci)];
     const ans = (it, ci) => `<span class="ans-letter">${letter(it, ci)}</span> ${fill(it.q.choices[ci], it.cast, false)}`;
@@ -16058,8 +17573,8 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
         </section>
         <div class="diag-actions">
           <button class="btn" type="button" data-retake>↻ ${isTest ? "Retake test" : "New practice set"}</button>
-          ${next && isUnlocked(next.id) ? `<button class="btn ghost" type="button" data-next-ch="${next.id}">${next.bonus ? "Bonus chapter" : `Chapter ${next.id}`} →</button>` : ""}
-          ${!isTest ? `<button class="btn ghost" type="button" data-test-now>🎯 Take the test</button>` : ""}
+          ${next && isUnlocked(next.id) ? `<button class="btn ghost" type="button" data-next-ch="${next.id}">${next.bonus ? "Bonus chapter" : `Chapter ${next.num}`} →</button>` : ""}
+          ${!isTest && testReady(ch) ? `<button class="btn ghost" type="button" data-test-now>🎯 Take the test</button>` : ""}
           <button class="btn ghost" type="button" data-dash>🏠 Dashboard</button>
         </div>
         <h3 class="diag-head">Item-by-item review · ${esc(ch.title.replace(/^Bonus: /, ""))}</h3>
@@ -16171,7 +17686,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       <section class="help-sec" id="help-play">
         <h3>How to Play SatWizz</h3>
         <ul class="help-list">
-          <li><b>🏠 Chapters.</b> Learn each chapter's rules in <i>Learn &amp; practice</i>, try a <i>Practice set</i>, then take the 10-question <b>Review for Understanding</b>. Score <b>8/10</b> to unlock the next chapter. After every set, the Diagnostic screen explains each answer.</li>
+          <li><b>🏠 Chapters.</b> Learn each chapter's rules in <i>Learn &amp; practice</i>, try a <i>Practice set</i>, then take the 10-question <b>Review for Understanding</b>. The test opens once you've answered more than half of the chapter's questions correctly; score <b>${passMark(TEST_LEN)}/${TEST_LEN}</b> to unlock the next chapter. After every set, the Diagnostic screen explains each answer.</li>
           <li><b>🧠 Focus (0–100%).</b> A miss costs ${FOCUS.RULES.miss}%, rushing (under 3s) costs ${FOCUS.RULES.rush}%. Two right in a row gives +${FOCUS.RULES.restore}%. It refills to 100% every hour, or right away with a 🧪 Focus Elixir. Low Focus outlines the question in orange or red, and in the Derby it locks your answers for a few seconds.</li>
           <li><b>⚡ Sparks.</b> +${RULES.sparksPerCorrect} per right answer, bonuses for combos, your daily goal and chapter milestones. Spend them in the 🛍️ Shop or bet them in the 🐎 Derby.</li>
           <li><b>🔥 Lock In Streak.</b> Meet your daily goal (${S.goal} questions) every day. Aura Shields 💠 cover a missed day.</li>
@@ -16195,9 +17710,9 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
         <div class="rule-acc">
           ${core.map((ch) => `
             <details>
-              <summary><span class="ch-badge">Ch ${ch.id}</span> ${esc(ch.title)}</summary>
-              <p class="muted">${fill(ch.pause.summary, cast, false)}</p>
-              <ul>${ch.pause.rules.map((r) => `<li>${fill(r, cast, false)}</li>`).join("")}</ul>
+              <summary><span class="ch-badge">Ch ${ch.num}</span> ${esc(ch.title)}</summary>
+              <p class="muted">${bold(fill(ch.pause.summary, cast, false))}</p>
+              <ul>${ch.pause.rules.map((r) => `<li>${bold(fill(r, cast, false))}</li>`).join("")}</ul>
             </details>`).join("")}
         </div>
       </section>
@@ -16714,7 +18229,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       const s = byChapter[ch.id];
       const pct = Math.round((s.right / s.seen) * 100);
       const tone = pct >= 80 ? "" : pct >= 50 ? "mid" : "low";
-      return `<div class="bar-row"><div class="top"><span>${ch.bonus ? "Bonus" : `Ch ${ch.id}`} · ${esc(ch.short)}</span><span>${s.right}/${s.seen} · ${pct}%</span></div><div class="bar"><i class="${tone}" style="width:${pct}%"></i></div></div>`;
+      return `<div class="bar-row"><div class="top"><span>${ch.bonus ? "Bonus" : `Ch ${ch.num}`} · ${esc(ch.short)}</span><span>${s.right}/${s.seen} · ${pct}%</span></div><div class="bar"><i class="${tone}" style="width:${pct}%"></i></div></div>`;
     }).join("");
 
     const tabsHtml = `
@@ -16827,7 +18342,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           S.syncedUserId = keepUser; // still the same account; the reset should win on next merge
           save();
           renderHud();
-          startChapter(1);
+          startChapter(SW.FIRST_CHAPTER);
           youTab = "profile";
           show("feed");
           toast("Progress reset. Fresh start.");
@@ -17229,9 +18744,12 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       ranks.invalidate();
       renderHud();
       rerenderCurrent();
-    } else if (!session && event === "INITIAL_SESSION" && pendingInvite() && auth.available()) {
+    } else if (!session && event === "INITIAL_SESSION" && auth.available()) {
       // Opened an invite link while signed out: ask them to sign in first.
-      openSignup("invite");
+      if (pendingInvite()) openSignup("invite");
+      // Opening screen: anyone who isn't signed in and hasn't chosen to play
+      // as a guest starts at the sign-in screen (with a guest option).
+      else if (!S.guest && !S.demo) openSignup("welcome");
     }
   });
 

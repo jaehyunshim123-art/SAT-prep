@@ -2351,6 +2351,9 @@ kbd {
 .consent { display: flex; gap: 10px; align-items: flex-start; text-align: left; font-size: 0.84rem; line-height: 1.45; color: var(--muted); cursor: pointer; }
 .consent input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--volt); }
 
+/* Opening screen: the sign-in box on a solid background, not over the app. */
+.modal-backdrop.welcome { background: var(--bg); }
+
 /* ---------- Standalone build ---------- */
 .scrollview.solo { padding-block: 4px 24px; }
 .stipend p { margin: 0; }
@@ -2560,7 +2563,7 @@ window.SatWizz.avatars = [
 // SatWizz curriculum framework.
 //
 // Loaded BEFORE the chapter files. It defines:
-//   • CURRICULUM_PLAN: the 7-chapter sequence (plus two bonus chapters)
+//   • CURRICULUM_PLAN: the 9-chapter sequence, in the order students take it
 //   • STEMS: the official Digital SAT question stems
 //   • SatWizz.curriculum.addChapter(): how a chapter file registers itself
 //   • SatWizz.curriculum.build(): called once by the app after every chapter
@@ -2610,28 +2613,36 @@ window.SatWizz.avatars = [
 
   const SW = (window.SatWizz = window.SatWizz || {});
 
-  // The 7-chapter sequence, then two bonus chapters. Chapters unlock in this order.
-  // Each core chapter leads with its pop-culture set (clause-derby/src/chN.js,
-  // registered by js/curriculum/clause.js), then the extra practice in
-  // js/curriculum/chN.js.
+  // The 9 chapters in the order students take them; they unlock in this
+  // order and are numbered by it (ch.num, "Chapter 1…9"). The `id` is only an
+  // internal key that never changes, so saved progress and synced accounts
+  // keep working: Complete Sentences was added in front later, so it's id 10.
+  // Every chapter runs easy → hard: the plain-English starters
+  // (js/curriculum/basics.js, level 1), the extra practice
+  // (js/curriculum/chN.js, level 2), then the SAT-style passages
+  // (clause-derby/src/chN.js via js/curriculum/clause.js, level 3).
   SW.CURRICULUM_PLAN = [
-    { id: 1, short: "Clause Connectors", title: "Independent Clause Connectors & Sentence Boundaries" },
+    { id: 10, short: "Complete Sentences", title: "Complete Sentences: Subjects, Verbs & Fragments" },
+    { id: 1, short: "Joining Sentences", title: "Joining Sentences: Periods, Semicolons & FANBOYS" },
     { id: 2, short: "Subject-Verb Agreement", title: "Subject-Verb Agreement" },
-    { id: 3, short: "Verb vs. Non-Verb", title: "Verb vs. Non-Verb Identification (Appositives)" },
-    { id: 4, short: "Verb Tenses", title: "Verb Tenses & Aspect" },
-    { id: 5, short: "Logical Transitions", title: "Logical Transitions" },
-    { id: 6, short: "Semicolons, Dashes, Colons", title: "Punctuation Fundamentals (Semicolon, Dash, Colon)" },
-    { id: 7, short: "Appositives", title: "Appositives & Non-Essential Clauses" },
-    { id: 8, short: "Modifiers & Parallelism", title: "Bonus: Modifiers & Parallelism", bonus: true },
-    { id: 9, short: "Pronouns & Possessives", title: "Bonus: Pronouns & Possessives", bonus: true },
+    { id: 3, short: "Verb or Not a Verb?", title: "Verb or Not a Verb? (Main Verbs vs. Describers)" },
+    { id: 4, short: "Verb Tenses", title: "Verb Tenses: Matching the Time" },
+    { id: 5, short: "Transitions", title: "Transitions: How Ideas Connect" },
+    { id: 6, short: "Semicolons, Colons, Dashes", title: "Semicolons, Colons & Dashes" },
+    { id: 7, short: "Extra Information", title: "Extra Information: Appositives & Commas" },
+    { id: 8, short: "Modifiers & Pronouns", title: "Modifiers, Parallelism & Pronouns" },
   ];
+  // Chapter 9 used to be a separate bonus chapter (Pronouns & Possessives);
+  // its questions now live in id 8. Old saves move with this map.
+  SW.MERGED_CHAPTERS = { 9: 8 };
 
   // Saves from before the 7-chapter curriculum (SAVE_VERSION < 3) used ids 1-10:
   // old → new chapter id. Old chapter 1 (complete sentences) was retired.
   SW.LEGACY_CHAPTER_MAP = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9 };
 
-  // Share of a chapter's questions you need right to unlock the next one.
-  SW.UNLOCK_SHARE = 0.6;
+  // A chapter's Review for Understanding test opens once you've answered
+  // more than half of its questions correctly ("a majority").
+  SW.testReadyAt = (ch) => Math.floor(ch.questions.length / 2) + 1;
 
   // Official Digital SAT question stems. {word} is filled for vocab "meaning" items.
   SW.STEMS = {
@@ -2689,6 +2700,7 @@ window.SatWizz.avatars = [
     // practice): questions are appended, and the first registration's title
     // and lesson win. Lesson patterns/example missing from it are filled in.
     addChapter(def) {
+      def = { ...def, id: SW.MERGED_CHAPTERS[def.id] || def.id };
       const plan = SW.CURRICULUM_PLAN.find((p) => p.id === def.id);
       if (!plan) console.warn(`SatWizz: chapter ${def.id} isn't in CURRICULUM_PLAN`);
       const prev = registered.find((c) => c.id === def.id);
@@ -2710,13 +2722,23 @@ window.SatWizz.avatars = [
       const byId = new Map(registered.map((c) => [c.id, c]));
       SW.chapters = SW.CURRICULUM_PLAN
         .map((p) => byId.get(p.id) || { ...p, pause: null, questions: [] })
-        .concat(registered.filter((c) => !SW.CURRICULUM_PLAN.some((p) => p.id === c.id)))
-        .sort((a, b) => a.id - b.id);
+        .concat(registered.filter((c) => !SW.CURRICULUM_PLAN.some((p) => p.id === c.id)));
+      SW.chapters.forEach((ch, i) => {
+        ch.num = i + 1;
+        // Easy → hard. Starters are level 1; SAT-style passages (with a rule
+        // line) default to 3, everything else to 2. Stable within a level.
+        const level = (q) => q.level || (q.rule ? 3 : 2);
+        ch.questions = ch.questions.map((q, k) => [q, k]).sort((a, b) => level(a[0]) - level(b[0]) || a[1] - b[1]).map(([q]) => Object.assign(q, { level: level(q) }));
+      });
       // Generated pools (js/curriculum/gen/): thousands of extra questions per
       // chapter, served after the core set and never repeated (see app.js).
       for (const ch of SW.chapters) ch.pool = SW.gen ? SW.gen.pool(ch.id).map((q) => Object.assign(q, { chapterId: ch.id })) : [];
       SW.questions = SW.chapters.flatMap((ch) => [...ch.questions.map((q) => Object.assign(q, { chapterId: ch.id })), ...ch.pool]);
       SW.chapterById = (id) => SW.chapters.find((c) => c.id === id);
+      // Order-based neighbours: the chapter a test unlocks, and the one before.
+      SW.nextChapter = (ch) => SW.chapters[SW.chapters.indexOf(ch) + 1] || null;
+      SW.prevChapter = (ch) => SW.chapters[SW.chapters.indexOf(ch) - 1] || null;
+      SW.FIRST_CHAPTER = SW.chapters[0].id;
       SW.CORE_CHAPTERS = SW.chapters.filter((c) => !c.bonus).length;
       return SW.chapters;
     },

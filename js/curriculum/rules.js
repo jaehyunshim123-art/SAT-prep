@@ -9,6 +9,12 @@
 
   // [skill pattern, rule name], first match wins, per chapter.
   const TABLE = {
+    10: [
+      [/real verb/i, "Main Verb Rule"],
+      [/describing/i, "Skip the Describer"],
+      [/Hanging/i, "Dependent Word Rule"],
+      [/fragment/i, "Complete Sentence Rule"],
+    ],
     1: [
       [/^IC\. /, "Terminal Boundary Rule"],
       [/^IC; (however|nevertheless|then)|; LW/, "Semicolon + Conjunctive Adverb"],
@@ -38,6 +44,7 @@
       [/Appositive/i, "Appositive + Modifier Rule"],
       [/Participle|Non-verb|Reduced/i, "Participle Modifier (Non-Verb)"],
       [/main verb|Main verb/i, "Main Verb Rule"],
+      [/Infinitive/i, "Infinitive Describer (to + verb)"],
     ],
     4: [
       [/Past perfect/i, "Past Perfect Sequence"],
@@ -101,7 +108,7 @@
     let rule = q.rule;
     if (!rule) {
       const ch = SW.chapterById && SW.chapterById(q.chapterId || q.chapter);
-      rule = ch && ch.pause && ch.pause.summary;
+      rule = ch && ch.pause && ch.pause.summary.replace(/\*\*/g, "");
     }
     return [rule, why].filter(Boolean).join(" ");
   };

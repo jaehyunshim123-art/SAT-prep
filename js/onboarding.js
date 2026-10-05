@@ -7,6 +7,11 @@
   const auth = () => SW.auth;
 
   const COPY = {
+    // The opening screen for new visitors.
+    welcome: {
+      title: "Welcome to SatWizz 👋",
+      body: "Free Digital SAT grammar and vocab practice. Sign in to keep your streak, Sparks and progress on every device, or jump straight in as a guest.",
+    },
     save: {
       title: "Save your progress",
       body: "Create a free account to keep your streak, XP and cast on every device.",
@@ -82,7 +87,7 @@
     const copy = COPY[opts.reason] || COPY.save;
     const ready = auth() && auth().available();
     root = document.createElement("div");
-    root.className = "modal-backdrop";
+    root.className = `modal-backdrop${opts.reason === "welcome" ? " welcome" : ""}`;
     root.innerHTML = `
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-body">
         <div class="modal-brand">Sat<span>Wizz</span></div>
@@ -114,11 +119,13 @@
           <button class="btn wide" type="submit" id="auth-submit"></button>
         </form>
         <button class="linkbtn" type="button" id="auth-guest">Continue as Guest</button>
-        <p class="fine">As a guest, progress is saved in this browser only.</p>
+        <p class="fine">As a guest, progress is saved in this browser only. You can sign in any time from Profile.</p>
       </div>`;
     document.body.append(root);
 
-    root.addEventListener("mousedown", (e) => { if (e.target === root) continueAsGuest(); });
+    // The opening screen only closes through its buttons; the other prompts
+    // also close by tapping outside.
+    root.addEventListener("mousedown", (e) => { if (e.target === root && opts.reason !== "welcome") continueAsGuest(); });
     root.querySelector("#tab-signup").addEventListener("click", () => setMode("signup"));
     root.querySelector("#tab-login").addEventListener("click", () => setMode("login"));
     root.querySelector("#auth-guest").addEventListener("click", continueAsGuest);

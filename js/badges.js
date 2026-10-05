@@ -23,10 +23,11 @@
   const obj = (x) => (x && typeof x === "object" ? x : {});
   const tests = (s) => Object.values(obj(s.tests));
   const coreIds = () => (SW.chapters || []).filter((c) => !c.bonus).map((c) => c.id);
-  const bonusIds = () => (SW.chapters || []).filter((c) => c.bonus).map((c) => c.id);
+  // The last chapter in the plan (Modifiers, Parallelism & Pronouns).
+  const finalIds = () => (SW.chapters || []).slice(-1).map((c) => c.id);
   const testsPassed = (s) => coreIds().filter((id) => obj(s.tests)[id]?.passed).length;
   const coreComplete = (s) => coreIds().filter((id) => (s.completedChapters || []).includes(id)).length;
-  const bonusComplete = (s) => bonusIds().filter((id) => (s.completedChapters || []).includes(id)).length;
+  const finalComplete = (s) => finalIds().filter((id) => (s.completedChapters || []).includes(id)).length;
   const practiceSets = (s) => Object.values(obj(s.practiceSets)).reduce((n, p) => n + (p.attempts || 0), 0);
   const comebacks = (s) => tests(s).filter((t) => t.passed && (t.attempts || 0) > 1).length;
   const goalDays = (s) => Object.values(obj(s.days)).filter((d) => d && d.done).length;
@@ -54,14 +55,14 @@
 
   const LIST = [
     // ---------- Curriculum (10) ----------
-    count("gatekeeper", "curriculum", "🚪", "Gatekeeper", "Pass your first Review for Understanding (8/10 or better).", testsPassed, 1, "tests passed"),
+    count("gatekeeper", "curriculum", "🚪", "Gatekeeper", "Pass your first Review for Understanding (7/10 or better).", testsPassed, 1, "tests passed"),
     count("halfway-there", "curriculum", "🧭", "Halfway There", "Pass 4 chapter tests.", testsPassed, 4, "tests passed"),
-    count("grammar-graduate", "curriculum", "🎓", "Grammar Graduate", "Pass all 7 chapter tests.", testsPassed, 7, "tests passed"),
+    count("grammar-graduate", "curriculum", "🎓", "Grammar Graduate", "Pass all 9 chapter tests.", testsPassed, 9, "tests passed"),
     count("flawless", "curriculum", "💎", "Flawless", "Score 10/10 on a test or practice set.", (s) => s.flawless, 1, "flawless runs"),
     count("flawless-ten", "curriculum", "👑", "Flawless ×10", "Score 10/10 on ten tests or practice sets.", (s) => s.flawless, 10, "flawless runs"),
     count("chapter-champion", "curriculum", "⭐", "Chapter Champion", "Answer every core question in a chapter correctly.", coreComplete, 1, "chapters complete"),
-    count("completionist", "curriculum", "🌟", "Completionist", "Complete all 7 core chapters.", coreComplete, 7, "chapters complete"),
-    count("bonus-hunter", "curriculum", "🎁", "Bonus Hunter", "Complete a bonus chapter.", bonusComplete, 1, "bonus chapters"),
+    count("completionist", "curriculum", "🌟", "Completionist", "Complete all 9 chapters.", coreComplete, 9, "chapters complete"),
+    count("bonus-hunter", "curriculum", "🎁", "Finish Line", "Answer every question in the final chapter (Chapter 9).", finalComplete, 1, "final chapter"),
     count("drill-sergeant", "curriculum", "📋", "Drill Sergeant", "Finish 10 practice sets.", practiceSets, 10, "practice sets"),
     count("comeback", "curriculum", "🔁", "Comeback Kid", "Pass a chapter test after failing it.", comebacks, 1, "comebacks"),
 

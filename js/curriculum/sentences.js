@@ -1,0 +1,277 @@
+// Chapter 1 (practice, after the easy starters in js/curriculum/basics.js):
+// Complete Sentences. Plain language: a full sentence needs a subject, a verb
+// and a complete thought; everything else is a fragment.
+// Internal chapter id 10: it was added in front of the existing chapters, and
+// ids never change so saved progress keeps working (display numbers come from
+// CURRICULUM_PLAN order).
+// Each question's `notes` line up with `choices`: why each one works or fails.
+window.SatWizz.curriculum.addChapter({
+  id: 10,
+  questions: [
+    {
+      id: "c1-1", skill: "Finding the real verb",
+      text: "The telescope that {{NAME_1}} built last summer ______ sharp images of Saturn's rings.",
+      choices: ["captures", "capturing", "which captures", "that captures"],
+      answer: 0,
+      notes: [
+        "“The telescope … captures sharp images” has a subject and a real verb, so the thought is complete.",
+        "“Capturing” is an -ing word, not a full verb. The telescope never actually does anything, so it's a fragment.",
+        "“Which captures” turns the ending into another description. We still never learn what the telescope does.",
+        "“That captures” just adds another description. The sentence still has no main action.",
+      ],
+    },
+    {
+      id: "c1-2", skill: "Finding the real verb",
+      text: "{{NAME_2}}, who had never performed at {{LOCATION}} before, ______ nervous but ready.",
+      choices: ["felt", "feeling", "who felt", "having felt"],
+      answer: 0,
+      notes: [
+        "Skip the middle description and you get “{{NAME_2}} felt nervous but ready.” That's a complete sentence.",
+        "“{{NAME_2}} feeling nervous” has no real verb. It's a fragment.",
+        "“Who felt” is another description. {{NAME_2}} still never does anything.",
+        "“Having felt” is an -ing form, so there's still no main verb.",
+      ],
+    },
+    {
+      id: "c1-3", skill: "Finding the real verb",
+      text: "The notebook that {{NAME_1}} carried to every practice ______ filled with sketches, formulas, and reminders.",
+      choices: ["was", "being", "having been", "to be"],
+      answer: 0,
+      notes: [
+        "“The notebook … was filled” gives the subject a real verb and finishes the thought.",
+        "“Being” can't act as the main verb, so the sentence is left hanging.",
+        "“Having been” is an -ing form. There's still no main verb.",
+        "“To be” is a “to” form. It can't be the main verb.",
+      ],
+    },
+    {
+      id: "c1-4", skill: "Complete vs. fragment",
+      text: "After months of preparation for {{EVENT}}, ______",
+      choices: [
+        "{{NAME_3}} finally felt confident.",
+        "{{NAME_3}}, who finally felt confident.",
+        "{{NAME_3}} finally feeling confident.",
+        "which gave {{NAME_3}} confidence at last.",
+      ],
+      answer: 0,
+      notes: [
+        "Subject ({{NAME_3}}) + verb (felt) + complete thought. This is a full sentence.",
+        "“{{NAME_3}}, who felt confident” only describes {{NAME_3}}. We never find out what {{NAME_3}} does.",
+        "“Feeling” is an -ing word, so there's no real verb.",
+        "“Which gave…” has nothing to point back to and leaves the thought hanging.",
+      ],
+    },
+    {
+      id: "c1-5", skill: "Finding the real verb",
+      text: "The coach whose drills {{NAME_2}} practiced every morning ______ a former champion.",
+      choices: ["was", "being", "who was", "whose career was"],
+      answer: 0,
+      notes: [
+        "Strip out the middle description and you get “The coach was a former champion.” That's complete.",
+        "“Being” isn't a real verb here, so the sentence stays incomplete.",
+        "“Who was” adds another description instead of finishing the sentence.",
+        "“Whose career was” starts yet another description. The coach still has no verb.",
+      ],
+    },
+    {
+      id: "c1-6", skill: "Finding the real verb",
+      text: "The old arena where {{NAME_1}} first watched {{EVENT}} ______ torn down last year.",
+      choices: ["was", "being", "that was", "which was"],
+      answer: 0,
+      notes: [
+        "The core sentence is “The old arena was torn down last year.” It's complete.",
+        "“Being torn down” has no real verb.",
+        "“That was torn down” turns the ending into a description, so the arena still has no verb.",
+        "“Which was torn down” also just describes. The sentence never finishes.",
+      ],
+    },
+    {
+      id: "c1-7", skill: "Complete vs. fragment",
+      text: "{{NAME_2}} arrived at {{LOCATION}} early. ______ to review {{SKILL}} before anyone else showed up.",
+      choices: ["{{NAME_2}} wanted", "Wanting", "Because {{NAME_2}} wanted", "Which allowed {{NAME_2}}"],
+      answer: 0,
+      notes: [
+        "“{{NAME_2}} wanted to review…” has a subject and a verb and stands on its own.",
+        "“Wanting to review…” has no subject and no real verb. It's a fragment.",
+        "“Because…” is a hanging word. The second sentence never finishes the thought.",
+        "“Which allowed…” can't start a sentence by itself. It leaves you waiting.",
+      ],
+    },
+    {
+      id: "c1-8", skill: "Hanging words",
+      text: "Although {{NAME_1}} was tired after {{EVENT}}, ______",
+      choices: [
+        "{{NAME_1}} still went for a run.",
+        "still going for a run.",
+        "because a run always helped.",
+        "and a run always helped.",
+      ],
+      answer: 0,
+      notes: [
+        "“Although…” needs a full sentence after the comma. “{{NAME_1}} still went for a run” completes it.",
+        "“Still going for a run” has no subject or real verb, so the whole thing is a fragment.",
+        "“Because…” is another hanging word. Now there are two unfinished thoughts and no sentence.",
+        "“Although … and” uses two connecting words for one idea, and the thought still doesn't land.",
+      ],
+    },
+    {
+      id: "c1-9", skill: "Hanging words",
+      text: "{{NAME_2}} stayed at {{LOCATION}} until midnight. ______ the final draft was finished.",
+      choices: ["By then,", "Because", "Although", "While"],
+      answer: 0,
+      notes: [
+        "“By then, the final draft was finished.” is a complete sentence. “By then” just adds timing.",
+        "“Because the final draft was finished.” leaves you asking: because of that, what happened?",
+        "“Although the final draft was finished.” is a hanging thought. What happened anyway?",
+        "“While the final draft was finished.” is unfinished. While that happened, what else happened?",
+      ],
+    },
+    {
+      id: "c1-10", skill: "Finding the real verb",
+      text: "The best part of {{EVENT}} ______ the moment {{NAME_3}} crossed the finish line.",
+      choices: ["was", "being", "which was", "that was"],
+      answer: 0,
+      notes: [
+        "“The best part … was the moment…” gives the subject a real verb.",
+        "“Being” isn't a real verb, so the sentence is left hanging.",
+        "“Which was” turns the rest into a description of {{EVENT}}. “The best part” never gets a verb.",
+        "“That was” also describes instead of finishing the sentence.",
+      ],
+    },
+    {
+      id: "c1-11", skill: "Finding the real verb",
+      text: "Every morning, {{NAME_1}} ______ twenty minutes on {{SKILL}}.",
+      choices: ["spends", "spending", "to spend", "who spends"],
+      answer: 0,
+      notes: [
+        "“{{NAME_1}} spends twenty minutes” has a subject and a real verb. It's complete.",
+        "“{{NAME_1}} spending…” is an -ing form with no real verb.",
+        "“{{NAME_1}} to spend…” uses a “to” form, which can't be the main verb.",
+        "“{{NAME_1}} who spends…” only describes {{NAME_1}}. The sentence never says what {{NAME_1}} does.",
+      ],
+    },
+    {
+      id: "c1-12", skill: "Hanging words",
+      text: "{{NAME_3}} forgot {{NAME_3_POSS}} notes at home. ______ still gave a flawless presentation.",
+      choices: ["Luckily, {{NAME_3}}", "Luckily, which {{NAME_3}}", "Although {{NAME_3}}", "Because {{NAME_3}}"],
+      answer: 0,
+      notes: [
+        "“Luckily, {{NAME_3}} still gave a flawless presentation.” is a complete sentence.",
+        "“Which” doesn't belong here. It breaks the sentence and leaves it unfinished.",
+        "“Although {{NAME_3}} still gave…” is a hanging thought with nothing to finish it.",
+        "“Because {{NAME_3}} still gave…” is also a hanging thought. It needs another part to complete it.",
+      ],
+    },
+    {
+      id: "c1-13", skill: "Hanging words",
+      text: "When the lights at {{LOCATION}} finally came on, ______",
+      choices: [
+        "the crowd cheered.",
+        "the crowd cheering.",
+        "because the crowd cheered.",
+        "which made the crowd cheer.",
+      ],
+      answer: 0,
+      notes: [
+        "“When…” sets up the timing, and “the crowd cheered” completes the thought.",
+        "“Cheering” is an -ing word, so the crowd never really does anything.",
+        "Adding “because” creates a second hanging thought. There's still no full sentence.",
+        "“Which made…” points back to nothing clear and leaves the sentence unfinished.",
+      ],
+    },
+    {
+      id: "c1-14", skill: "Finding the real verb",
+      text: "The trophy sitting on {{NAME_1_POSS}} shelf ______ at {{EVENT}} two years ago.",
+      choices: ["was won", "being won", "having been won", "to be won"],
+      answer: 0,
+      notes: [
+        "“The trophy … was won two years ago” has a real verb, so the sentence is complete.",
+        "“Being won” is an -ing form. There's no real verb.",
+        "“Having been won” is still an -ing form, so the thought is incomplete.",
+        "“To be won” is a “to” form and can't be the main verb.",
+      ],
+    },
+    {
+      id: "c1-15", skill: "Complete vs. fragment",
+      text: "{{NAME_2}} practiced {{SKILL}} every day for a month. ______ improved faster than anyone expected.",
+      choices: ["As a result, {{NAME_2}}", "As a result of {{NAME_2}}", "Because {{NAME_2}}", "While {{NAME_2}}"],
+      answer: 0,
+      notes: [
+        "“As a result, {{NAME_2}} improved…” has a subject and a verb and completes the thought.",
+        "“As a result of {{NAME_2}} improved…” takes away the subject. Nobody is doing the improving.",
+        "“Because {{NAME_2}} improved…” is a hanging thought. Because of that, what happened?",
+        "“While {{NAME_2}} improved…” is also unfinished. It needs another part.",
+      ],
+    },
+    {
+      id: "c1-16", skill: "Hanging words",
+      text: "Since {{EVENT}} was only a week away, ______",
+      choices: [
+        "{{NAME_1}} and {{NAME_2}} practiced every night.",
+        "{{NAME_1}} and {{NAME_2}} practicing every night.",
+        "so {{NAME_1}} and {{NAME_2}} practiced every night.",
+        "which meant nightly practice for {{NAME_1}} and {{NAME_2}}.",
+      ],
+      answer: 0,
+      notes: [
+        "“Since…” needs a full sentence after it, and “{{NAME_1}} and {{NAME_2}} practiced every night” is one.",
+        "“Practicing” isn't a real verb, so the sentence never finishes.",
+        "“Since … so …” uses two connecting words for one idea. Pick one.",
+        "“Which meant…” doesn't give a subject and verb, so the thought still hangs.",
+      ],
+    },
+    {
+      id: "c1-17", skill: "Finding the real verb",
+      text: "The volunteers at {{LOCATION}}, most of them students from nearby schools, ______ the event possible.",
+      choices: ["made", "making", "who made", "having made"],
+      answer: 0,
+      notes: [
+        "Skip the middle part and you get “The volunteers made the event possible.” That's complete.",
+        "“Making” is an -ing word. The volunteers never actually do anything.",
+        "“Who made” is a description, so the volunteers still need a verb.",
+        "“Having made” is an -ing form. There's still no real verb.",
+      ],
+    },
+    {
+      id: "c1-18", skill: "Hanging words",
+      text: "{{NAME_3}} wanted to try {{SKILL}}. ______ a beginner's class started the next week.",
+      choices: ["Luckily,", "Because", "Although", "Which meant"],
+      answer: 0,
+      notes: [
+        "“Luckily, a beginner's class started the next week.” is complete. “Luckily” just adds feeling.",
+        "“Because a beginner's class started…” leaves the reader waiting for the result.",
+        "“Although a beginner's class started…” is unfinished. What happened anyway?",
+        "“Which meant a beginner's class started…” can't stand alone as a sentence.",
+      ],
+    },
+    {
+      id: "c1-19", skill: "Finding the real verb",
+      text: "The reason {{NAME_1}} arrived early ______ simple: the doors opened at seven.",
+      choices: ["was", "being", "because", "which was"],
+      answer: 0,
+      notes: [
+        "“The reason … was simple” gives the subject a real verb and finishes the thought.",
+        "“Being simple” has no real verb.",
+        "“Because simple” isn't grammatical. The subject still has no verb.",
+        "“Which was simple” only describes. “The reason” never gets its own verb.",
+      ],
+    },
+    {
+      id: "c1-20", skill: "Hanging words",
+      text: "Unless {{NAME_2}} finishes the essay tonight, ______",
+      choices: [
+        "the deadline will pass.",
+        "the deadline passing.",
+        "because the deadline is tomorrow.",
+        "which would be a problem.",
+      ],
+      answer: 0,
+      notes: [
+        "“Unless…” sets up a condition, and “the deadline will pass” completes the thought.",
+        "“The deadline passing” has no real verb.",
+        "“Because…” adds a second hanging thought instead of finishing the first.",
+        "“Which would be a problem” doesn't give a full subject-and-verb sentence. The thought still hangs.",
+      ],
+    },
+  ],
+});

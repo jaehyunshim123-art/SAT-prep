@@ -1,10 +1,10 @@
 # SatWizz
 
-A mobile-first, gamified Digital SAT grammar and vocabulary website. You work through a 7-chapter grammar curriculum from a Dashboard: learn each chapter in a snap-scrolling feed of Digital SAT-style questions, then pass its 10-question **Review for Understanding** (8/10) to unlock the next. The Vocab Vault has 3D flashcards, sprints and Vocab Fishing. You race your unit's grammar questions in the Derby and spend Sparks in the Shop. Daily and friend streaks and live leaderboards keep you coming back.
+A mobile-first, gamified Digital SAT grammar and vocabulary website. You work through a 9-chapter grammar curriculum, built so a student scoring around 1000 can start from the basics, from a Dashboard: learn each chapter in a snap-scrolling feed of Digital SAT-style questions, then pass its 10-question **Review for Understanding** (7/10, opens after you get more than half of the chapter right) to unlock the next. The Vocab Vault has 3D flashcards, sprints and Vocab Fishing. You race your unit's grammar questions in the Derby and spend Sparks in the Shop. Daily and friend streaks and live leaderboards keep you coming back.
 
 - **Header (every screen):** ⚡ **Spark balance** (new players start with **50**), a **❓ Help** button next to it, 🔥 **Lock In Streak**, and the 🧠 **Focus Meter** (0–100%). On phones the wordmark shrinks to a "W" badge so everything fits; at 340px and below the cloud/Save button moves to Profile (tap the avatar).
 - **Bottom nav, five tabs:**
-  - 🏠 **Dashboard** ("Home" on phones): chapter select 1–7 plus the bonus chapters. Each chapter card opens **Learn & practice** (the lesson and question feed), a **Practice set** (10) or the **Review for Understanding** test (10). After every set the **Diagnostic** screen opens.
+  - 🏠 **Dashboard** ("Home" on phones): chapter select 1–9. Each chapter card opens **Learn & practice** (the lesson and question feed), a **Practice set** (10) or the **Review for Understanding** test (10). After every set the **Diagnostic** screen opens.
   - 📚 **Vocab Vault:** flashcards, sprints and 🎣 Vocab Fishing.
   - 🐎 **Derby:** a grammar horse race on your unit.
   - 🛍️ **Shop.**
@@ -26,7 +26,14 @@ The stems live in `SatWizz.STEMS` in `js/questions.js`. `SatWizz.stemFor(q)` pic
 
 ## Curriculum
 
-Seven chapters, in this order, plus two bonus chapters. Each core chapter starts with **25 questions in the user's passage style** (shared with Clause Derby in `clause-derby/src/chN.js`). Then come **20 extra-practice questions** (`js/curriculum/chN.js`). That's **345 core questions**. On top of them, a **question generator** adds about **3,600 more** (see below), for over **3,900**.
+**Nine chapters, in this order, built for a gentle start.** Chapter 1 teaches the basics (subject, verb, complete sentence) and defines every term the later chapters use: **independent clause (IC)**, **dependent clause (DC)**, **fragment** and **FANBOYS**. `scripts/validate-content.js` fails if a lesson uses IC, DC or FANBOYS before a lesson has defined it.
+
+Every chapter runs **easy → hard**:
+1. **Easy starters** (`js/curriculum/basics.js`, level 1): 8–12 short, everyday sentences with plain-English explanations, in teaching order. This file also holds the plain-English lesson each chapter shows.
+2. **Extra practice** (`js/curriculum/chN.js` and `js/curriculum/sentences.js`, level 2), shuffled.
+3. **SAT-style passages** (`clause-derby/src/chN.js`, shared with Clause Derby, level 3), shuffled, including each chapter's benchmark.
+
+After the core set, the feed keeps going with generated questions (chapters 2–8).
 
 **Names come from your cast.** Every person in a question is a cast slot:
 - `{{NAME_1}}`–`{{NAME_3}}` for names;
@@ -38,24 +45,27 @@ Seven chapters, in this order, plus two bonus chapters. Each core chapter starts
 
 Facts tied to real historical people (radium, penicillin) were reworded to stay accurate with any name. Novel and album titles are invented.
 
-Each chapter opens with an **Explanation Pause** lesson card: the chapter's explicit rules, ✓/✗ pattern chips and a worked example. After each answer a **slide-up drawer** shows the rule being tested, why the right answer works and why every other choice fails. A wrong answer comes back two cards later marked "↺ Try again".
+Each chapter opens with an **Explanation Pause** lesson card in plain English (key terms in bold): the chapter's rules, ✓/✗ pattern chips and a worked example. After each answer a **slide-up drawer** shows the rule being tested, why the right answer works and why every other choice fails. A wrong answer comes back two cards later marked "↺ Try again".
 
-- **Unlocking:** score **8/10 (80%)** or better on the chapter's **Review for Understanding** test to unlock the next one (Chapter 7 opens the bonus chapters). Practice alone no longer unlocks chapters; chapters you had already unlocked stay open.
+- **The test opens after a majority:** a chapter's **Review for Understanding** test stays locked until you've answered **more than half** of the chapter's questions correctly (17 of 32 in Chapter 1). The Dashboard card says how many more you need. Practice sets are always open.
+- **Unlocking:** score **7/10 (70%)** or better on the test to unlock the next chapter. Practice alone doesn't unlock chapters; chapters you had already unlocked stay open.
 - **Complete:** a chapter is complete once every question has been answered correctly. The first completion earns **+50 ⚡**.
 
-| # | Chapter | What it covers |
-|---|---|---|
-| 1 | Independent Clause Connectors & Sentence Boundaries | Comma + FANBOYS, semicolons, periods; comma splices and run-ons. Includes the user's goal-post example (`posts. With`) |
-| 2 | Subject-Verb Agreement | Singular vs. plural; tracking the subject past prepositional and parenthetical phrases; the **3:1 / 2:1 shortcuts**. Includes the "Dark Lord's name ___ pronounced" example (`is`) |
-| 3 | Verb vs. Non-Verb Identification (Appositives) | Does the blank need a conjugated main verb or a participle modifier? Includes the title-plus-name example (`player {{NAME_1}}, intending` vs. `player {{NAME_1}} intends`) |
-| 4 | Verb Tenses & Aspect | Explicit time frames: past (happened), future (will happen), past perfect (had happened), present perfect (until now), present (general truths) |
-| 5 | Logical Transitions | Contrast (However), addition, cause/effect, example, sequence. Includes a superhero-film example |
-| 6 | Punctuation Fundamentals (Semicolon, Dash, Colon) | Paired dashes around non-essential appositives; semicolons between ICs; a colon after an IC for a list, noun or explanation |
-| 7 | Appositives & Non-Essential Clauses | "a/an" cues → non-essential (paired commas or dashes); essential vs. non-essential names |
-| Bonus | Modifiers & Parallelism | 20 questions; unlocks when you pass Chapter 7's test |
-| Bonus | Pronouns & Possessives | 10 questions |
+| # | Chapter | What it covers | Questions |
+|---|---|---|---|
+| 1 | Complete Sentences: Subjects, Verbs & Fragments | Subject + verb + complete thought; -ing and "to" words aren't verbs; skipping describing parts; dependent words. Defines IC, DC, fragment and FANBOYS | 12 starters + 20 |
+| 2 | Joining Sentences: Periods, Semicolons & FANBOYS | Period, semicolon, or comma + FANBOYS between two ICs; comma splices and run-ons; however/therefore; DC, IC | 8 + 45 + benchmark |
+| 3 | Subject-Verb Agreement | Singular vs. plural; crossing out the middle; and / each / there is; the **3:1 / 2:1 shortcuts** | 8 + 45 |
+| 4 | Verb or Not a Verb? | Does the sentence already have its main verb? Main verbs vs. -ing / -ed / "to" describers | 8 + 45 + benchmark |
+| 5 | Verb Tenses: Matching the Time | Time clues: past, present, future, present perfect (since…), past perfect (before another past event) | 8 + 45 |
+| 6 | Transitions: How Ideas Connect | Opposite, adding on, cause → result, example, time order | 8 + 45 + benchmark |
+| 7 | Semicolons, Colons & Dashes | Semicolon = period; colon after a complete sentence; dash pairs | 8 + 45 + benchmark |
+| 8 | Extra Information: Appositives & Commas | The cover-up test; comma and dash pairs; no commas for needed info or titles | 8 + 45 |
+| 9 | Modifiers, Parallelism & Pronouns | Dangling modifiers, matching lists, its/it's, their/there/they're, possessives | 8 + 30 |
 
-**Saves from the old 9-chapter course** migrate automatically: chapters 2–10 become 1–9, and the old "Complete Sentences" chapter was retired. Accounts that synced the old chapter numbers may see one extra chapter unlocked.
+**Internal ids vs. chapter numbers.** Chapter numbers come from the order in `CURRICULUM_PLAN` (`js/questions.js`). Each chapter's `id` never changes, so saved progress and synced accounts keep working: Complete Sentences is id 10, and Chapters 2–9 are ids 1–8.
+
+**Saves keep their progress** (save version 4): every chapter a player had stays open, the new Chapter 1 opens too, and the old bonus "Pronouns & Possessives" chapter (id 9) merges into Chapter 9 (id 8), including right answers and test scores. Saves from the even older 10-chapter course still migrate first (old chapters 2–10 → ids 1–9).
 
 **Ratio shortcuts** (taught in Chapters 3 and 4, where the answer choices are verbs):
 - **3:1:** if three choices are plural verbs and one is singular (or the reverse), the odd one out is the answer.
@@ -67,7 +77,7 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 
 ## Dashboard, tests and the Diagnostic screen
 
-- **Review for Understanding (10 questions):** the chapter's **benchmark** question first, then 5 core questions (missed and not-yet-right first), then 4 fresh generated ones from the no-repeat stream, so every retake is different. One question at a time (A–D, or keys A–D / 1–4, → and ←), number dots to jump around, and **no answers shown until you submit**. **8/10 passes** and unlocks the next chapter (+50 ⚡ the first time).
+- **Review for Understanding (10 questions):** the chapter's **benchmark** question first (where it has one), then 5 core questions (missed and not-yet-right first), then 4 fresh generated ones from the no-repeat stream, so every retake is different. One question at a time (A–D, or keys A–D / 1–4, → and ←), number dots to jump around, and **no answers shown until you submit**. It opens once more than half of the chapter is right. **7/10 passes** and unlocks the next chapter (+50 ⚡ the first time).
 - **Practice set (10 questions):** this chapter's missed questions first, then fresh ones. Same screens; it never unlocks anything.
 - **Answers count:** each answer counts toward the daily goal, stats, the missed list, Sparks (+10 per right answer) and Focus (misses, rushing under 3s, 2 in a row).
 - **Diagnostic Feedback screen:** opens automatically on submit. A **PASS / FAIL** banner with the score %, then an item-by-item review: the passage with the right answer filled in, **your answer vs. the correct one**, the **rule's name** (e.g. "Terminal Boundary Rule", "Restrictive Title Rule", "Dash Pair Rule") and a short explanation (the rule line, then why the right answer works; on a miss, why your choice fails). Buttons: Retake (new questions), the next chapter, Dashboard.
@@ -90,7 +100,7 @@ Every question where a shortcut applies is tagged, and `scripts/validate-content
 
 ## Question generator (`js/curriculum/gen/`)
 
-Each of the 7 chapters has a generator that builds hundreds of questions in the style of the hand-written set. They are short narrative passages with cast slots for names and the pack's scenery (`{{LOCATION}}`, `{{EVENT}}`, `{{SKILL}}`), and every question has a rule line and a note for each choice.
+Chapters 2–8 (ids 1–7) each have a generator that builds hundreds of questions in the style of the hand-written set. They are short narrative passages with cast slots for names and the pack's scenery (`{{LOCATION}}`, `{{EVENT}}`, `{{SKILL}}`), and every question has a rule line and a note for each choice.
 
 | Ch | Questions | How they're built |
 |---|---|---|
@@ -430,6 +440,8 @@ python3 -m http.server 8000   # then open http://localhost:8000
 Without Supabase settings it runs in guest mode, and progress stays in `localStorage`.
 
 ## Set up Supabase (accounts, sync, leaderboards, friends, feedback)
+
+**Opening screen.** With accounts set up, a visitor who isn't signed in and hasn't chosen to play as a guest opens on the sign-in screen: Continue with Google, email Sign Up / Log In, or **Continue as Guest**. It sits on a solid background and only closes through its buttons. Choosing guest is remembered, signed-in visitors skip it, and a guest-only copy of the site never shows it.
 
 **Without Supabase keys the website runs guest-only.** Everything works and saves in each visitor's browser, but there are no accounts. The header has no Save/sign-up button, Profile has no Leaderboard tab, and feedback stays in the browser that wrote it. Add the keys (steps below) to turn on accounts, cross-device sync, leaderboards, friends and feedback collection.
 

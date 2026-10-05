@@ -2334,3 +2334,6 @@ kbd {
 .legal-links { margin: 14px 0 4px; text-align: center; font-size: 0.8rem; line-height: 1.6; }
 .consent { display: flex; gap: 10px; align-items: flex-start; text-align: left; font-size: 0.84rem; line-height: 1.45; color: var(--muted); cursor: pointer; }
 .consent input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--volt); }
+
+/* Opening screen: the sign-in box on a solid background, not over the app. */
+.modal-backdrop.welcome { background: var(--bg); }
