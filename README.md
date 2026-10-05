@@ -32,7 +32,7 @@ Every chapter runs **easy → hard**:
 1. **Easy starters** (`js/curriculum/basics.js`, level 1): 8–12 short, everyday sentences with plain-English explanations, in teaching order. This file also holds the plain-English lesson each chapter shows.
 2. **Extra practice** (`js/curriculum/chN.js` and `js/curriculum/sentences.js`, level 2), shuffled.
 3. **SAT-style passages** (`clause-derby/src/chN.js`, shared with Clause Derby, level 3), shuffled, including each chapter's benchmark.
-4. **Hardest questions** (`js/curriculum/hard.js`, level 4): 10 more each in Chapters 4, 7 and 8 (Verb or Not a Verb?, Semicolons/Colons/Dashes, Extra Information), where strong students lose the most points. They have long passages and close answer choices, and each one has a rule line and a note for every choice.
+4. **Hardest questions** (`js/curriculum/hard.js`, level 4): 40 in total. There are 10 each in Chapters 4 and 8 (Verb or Not a Verb?, Extra Information), 13 in Chapter 7 (Semicolons/Colons/Dashes, including no punctuation between a subject and its verb) and 7 in Chapter 9 (pronouns, possessives, parallel lists, modifiers). These are where strong students lose the most points. They have long passages and close answer choices, and each one has a rule line and a note for every choice.
 
 The aim: easy enough to start from scratch, and hard enough at the top to master Digital SAT grammar.
 
