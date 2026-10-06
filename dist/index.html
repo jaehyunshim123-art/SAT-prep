@@ -15415,7 +15415,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
 
   const OWNER = "SatWizz";
   const EMAIL = "jshim7892@gmail.com";
-  const UPDATED = "1 October 2026";
+  const UPDATED = "6 October 2026";
   const mail = `<a href="mailto:${EMAIL}">${EMAIL}</a>`;
 
   const LEGAL = {
@@ -15425,7 +15425,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       summary: [
         "Playing as a guest sends us nothing about your progress: it stays in your browser.",
         "If you make an account, we store your email and your SatWizz progress so it syncs across devices.",
-        "No ads, no selling your data, no tracking or analytics cookies.",
+        "No ads, no selling your data, no tracking cookies. We count visits anonymously, without cookies.",
         "You can delete your account and its data any time in Profile → Settings.",
         "Under 18? Ask a parent or guardian before making an account.",
       ],
@@ -15462,11 +15462,12 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
             <li><b>Google</b>: Google sign-in (if you use it), and Google Fonts, which loads the site's fonts (your browser contacts Google's servers, which see your IP address).</li>
             <li><b>Netlify</b>: hosts the website. Like any web host, it keeps basic server logs such as IP addresses.</li>
             <li><b>jsDelivr</b>: delivers the code library that connects to Supabase.</li>
+            <li><b>GoatCounter</b>: counts visits so we know roughly how many people use SatWizz, including guests. It uses no cookies and stores no personal data: it records the page visited, browser type, screen size, approximate country and the site that linked you, and it doesn't follow you across other websites. It doesn't run at all if your browser sends “Do Not Track” or Global Privacy Control.</li>
             <li><b>Your browser's push service</b> (from Google, Apple or Mozilla), only if you turn on Lock In alerts.</li>
           </ul>
           <p>Because these services operate around the world, your data may be stored or processed outside India, including in Japan and the United States.</p>`],
         ["6. Cookies and local storage", `
-          <p>SatWizz doesn't use advertising or analytics cookies. It uses your browser's local storage to save your progress, your light/dark choice, your agreement to these documents and unsent feedback, and (if you sign in) to keep you signed in. Because we don't track you, we don't need a cookie banner, and we treat "Do Not Track" and Global Privacy Control signals as already respected.</p>
+          <p>SatWizz doesn't use advertising or analytics cookies. Visits are counted anonymously with GoatCounter, without cookies (see section 5). The site uses your browser's local storage to save your progress, your light/dark choice, your agreement to these documents and unsent feedback, and (if you sign in) to keep you signed in. Because we don't track you, we don't need a cookie banner, and if your browser sends "Do Not Track" or Global Privacy Control, your visits aren't counted at all.</p>
           <p>To erase what's stored on your device, use Profile → Settings → <b>Reset progress</b>, or clear this site's data in your browser settings.</p>`],
         ["7. How long we keep it", `
           <p>We keep account data while your account exists. When you delete your account, your account and progress are removed from our database straight away; copies may stay in our providers' backups for a short time before they're overwritten. Feedback is kept while it's useful for improving the site; once your account is deleted it's no longer linked to you.</p>`],
@@ -15551,7 +15552,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
         ["11. Disclaimer and liability", `
           <p>SatWizz is provided "as is" and "as available", without warranties of any kind. To the fullest extent the law allows, ${OWNER} isn't liable for indirect or consequential losses, or for lost progress, data or virtual items. Nothing in these terms limits rights you have by law that can't be limited.</p>`],
         ["12. Other services", `
-          <p>${OWNER} relies on other services (such as Supabase, Google, Netlify and your browser's push service) that have their own terms. We aren't responsible for them, or for websites we link to.</p>`],
+          <p>${OWNER} relies on other services (such as Supabase, Google, Netlify, GoatCounter and your browser's push service) that have their own terms. We aren't responsible for them, or for websites we link to.</p>`],
         ["13. Privacy", `
           <p>Our <a href="#privacy" data-legal="privacy">Privacy Policy</a> explains how we handle your data.</p>`],
         ["14. Governing law and disputes", `
@@ -19510,7 +19511,18 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
 })();
 
 </script>
-<!-- GoatCounter: anonymous visit counts (no cookies). Dashboard: https://jsssss.goatcounter.com -->
-<script data-goatcounter="https://jsssss.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+<!-- GoatCounter: anonymous visit counts (no cookies). Dashboard: https://jsssss.goatcounter.com
+     Skipped when the browser sends Do Not Track or Global Privacy Control (see js/legal.js, section 5). -->
+<script>
+(function () {
+  var n = navigator;
+  if (n.doNotTrack === "1" || window.doNotTrack === "1" || n.globalPrivacyControl) return;
+  var s = document.createElement("script");
+  s.async = true;
+  s.setAttribute("data-goatcounter", "https://jsssss.goatcounter.com/count");
+  s.src = "https://gc.zgo.at/count.js";
+  document.body.appendChild(s);
+})();
+</script>
 </body>
 </html>
