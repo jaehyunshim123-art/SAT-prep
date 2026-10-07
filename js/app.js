@@ -2648,6 +2648,7 @@
             <h2>Settings</h2>
             <label class="toggle"><input type="checkbox" id="set-sound" ${S.muted ? "" : "checked"}><span>Sound effects</span></label>
             ${sfx.canVibrate() ? `<label class="toggle"><input type="checkbox" id="set-haptics" ${S.haptics ? "checked" : ""}><span>Vibration</span></label>` : ""}
+            <div id="set-email"></div>
             <div id="set-push"></div>
           </section>
           <section class="panel">
@@ -2967,6 +2968,42 @@
     }
   }
 
+  // Settings: optional daily reminder email (signed-in players only, off by
+  // default). Sent from SatWizz's Gmail to the people listed in Supabase's
+  // reminder_list; see README → Daily reminder emails.
+  async function renderEmailReminders(slot) {
+    if (!slot) return;
+    if (!auth.configured()) { slot.remove(); return; }
+    if (!auth.user()) {
+      slot.innerHTML = '<p class="muted">📧 Sign in to get an optional daily practice reminder email.</p>';
+      return;
+    }
+    slot.innerHTML = `
+      <label class="toggle"><input type="checkbox" id="set-email-reminders" disabled><span>📧 Email me a daily practice reminder</span></label>
+      <p class="muted small" id="set-email-note">Off by default. One short email a day from SatWizz's Gmail to ${esc(auth.user().email || "your email")}. Turn it off here any time, or reply STOP.</p>`;
+    const box = $("#set-email-reminders", slot);
+    let on;
+    try { on = await auth.getEmailReminders(); } catch (e) { on = null; }
+    if (!box.isConnected) return;
+    if (on === null) {
+      $("#set-email-note", slot).textContent = "Reminder emails aren't available yet. Check back soon.";
+      return;
+    }
+    box.checked = on;
+    box.disabled = false;
+    box.addEventListener("change", async () => {
+      box.disabled = true;
+      try {
+        await auth.setEmailReminders(box.checked);
+        toast(box.checked ? "📧 Daily reminder emails on. You can turn them off here any time." : "Reminder emails off. You won't get any more.");
+      } catch (e) {
+        box.checked = !box.checked;
+        toast("Couldn't save that. Check your connection and try again.");
+      }
+      box.disabled = false;
+    });
+  }
+
   // Settings: sound, vibration and Lock In push alerts.
   async function renderSettings() {
     const panel = $("#settings-panel");
@@ -2983,6 +3020,7 @@
       save(false);
       sfx.buzz(50);
     });
+    renderEmailReminders($("#set-email", panel));
     const slot = $("#set-push", panel);
     if (!auth.configured()) {
       slot.remove(); // friend alerts need accounts

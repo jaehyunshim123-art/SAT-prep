@@ -14789,6 +14789,36 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     setStatus("idle");
   }
 
+  // Optional daily reminder emails (Settings toggle). Stored in its own
+  // column, written on its own, so a project that hasn't run the newer
+  // schema still syncs everything else. Returns true / false, or null when
+  // the column doesn't exist yet (re-run supabase/schema.sql).
+  async function getEmailReminders() {
+    requireClient();
+    const u = user();
+    if (!u) return false;
+    const { data, error } = await client.from("user_settings").select("email_reminders").eq("user_id", u.id).maybeSingle();
+    if (error) {
+      if (/email_reminders|column|schema cache/i.test(error.message || "")) {
+        console.warn("SatWizz: re-run supabase/schema.sql to enable reminder emails.");
+        return null;
+      }
+      throw error;
+    }
+    return Boolean(data && data.email_reminders);
+  }
+
+  async function setEmailReminders(on) {
+    requireClient();
+    const u = user();
+    if (!u) throw new Error("not_signed_in");
+    const { error } = await client.from("user_settings").upsert(
+      { user_id: u.id, email_reminders: Boolean(on), email_reminders_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+    if (error) throw error;
+  }
+
   // ---------- Cloud sync ----------
   function setStatus(next) {
     status = next;
@@ -15370,6 +15400,8 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     signInWithGoogle,
     signOut,
     deleteAccount,
+    getEmailReminders,
+    setEmailReminders,
     pull,
     push,
     schedulePush,
@@ -15415,7 +15447,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
 
   const OWNER = "SatWizz";
   const EMAIL = "jshim7892@gmail.com";
-  const UPDATED = "6 October 2026";
+  const UPDATED = "7 October 2026";
   const mail = `<a href="mailto:${EMAIL}">${EMAIL}</a>`;
 
   const LEGAL = {
@@ -15426,6 +15458,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
         "Playing as a guest sends us nothing about your progress: it stays in your browser.",
         "If you make an account, we store your email and your SatWizz progress so it syncs across devices.",
         "No ads, no selling your data, no tracking cookies. We count visits anonymously, without cookies.",
+        "Reminder emails are optional and off unless you turn them on. Turn them off any time, or reply STOP.",
         "You can delete your account and its data any time in Profile → Settings.",
         "Under 18? Ask a parent or guardian before making an account.",
       ],
@@ -15440,6 +15473,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
             <li><b>Profile:</b> the display name, username and avatar you choose.</li>
             <li><b>Progress:</b> streaks, XP, Sparks, Shop and avatar purchases, unlocked chapters, test and practice scores, missed questions, vocab progress, badges, your Focus meter, daily goal, chosen theme and any character names you type in.</li>
             <li><b>Friends:</b> friend requests and friendships, friend streaks, Lock In messages, and the time you last practised.</li>
+            <li><b>Reminder emails (optional):</b> if you turn on “Email me a daily practice reminder” in Settings, we note that choice and when you made it.</li>
             <li><b>Notifications (optional):</b> if you turn on Lock In alerts, your browser's push subscription (a web address and keys from your browser's push service).</li>
             <li><b>Sign-in and security logs:</b> our sign-in provider records sign-in events, including IP address, browser type and time, to keep accounts secure.</li>
           </ul>
@@ -15450,6 +15484,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
           <ul>
             <li>To run your account and sync your progress across devices.</li>
             <li>To show leaderboards, friends, friend streaks and Lock In alerts.</li>
+            <li>To send a short daily practice reminder email, only if you turned reminders on.</li>
             <li>To fix bugs and improve SatWizz using feedback.</li>
             <li>To keep the site safe, for example by enforcing the Terms of Service.</li>
           </ul>
@@ -15462,6 +15497,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
             <li><b>Google</b>: Google sign-in (if you use it), and Google Fonts, which loads the site's fonts (your browser contacts Google's servers, which see your IP address).</li>
             <li><b>Netlify</b>: hosts the website. Like any web host, it keeps basic server logs such as IP addresses.</li>
             <li><b>jsDelivr</b>: delivers the code library that connects to Supabase.</li>
+            <li><b>Gmail (Google) and Claude (Anthropic)</b>: only if you turn on reminder emails. We send the daily reminder from SatWizz's Gmail account, and we use Anthropic's Claude assistant to help send it and to spot STOP replies. They see your email address and display name, never your progress. Reminders go out as BCC, so other students can't see your address.</li>
             <li><b>GoatCounter</b>: counts visits so we know roughly how many people use SatWizz, including guests. It uses no cookies and stores no personal data: it records the page visited, browser type, screen size, approximate country and the site that linked you, and it doesn't follow you across other websites. It doesn't run at all if your browser sends “Do Not Track” or Global Privacy Control.</li>
             <li><b>Your browser's push service</b> (from Google, Apple or Mozilla), only if you turn on Lock In alerts.</li>
           </ul>
@@ -15478,6 +15514,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
             <li><b>Access:</b> email us for a copy of the data we hold about you.</li>
             <li><b>Withdraw consent:</b> delete your account, or sign out and play as a guest.</li>
             <li><b>Notifications:</b> turn Lock In alerts off in Settings or in your browser.</li>
+            <li><b>Reminder emails:</b> turn them off in Profile → Settings, or reply STOP to any reminder. We remove you from the list within a few days.</li>
             <li><b>Nominate:</b> you can name someone to exercise your rights if you die or can't act for yourself; email us with their details.</li>
           </ul>
           <p>To protect your account, we may ask you to confirm a request from the email address on the account. We won't treat you differently for using your rights.</p>
@@ -18916,6 +18953,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
             <h2>Settings</h2>
             <label class="toggle"><input type="checkbox" id="set-sound" ${S.muted ? "" : "checked"}><span>Sound effects</span></label>
             ${sfx.canVibrate() ? `<label class="toggle"><input type="checkbox" id="set-haptics" ${S.haptics ? "checked" : ""}><span>Vibration</span></label>` : ""}
+            <div id="set-email"></div>
             <div id="set-push"></div>
           </section>
           <section class="panel">
@@ -19235,6 +19273,42 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
     }
   }
 
+  // Settings: optional daily reminder email (signed-in players only, off by
+  // default). Sent from SatWizz's Gmail to the people listed in Supabase's
+  // reminder_list; see README → Daily reminder emails.
+  async function renderEmailReminders(slot) {
+    if (!slot) return;
+    if (!auth.configured()) { slot.remove(); return; }
+    if (!auth.user()) {
+      slot.innerHTML = '<p class="muted">📧 Sign in to get an optional daily practice reminder email.</p>';
+      return;
+    }
+    slot.innerHTML = `
+      <label class="toggle"><input type="checkbox" id="set-email-reminders" disabled><span>📧 Email me a daily practice reminder</span></label>
+      <p class="muted small" id="set-email-note">Off by default. One short email a day from SatWizz's Gmail to ${esc(auth.user().email || "your email")}. Turn it off here any time, or reply STOP.</p>`;
+    const box = $("#set-email-reminders", slot);
+    let on;
+    try { on = await auth.getEmailReminders(); } catch (e) { on = null; }
+    if (!box.isConnected) return;
+    if (on === null) {
+      $("#set-email-note", slot).textContent = "Reminder emails aren't available yet. Check back soon.";
+      return;
+    }
+    box.checked = on;
+    box.disabled = false;
+    box.addEventListener("change", async () => {
+      box.disabled = true;
+      try {
+        await auth.setEmailReminders(box.checked);
+        toast(box.checked ? "📧 Daily reminder emails on. You can turn them off here any time." : "Reminder emails off. You won't get any more.");
+      } catch (e) {
+        box.checked = !box.checked;
+        toast("Couldn't save that. Check your connection and try again.");
+      }
+      box.disabled = false;
+    });
+  }
+
   // Settings: sound, vibration and Lock In push alerts.
   async function renderSettings() {
     const panel = $("#settings-panel");
@@ -19251,6 +19325,7 @@ contrition|n|the state of feeling sorry for one's actions|remorse, regret, repen
       save(false);
       sfx.buzz(50);
     });
+    renderEmailReminders($("#set-email", panel));
     const slot = $("#set-push", panel);
     if (!auth.configured()) {
       slot.remove(); // friend alerts need accounts

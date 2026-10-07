@@ -118,6 +118,36 @@
     setStatus("idle");
   }
 
+  // Optional daily reminder emails (Settings toggle). Stored in its own
+  // column, written on its own, so a project that hasn't run the newer
+  // schema still syncs everything else. Returns true / false, or null when
+  // the column doesn't exist yet (re-run supabase/schema.sql).
+  async function getEmailReminders() {
+    requireClient();
+    const u = user();
+    if (!u) return false;
+    const { data, error } = await client.from("user_settings").select("email_reminders").eq("user_id", u.id).maybeSingle();
+    if (error) {
+      if (/email_reminders|column|schema cache/i.test(error.message || "")) {
+        console.warn("SatWizz: re-run supabase/schema.sql to enable reminder emails.");
+        return null;
+      }
+      throw error;
+    }
+    return Boolean(data && data.email_reminders);
+  }
+
+  async function setEmailReminders(on) {
+    requireClient();
+    const u = user();
+    if (!u) throw new Error("not_signed_in");
+    const { error } = await client.from("user_settings").upsert(
+      { user_id: u.id, email_reminders: Boolean(on), email_reminders_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+    if (error) throw error;
+  }
+
   // ---------- Cloud sync ----------
   function setStatus(next) {
     status = next;
@@ -699,6 +729,8 @@
     signInWithGoogle,
     signOut,
     deleteAccount,
+    getEmailReminders,
+    setEmailReminders,
     pull,
     push,
     schedulePush,

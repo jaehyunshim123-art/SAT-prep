@@ -425,6 +425,13 @@ node scripts/build-derby.js
 
 These are plain-English starting documents for a free student project, not legal advice.
 
+## Daily reminder emails (optional)
+
+- **For players:** Profile → Settings → **"📧 Email me a daily practice reminder"**. It's for signed-in players only, off by default, and saved as `user_settings.email_reminders` (with `email_reminders_at`). Turning it off, or replying STOP, stops the emails.
+- **For the owner:** Supabase → Table Editor → **reminder_list** shows the email and display name of everyone who opted in. It's a `security_invoker` view with no API access, so only the dashboard can read it. Keep a Gmail contact group in sync with that list.
+- **Sending:** a daily Claude task connected to SatWizz's Gmail sends one generic reminder to that group, as BCC, and lists STOP replies. The emails contain no progress data. It suits a small audience; past roughly 100 users, switch to a domain plus an email service with automatic unsubscribe.
+- The Privacy Policy covers this: the optional reminder emails, Gmail and Claude as services, and how to stop.
+
 ## Social
 
 - **Leaderboard** (Profile → 🏆 Leaderboard). **Global Top 50** and **Friends League**, ranked by XP or Sparks. Each row shows rank, avatar, display name, @username and streak. A sticky **Your Rank** bar sits at the bottom. Outside the top 50, your global rank comes from a count of players ahead of you.

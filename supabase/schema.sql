@@ -353,3 +353,23 @@ end $$;
 
 revoke execute on function public.delete_my_account() from public, anon;
 grant execute on function public.delete_my_account() to authenticated;
+
+
+-- ---------------------------------------------------------------------------
+-- Optional daily reminder emails (Settings → "Email me a daily practice
+-- reminder", off by default). The site writes only the player's own row.
+-- reminder_list shows who opted in, for the owner in Table Editor; it is not
+-- readable through the site's API by anyone.
+-- ---------------------------------------------------------------------------
+alter table public.user_settings add column if not exists email_reminders boolean not null default false;
+alter table public.user_settings add column if not exists email_reminders_at timestamptz;
+
+create or replace view public.reminder_list with (security_invoker = true) as
+  select u.email, p.display_name, s.email_reminders_at as opted_in_at
+    from public.user_settings s
+    join auth.users u on u.id = s.user_id
+    left join public.user_public p on p.user_id = s.user_id
+   where s.email_reminders
+   order by s.email_reminders_at;
+
+revoke all on public.reminder_list from public, anon, authenticated;
