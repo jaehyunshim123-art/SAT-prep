@@ -14,7 +14,7 @@
 
   const OWNER = "SatWizz";
   const EMAIL = "jshim7892@gmail.com";
-  const UPDATED = "6 October 2026";
+  const UPDATED = "29 October 2026";
   const mail = `<a href="mailto:${EMAIL}">${EMAIL}</a>`;
 
   const LEGAL = {
@@ -25,6 +25,7 @@
         "Playing as a guest sends us nothing about your progress: it stays in your browser.",
         "If you make an account, we store your email and your SatWizz progress so it syncs across devices.",
         "No ads, no selling your data, no tracking cookies. We count visits anonymously, without cookies.",
+        "Streak reminder emails are optional and off unless you turn them on. Every email has an unsubscribe link.",
         "You can delete your account and its data any time in Profile → Settings.",
         "Under 18? Ask a parent or guardian before making an account.",
       ],
@@ -39,6 +40,7 @@
             <li><b>Profile:</b> the display name, username and avatar you choose.</li>
             <li><b>Progress:</b> streaks, XP, Sparks, Shop and avatar purchases, unlocked chapters, test and practice scores, missed questions, vocab progress, badges, your Focus meter, daily goal, chosen theme and any character names you type in.</li>
             <li><b>Friends:</b> friend requests and friendships, friend streaks, Lock In messages, and the time you last practised.</li>
+            <li><b>Reminder emails (optional):</b> if you turn on reminder emails, we note that choice and when you made it, and your time zone so the email arrives at a sensible hour.</li>
             <li><b>Notifications (optional):</b> if you turn on Lock In alerts, your browser's push subscription (a web address and keys from your browser's push service).</li>
             <li><b>Sign-in and security logs:</b> our sign-in provider records sign-in events, including IP address, browser type and time, to keep accounts secure.</li>
           </ul>
@@ -49,6 +51,7 @@
           <ul>
             <li>To run your account and sync your progress across devices.</li>
             <li>To show leaderboards, friends, friend streaks and Lock In alerts.</li>
+            <li>To send streak reminder emails (for example, when your streak is about to end), only if you turned them on.</li>
             <li>To fix bugs and improve SatWizz using feedback.</li>
             <li>To keep the site safe, for example by enforcing the Terms of Service.</li>
           </ul>
@@ -61,6 +64,7 @@
             <li><b>Google</b>: Google sign-in (if you use it), and Google Fonts, which loads the site's fonts (your browser contacts Google's servers, which see your IP address).</li>
             <li><b>Netlify</b>: hosts the website. Like any web host, it keeps basic server logs such as IP addresses.</li>
             <li><b>jsDelivr</b>: delivers the code library that connects to Supabase.</li>
+            <li><b>An email delivery service</b>: only if you turn on reminder emails. It sends the reminders for us and sees your email address, display name and the streak details in the email (such as your streak length). It doesn't get the rest of your progress.</li>
             <li><b>GoatCounter</b>: counts visits so we know roughly how many people use SatWizz, including guests. It uses no cookies and stores no personal data: it records the page visited, browser type, screen size, approximate country and the site that linked you, and it doesn't follow you across other websites. It doesn't run at all if your browser sends “Do Not Track” or Global Privacy Control.</li>
             <li><b>Your browser's push service</b> (from Google, Apple or Mozilla), only if you turn on Lock In alerts.</li>
           </ul>
@@ -77,6 +81,7 @@
             <li><b>Access:</b> email us for a copy of the data we hold about you.</li>
             <li><b>Withdraw consent:</b> delete your account, or sign out and play as a guest.</li>
             <li><b>Notifications:</b> turn Lock In alerts off in Settings or in your browser.</li>
+            <li><b>Reminder emails:</b> click the unsubscribe link in any reminder email, or turn reminders off in Profile → Settings. Unsubscribing stops them straight away.</li>
             <li><b>Nominate:</b> you can name someone to exercise your rights if you die or can't act for yourself; email us with their details.</li>
           </ul>
           <p>To protect your account, we may ask you to confirm a request from the email address on the account. We won't treat you differently for using your rights.</p>
