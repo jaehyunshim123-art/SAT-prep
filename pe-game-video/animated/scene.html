@@ -1,0 +1,548 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="c" width="1280" height="720"></canvas>
+<script>
+const W = 1280, H = 720;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const FONT = 'Inter, "Noto Color Emoji", sans-serif';
+const EMO = '"Noto Color Emoji"';
+
+// ---------- BOARD ----------
+const COLS = 12, ROWS = 4, SQ = 52, GAPX = 8, ROWSTEP = 96;
+const BX = 1280 / 2 - (COLS * (SQ + GAPX) - GAPX) / 2, BY = 118;
+function sqPos(i) {
+  const r = Math.floor(i / COLS), k = i % COLS;
+  const col = r % 2 === 0 ? k : COLS - 1 - k;
+  const row = ROWS - 1 - r; // row 0 at bottom
+  return { x: BX + col * (SQ + GAPX) + SQ / 2, y: BY + row * ROWSTEP + SQ / 2 + 20 };
+}
+const T = {}; // square types
+function S(i, kind, top, bot) { T[i] = { kind, top, bot }; }
+S(0, 'start', '🚩', 'START');
+S(2, 'minus', '−1', '💰 FIN');
+S(3, 'plus', '+1', '💪 PHYS');
+S(4, 'gambleM', '🎰', 'MUST');
+S(5, 'plus', '+1', '📚 INTEL');
+S(7, 'minus', '−1', '🤝 SOC');
+S(8, 'plus', '+1', '😊 EMO');
+S(9, 'gambleC', '🎰', 'CHOICE');
+S(11, 'check', '⭐', 'GR 9');
+S(13, 'plus', '+1', '🙏 SPIR');
+S(14, 'minus', '−1', '💪 PHYS');
+S(16, 'addict', '🥚', 'TEST');
+S(18, 'plus', '+1', '🤝 SOC');
+S(19, 'refusal', '✋', 'REFUSE');
+S(21, 'minus', '−1', '😊 EMO');
+S(23, 'check', '⭐', 'GR 10');
+S(25, 'gambleC', '🎰', 'CHOICE');
+S(26, 'plus', '+1', '📚 INTEL');
+S(28, 'refusal', '✋', 'REFUSE');
+S(30, 'minus', '−1', '💰 FIN');
+S(31, 'plus', '+1', '💪 PHYS');
+S(33, 'gambleM', '🎰', 'MUST');
+S(35, 'check', '⭐', 'GR 11');
+S(37, 'plus', '+1', '🤝 SOC');
+S(38, 'addict', '🥚', 'TEST');
+S(40, 'minus', '−1', '🤝 SOC');
+S(41, 'plus', '+1', '😊 EMO');
+S(43, 'gambleC', '🎰', 'CHOICE');
+S(44, 'plus', '+1', '📚 INTEL');
+S(47, 'grad', '🎓', 'GRAD!');
+const KIND = {
+  plus: ['#d9f5e4', '#2f9e62'], minus: ['#fde0db', '#d24a35'], gambleM: ['#efe0ff', '#7b2ff7'],
+  gambleC: ['#f3eaff', '#9a5cff'], check: ['#ffe8a8', '#e09a00'], refusal: ['#dbeaff', '#2e6fd8'],
+  addict: ['#ffe4cc', '#e07a1f'], start: ['#ffffff', '#2a1550'], grad: ['#ffd76a', '#b07800'], none: ['#fffdf7', '#d8cfe8']
+};
+const BRIDGES = [[11, 15, 'short way'], [16, 20, '2nd semester'], [19, 23, 'short way'], [23, 27, 'short way'],
+  [25, 30, 'short way'], [28, 32, 'short way'], [35, 39, 'short way'], [38, 42, '2nd semester']];
+function bridgeCurve(a, b) {
+  const p = sqPos(a), q = sqPos(b);
+  const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
+  const dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy) || 1;
+  let nx = -dy / len, ny = dx / len; if (ny > 0) { nx = -nx; ny = -ny; }
+  const bulge = Math.min(70, 30 + len * 0.18);
+  return { p, q, c: { x: mx + nx * bulge, y: my + ny * bulge } };
+}
+function onCurve(cu, u) {
+  const a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u;
+  return { x: a * cu.p.x + b * cu.c.x + c * cu.q.x, y: a * cu.p.y + b * cu.c.y + c * cu.q.y };
+}
+
+// ---------- PLAYERS ----------
+const P = [
+  { name: 'Maya', value: 'Athlete', icon: '🏀', color: '#e5483b', skin: '#8d5a3b', hair: '#1d1410', x: 92, y: 146, side: 1, style: 'athlete' },
+  { name: 'Leo', value: 'Education', icon: '📚', color: '#2f74e0', skin: '#f1c9a5', hair: '#6b3f1d', x: 1188, y: 146, side: -1, style: 'glasses' },
+  { name: 'Sam', value: 'Future', icon: '💰', color: '#e9a514', skin: '#c68a5e', hair: '#2b1b12', x: 92, y: 405, side: 1, style: 'cap' },
+  { name: 'Ava', value: 'Friendship', icon: '🤝', color: '#2fa865', skin: '#f6d2b8', hair: '#c2552b', x: 1188, y: 405, side: -1, style: 'pony' },
+];
+const PAWN_OFF = [[-9, -9], [9, -9], [-9, 9], [9, 9]];
+
+// ---------- TIMELINE ----------
+let t0 = 0; const tl = { pawn: [[], [], [], []], flowers: [[], [], [], []], bubbles: [], captions: [], dice: [], pops: [],
+  active: [], cheer: [], bridgesHi: [], deltas: [], sfx: [], cards: [], timer: [], confetti: [], titles: [], highlightSq: [] };
+const pos = [0, 0, 0, 0], fl = [5, 5, 5, 5];
+function at(t) { t0 = t; }
+function wait(d) { t0 += d; }
+function sfx(name, t = t0) { tl.sfx.push({ t, name }); }
+function caption(text, dur, sub) { tl.captions.push({ t: t0, d: dur, text, sub }); }
+function bubble(p, text, dur) { tl.bubbles.push({ t: t0, d: dur, p, text }); }
+function activeP(p, dur) { tl.active.push({ t: t0, d: dur, p }); }
+function roll(p, v) { tl.dice.push({ t: t0, d: 2.0, p, v }); sfx('dice'); tl.active.push({ t: t0, d: 1.2, p, arm: 1 }); wait(2.0); }
+function hopTo(p, target, step = 0.3) {
+  while (pos[p] !== target) {
+    const from = pos[p], to = from + (target > from ? 1 : -1);
+    tl.pawn[p].push({ t: t0, d: step, from, to, mode: 'hop' }); sfx('hop', t0 + step * 0.9);
+    pos[p] = to; wait(step);
+  }
+}
+function slideBack(p, target) { tl.pawn[p].push({ t: t0, d: 1.0, from: pos[p], to: target, mode: 'slide' }); sfx('whoosh'); pos[p] = target; wait(1.0); }
+function bridge(p, a, b) {
+  tl.bridgesHi.push({ t: t0, d: 1.8, a, b });
+  tl.pawn[p].push({ t: t0, d: 1.2, from: a, to: b, mode: 'bridge' }); sfx('whoosh'); pos[p] = b; wait(1.4);
+}
+function flowers(p, delta, label) {
+  fl[p] += delta; tl.flowers[p].push({ t: t0, v: fl[p] });
+  tl.deltas.push({ t: t0, p, delta, label }); sfx(delta > 0 ? 'ding' : 'bonk');
+}
+function pop(kind, data, dur) { tl.pops.push({ t: t0, d: dur, kind, data }); }
+function cheer(p, dur = 1.2) { tl.cheer.push({ t: t0, d: dur, p }); }
+function hiSq(i, dur) { tl.highlightSq.push({ t: t0, d: dur, i }); }
+function sqPop(i, dur = 2.2) { const s = T[i]; pop('square', { i }, dur); hiSq(i, dur); }
+
+// ===== SCRIPT =====
+for (let p = 0; p < 4; p++) tl.flowers[p].push({ t: 0, v: 5 });
+tl.titles.push({ t: 0, d: 5.2 });
+at(0.2); sfx('chime');
+at(5.0);
+caption('Meet the players! Each one picks a Value Card.', 6.2, 'Everyone starts with 5 flowers 🌸 from the DOW box.');
+for (let p = 0; p < 4; p++) { tl.cards.push({ t: t0 + p * 0.5, p }); sfx('card', t0 + p * 0.5); }
+wait(2.6);
+for (let p = 0; p < 4; p++) { bubble(p, ['I\'m the Athlete! 🏀', 'Education for me! 📚', 'I value my Future 💰', 'Friendship! 🤝'][p], 2.2); }
+wait(3.6);
+caption('Set a 20-minute timer ⏱️', 2.2, 'When time runs out, the player furthest along wins.');
+tl.timer.push({ t: t0, mode: 'start' }); sfx('chime'); wait(2.6);
+
+// --- Round 1
+caption('Roll the die and move. Do what the square says!', 6.8, 'Maya lands on +1 Physical: take a flower. Athlete power: roll again!');
+activeP(0, 6.8); roll(0, 3); hopTo(0, 3); sqPop(3); flowers(0, 1, '+1'); cheer(0); bubble(0, 'Athlete power: roll again! 🏀', 2.2); wait(2.2);
+roll(0, 2); hopTo(0, 5); sqPop(5, 1.6); flowers(0, 1, '+1'); wait(1.6);
+
+caption('Leo lands on +1 Intellectual.', 4.6, 'Education power: take 2 flowers instead of 1!');
+activeP(1, 4.6); roll(1, 5); hopTo(1, 5, 0.22); sqPop(5); flowers(1, 2, '+2'); cheer(1); bubble(1, 'Double flowers! 📚', 2.0); wait(2.3);
+
+caption('Sam lands on −1 Financial.', 4.4, 'Future power: on a −1 Financial square, you keep your flower!');
+activeP(2, 4.4); roll(2, 2); hopTo(2, 2); sqPop(2); bubble(2, 'Future power! I keep my flower 💰', 2.4); sfx('shield'); wait(2.4);
+
+caption('Ava lands on Gamble: Mandatory. She MUST bet on the website.', 6.8, 'Win = short way + 4 flowers. Lose = lose 1 flower.');
+activeP(3, 6.8); roll(3, 4); hopTo(3, 4); sqPop(4, 1.4); wait(1.2);
+pop('laptop', { result: 'LOSE' }, 3.0); wait(2.2); flowers(3, -1, '−1'); bubble(3, 'Aww, I lost a flower 😩', 1.6); wait(1.6);
+
+// --- Round 2
+caption('Maya lands on +1 Emotional.', 3.8, 'Take 1 flower from the DOW box.');
+activeP(0, 3.8); roll(0, 3); hopTo(0, 8); sqPop(8, 1.4); flowers(0, 1, '+1'); wait(1.4);
+
+caption('Every grade ends at a checkpoint ⭐. Everyone stops there!', 9.2, 'You need at least 2 flowers to pass. Fewer than 2? Repeat the grade!');
+activeP(1, 9.2); roll(1, 6); hopTo(1, 11, 0.24); sqPop(11, 1.2); wait(1.2);
+pop('check', { p: 1, n: fl[1] }, 2.4); sfx('ding'); wait(2.4);
+pop('card', { text: 'SHORT WAY', good: true }, 2.0); sfx('card'); wait(1.6); bubble(1, 'Short way! 🙌', 1.6); bridge(1, 11, 15);
+
+caption('Sam lands on −1 Social.', 3.6, 'Put 1 flower back in the DOW box.');
+activeP(2, 3.6); roll(2, 5); hopTo(2, 7, 0.24); sqPop(7, 1.4); flowers(2, -1, '−1'); wait(1.5);
+
+caption('Ava lands on Gamble: Choice. She can bet or skip.', 5.4, 'Decision making: Ava chooses NOT to gamble.');
+activeP(3, 5.4); roll(3, 5); hopTo(3, 9, 0.24); sqPop(9, 1.2); wait(1.0); bubble(3, 'I already lost once… I\'ll skip it! 🙅‍♀️', 2.4); wait(2.4);
+
+// --- Round 3
+caption('Maya rolls past the checkpoint ⭐…', 8.6, 'If you roll past a checkpoint, go back to the ⭐ and draw a Refusal Skills card.');
+activeP(0, 8.6); roll(0, 5); hopTo(0, 13, 0.24); bubble(0, 'Oops! Back to the star ⭐', 1.6); wait(0.6); slideBack(0, 11); wait(0.2);
+pop('card', { text: 'LONG WAY', good: false }, 2.2); sfx('card'); wait(2.0); bubble(0, 'Long way this time 😅', 1.4); wait(1.4);
+
+caption('Leo lands on an Addiction Test 🥚', 7.2, 'Draw a slip from the egg. Not addicted? Advance to Second Semester!');
+activeP(1, 7.2); roll(1, 1); hopTo(1, 16); sqPop(16, 1.2); wait(1.0);
+pop('egg', { text: 'NOT ADDICTED ✓' }, 2.6); sfx('crack'); wait(2.2); bridge(1, 16, 20);
+
+caption('Sam lands on a blank square.', 2.6, 'Nothing happens. Next player!');
+activeP(2, 2.6); roll(2, 3); hopTo(2, 10, 0.24); wait(0.0);
+
+caption('Ava reaches the checkpoint ⭐ with 4 flowers.', 8.2, 'Friendship power: say a refusal skill out loud and take the short way!');
+activeP(3, 8.2); roll(3, 2); hopTo(3, 11); pop('check', { p: 3, n: fl[3] }, 1.8); sfx('ding'); wait(1.8);
+bubble(3, '"No thanks! Let\'s go shoot hoops instead." 🏀', 2.8); wait(2.8); cheer(3); bridge(3, 11, 15);
+
+// --- Round 4: Leo wins a gamble
+caption('Leo lands on Gamble: Choice and decides to bet.', 7.4, 'He wins: short way + 4 flowers! (Gambling is risky. Most people lose.)');
+activeP(1, 7.4); roll(1, 5); hopTo(1, 25, 0.24); sqPop(25, 1.2); wait(1.0);
+pop('laptop', { result: 'WIN' }, 3.0); wait(2.2); flowers(1, 4, '+4'); sfx('win'); cheer(1); wait(0.8); bridge(1, 25, 30);
+
+// --- Montage
+const mStart = t0;
+caption('…and the game keeps going!', 6.0, 'Collect flowers, make good choices and race to Graduation 🎓');
+tl.timer.push({ t: t0, mode: 'fast', d: 6.0 });
+const runs = [[0, 22], [2, 18], [3, 26]];
+for (const [p, tg] of runs) { const save = t0; tl.pawn[p].push({ t: t0, d: 5.0, from: pos[p], to: tg, mode: 'run' }); pos[p] = tg; t0 = save; }
+tl.pawn[1].push({ t: t0, d: 2.2, from: 30, to: 35, mode: 'run' }); wait(2.4); pos[1] = 35;
+bridge(1, 35, 39);
+tl.pawn[1].push({ t: t0, d: 2.2, from: 39, to: 47, mode: 'run' }); pos[1] = 47; wait(2.4);
+t0 = Math.max(t0, mStart + 6.0);
+
+caption('Leo reaches Graduation first. Leo wins! 🎓', 5.2, 'If the timer runs out first, the player furthest along wins.');
+tl.confetti.push({ t: t0, d: 5 }); sfx('win'); for (let p = 0; p < 4; p++) cheer(p, 2.5);
+bubble(1, 'I graduated! 🎓', 2.6); hiSq(47, 4.5); wait(2.6); bubble(3, 'Congrats Leo! 🎉', 2.2); bubble(0, 'GG! 👏', 2.2); wait(2.8);
+tl.titles.push({ t: t0, d: 5.5, end: true }); sfx('chime'); wait(5.5);
+const DURATION = t0;
+// flowers timeline sanity - sort
+for (const a of tl.flowers) a.sort((x, y) => x.t - y.t);
+
+// ---------- STATE HELPERS ----------
+const ease = u => u < 0 ? 0 : u > 1 ? 1 : u * u * (3 - 2 * u);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function pawnAt(p, t) {
+  let cur = { ...sqPos(0) }, lift = 0, sqi = 0;
+  for (const m of tl.pawn[p]) {
+    if (t < m.t) break;
+    const u = clamp((t - m.t) / m.d, 0, 1);
+    if (m.mode === 'hop') {
+      const a = sqPos(m.from), b = sqPos(m.to), e = ease(u);
+      cur = { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e }; lift = Math.sin(Math.PI * u) * 16; sqi = u < 1 ? -1 : m.to;
+    } else if (m.mode === 'slide') {
+      const k = m.from + (m.to - m.from) * ease(u), lo = Math.floor(k), hi = Math.ceil(k), f = k - lo;
+      const a = sqPos(lo), b = sqPos(hi); cur = { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f }; lift = 6; sqi = u < 1 ? -1 : m.to;
+    } else if (m.mode === 'bridge') {
+      const cu = bridgeCurve(m.from, m.to); cur = onCurve(cu, ease(u)); lift = Math.sin(Math.PI * u) * 26; sqi = u < 1 ? -1 : m.to;
+    } else if (m.mode === 'run') {
+      const n = m.to - m.from, k = m.from + n * u, lo = Math.floor(k), f = k - lo;
+      const a = sqPos(lo), b = sqPos(Math.min(lo + 1, 47)); cur = { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+      lift = u < 1 ? Math.abs(Math.sin(Math.PI * f)) * 12 : 0; sqi = u < 1 ? -1 : m.to;
+    }
+  }
+  return { ...cur, lift, sqi };
+}
+function flowersAt(p, t) { let v = 5, tt = -9; for (const f of tl.flowers[p]) if (f.t <= t) { v = f.v; tt = f.t; } return { v, since: t - tt }; }
+function within(e, t) { return t >= e.t && t < e.t + e.d; }
+
+// ---------- DRAWING ----------
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function txt(s, x, y, size, color, weight = 700, align = 'center', font = FONT) {
+  ctx.font = `${weight} ${size}px ${font}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y);
+}
+function wrap(s, maxW, size, weight = 700) {
+  ctx.font = `${weight} ${size}px ${FONT}`; const words = s.split(' '); const lines = []; let line = '';
+  for (const w of words) { const test = line ? line + ' ' + w : w; if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test; }
+  if (line) lines.push(line); return lines;
+}
+
+function drawBackground(t) {
+  // room
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#3a1f6e'); g.addColorStop(1, '#22113f');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // subtle wallpaper dots
+  ctx.fillStyle = 'rgba(255,255,255,0.035)';
+  for (let y = 20; y < H; y += 40) for (let x = (y / 40 % 2) * 20; x < W; x += 40) { ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill(); }
+  // table
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12;
+  rr(180, 62, 920, 540, 40); ctx.fillStyle = '#9b6a3f'; ctx.fill(); ctx.restore();
+  rr(192, 74, 896, 516, 32); const tg = ctx.createLinearGradient(0, 74, 0, 590); tg.addColorStop(0, '#b9844f'); tg.addColorStop(1, '#a3703f'); ctx.fillStyle = tg; ctx.fill();
+  ctx.strokeStyle = 'rgba(80,45,15,0.18)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(200, 100 + i * 58); ctx.bezierCurveTo(500, 90 + i * 58, 800, 115 + i * 58, 1080, 100 + i * 58); ctx.stroke(); }
+}
+
+function drawBoard(t) {
+  // board base
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 6;
+  rr(BX - 22, BY - 16, COLS * (SQ + GAPX) - GAPX + 44, ROWS * ROWSTEP + 4, 22); ctx.fillStyle = '#fff6e6'; ctx.fill(); ctx.restore();
+  rr(BX - 22, BY - 16, COLS * (SQ + GAPX) - GAPX + 44, ROWS * ROWSTEP + 4, 22); ctx.lineWidth = 6; ctx.strokeStyle = '#f39c1f'; ctx.stroke();
+  // grade labels
+  for (let r = 0; r < 4; r++) {
+    const p = sqPos(r * 12 + (r % 2 === 0 ? 0 : 11));
+    txt(['GRADE 9', 'GRADE 10', 'GRADE 11', 'GRADE 12'][r], BX - 4, p.y - 36, 11, '#7b2ff7', 800, 'left');
+  }
+  // path connectors
+  ctx.strokeStyle = '#e8dcc8'; ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.beginPath();
+  for (let i = 0; i < 48; i++) { const p = sqPos(i); i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); } ctx.stroke();
+  // bridges
+  for (const [a, b, lab] of BRIDGES) {
+    const cu = bridgeCurve(a, b); const hi = tl.bridgesHi.some(e => within(e, t) && e.a === a && e.b === b);
+    ctx.save(); ctx.setLineDash(hi ? [] : [7, 7]); ctx.lineWidth = hi ? 7 : 4; ctx.strokeStyle = hi ? '#7b2ff7' : 'rgba(123,47,247,0.45)';
+    ctx.beginPath(); ctx.moveTo(cu.p.x, cu.p.y); ctx.quadraticCurveTo(cu.c.x, cu.c.y, cu.q.x, cu.q.y); ctx.stroke(); ctx.restore();
+  }
+  // squares
+  for (let i = 0; i < 48; i++) {
+    const p = sqPos(i), s = T[i], k = KIND[s ? s.kind : 'none'];
+    const hi = tl.highlightSq.find(e => within(e, t) && e.i === i);
+    const sc = hi ? 1 + 0.12 * Math.sin(clamp((t - hi.t) / 0.35, 0, 1) * Math.PI) + 0.05 : 1;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(sc, sc);
+    rr(-SQ / 2, -SQ / 2, SQ, SQ, 10); ctx.fillStyle = k[0]; ctx.fill(); ctx.lineWidth = hi ? 4 : 2.5; ctx.strokeStyle = hi ? '#ff9f1c' : k[1]; ctx.stroke();
+    if (s) {
+      const isEmoji = /[^\x00-\x7F−]/.test(s.top) && !s.top.startsWith('+') && !s.top.startsWith('−');
+      if (isEmoji) txt(s.top, 0, -8, 20, '#000', 400, 'center', EMO); else txt(s.top, 0, -8, 19, k[1], 900);
+      txt(s.bot, 0, 14, 9.5, k[1], 800);
+    } else txt(String(i), 0, 0, 11, '#cbbfdf', 700);
+    ctx.restore();
+  }
+  for (const [a, b, lab] of BRIDGES) {
+    const cu = bridgeCurve(a, b); const hi = tl.bridgesHi.some(e => within(e, t) && e.a === a && e.b === b);
+    const m = onCurve(cu, 0.5); rr(m.x - 38, m.y - 9, 76, 18, 9); ctx.fillStyle = hi ? '#7b2ff7' : 'rgba(255,255,255,0.95)'; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = '#7b2ff7'; ctx.stroke(); txt(lab, m.x, m.y + 1, 10, hi ? '#fff' : '#7b2ff7', 800);
+  }
+}
+
+function drawPawns(t) {
+  const st = P.map((_, p) => pawnAt(p, t));
+  const order = [0, 1, 2, 3].sort((a, b) => st[a].y - st[b].y);
+  for (const p of order) {
+    const s = st[p]; let ox = 0, oy = 0;
+    if (s.sqi >= 0) { const same = [0, 1, 2, 3].filter(q => st[q].sqi === s.sqi); if (same.length > 1) { const k = same.indexOf(p); ox = PAWN_OFF[k][0]; oy = PAWN_OFF[k][1]; } }
+    const x = s.x + ox, y = s.y + oy;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(x, y + 10, 11, 5, 0, 0, 7); ctx.fill();
+    const yy = y - s.lift;
+    ctx.fillStyle = P[p].color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(x - 11, yy + 10); ctx.quadraticCurveTo(x, yy - 14, x + 11, yy + 10); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, yy - 10, 8, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.arc(x - 3, yy - 13, 2.5, 0, 7); ctx.fill();
+  }
+}
+
+function drawPerson(p, t) {
+  const pl = P[p]; const s = pl.side;
+  const act = tl.active.find(e => within(e, t) && e.p === p && !e.arm);
+  const arm = tl.active.find(e => within(e, t) && e.p === p && e.arm);
+  const ch = tl.cheer.find(e => within(e, t) && e.p === p);
+  let bob = Math.sin(t * 2 + p) * 2;
+  if (ch) bob -= Math.abs(Math.sin((t - ch.t) * 9)) * 14 * (1 - (t - ch.t) / ch.d);
+  const x = pl.x, y = pl.y + bob;
+  // spotlight
+  if (act) { const a = Math.min(1, (t - act.t) / 0.3, (act.t + act.d - t) / 0.3); ctx.fillStyle = `rgba(255,214,107,${0.22 * a})`; ctx.beginPath(); ctx.ellipse(pl.x, pl.y + 30, 92, 110, 0, 0, 7); ctx.fill(); }
+  // chair back
+  ctx.fillStyle = '#5b3a8a'; rr(x - 50, y + 8, 100, 120, 24); ctx.fill();
+  // body
+  ctx.fillStyle = pl.color; ctx.beginPath(); ctx.moveTo(x - 46, y + 120); ctx.quadraticCurveTo(x - 50, y + 32, x, y + 28); ctx.quadraticCurveTo(x + 50, y + 32, x + 46, y + 120); ctx.closePath(); ctx.fill();
+  if (pl.style === 'athlete') { txt('7', x, y + 72, 30, '#fff', 900); }
+  if (pl.style === 'glasses') { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.moveTo(x - 14, y + 30); ctx.lineTo(x, y + 52); ctx.lineTo(x + 14, y + 30); ctx.fill(); }
+  if (pl.style === 'cap') { ctx.fillStyle = 'rgba(255,255,255,0.3)'; rr(x - 20, y + 66, 40, 22, 8); ctx.fill(); }
+  // neck & head
+  ctx.fillStyle = pl.skin; rr(x - 9, y + 14, 18, 18, 6); ctx.fill();
+  if (pl.style === 'pony') { ctx.fillStyle = pl.hair; ctx.beginPath(); ctx.ellipse(x - s * 34, y - 4, 13, 24, -s * 0.5, 0, 7); ctx.fill(); }
+  ctx.fillStyle = pl.skin; ctx.beginPath(); ctx.arc(x, y - 8, 30, 0, 7); ctx.fill();
+  // hair
+  ctx.fillStyle = pl.hair; ctx.beginPath(); ctx.arc(x, y - 12, 31, Math.PI * 1.05, Math.PI * 1.95); ctx.quadraticCurveTo(x + 10, y - 30, x - 29, y - 20); ctx.fill();
+  if (pl.style === 'athlete') { ctx.fillStyle = '#fff'; rr(x - 31, y - 28, 62, 9, 4); ctx.fill(); ctx.fillStyle = pl.color; rr(x - 31, y - 25, 62, 3, 2); ctx.fill(); }
+  if (pl.style === 'cap') { ctx.fillStyle = '#2a1550'; ctx.beginPath(); ctx.arc(x, y - 18, 31, Math.PI, 0); ctx.fill(); rr(x + (s > 0 ? 0 : -46), y - 22, 46, 9, 4); ctx.fill(); }
+  // face (looking toward board)
+  const fx = x + s * 8;
+  ctx.fillStyle = '#1d1433'; ctx.beginPath(); ctx.arc(fx - 9, y - 8, 3.6, 0, 7); ctx.arc(fx + 9, y - 8, 3.6, 0, 7); ctx.fill();
+  if (pl.style === 'glasses') { ctx.strokeStyle = '#1d1433'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(fx - 9, y - 8, 8, 0, 7); ctx.moveTo(fx + 17, y - 8); ctx.arc(fx + 9, y - 8, 8, 0, 7); ctx.moveTo(fx - 1, y - 8); ctx.lineTo(fx + 1, y - 8); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(255,120,120,0.35)'; ctx.beginPath(); ctx.arc(fx - 16, y + 2, 5, 0, 7); ctx.arc(fx + 16, y + 2, 5, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#1d1433'; ctx.lineWidth = 2.5; ctx.beginPath();
+  if (ch) { ctx.arc(fx, y + 3, 9, 0.1, Math.PI - 0.1); ctx.fillStyle = '#7a1f2b'; ctx.fill(); } else ctx.arc(fx, y + 2, 8, 0.25, Math.PI - 0.25);
+  ctx.stroke();
+  // arm reaching to board
+  let reach = 0, shake = 0;
+  if (arm) { const u = (t - arm.t) / arm.d; reach = Math.sin(Math.min(1, u * 1.3) * Math.PI); shake = Math.sin(t * 40) * 5 * (u < 0.7 ? 1 : 0); }
+  if (ch) reach = 0;
+  const sx = x + s * 34, sy = y + 50;
+  const hx = sx + s * (40 + reach * 90), hy = sy + 10 - reach * 30 + shake;
+  ctx.strokeStyle = pl.color; ctx.lineWidth = 18; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(sx, sy);
+  if (ch) { ctx.lineTo(sx + s * 14, sy - 50); ctx.lineTo(sx + s * 8, sy - 92 + Math.sin(t * 9) * 6); ctx.stroke(); ctx.fillStyle = pl.skin; ctx.beginPath(); ctx.arc(sx + s * 8, sy - 98 + Math.sin(t * 9) * 6, 10, 0, 7); ctx.fill(); }
+  else { ctx.quadraticCurveTo(sx + s * 30, sy + 30, hx, hy); ctx.stroke(); ctx.fillStyle = pl.skin; ctx.beginPath(); ctx.arc(hx, hy, 10, 0, 7); ctx.fill(); }
+  // name / panel
+  const py = pl.y + 132; const bw = 150;
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 10; rr(pl.x - bw / 2, py, bw, 74, 14); ctx.fillStyle = '#fffaf2'; ctx.fill(); ctx.restore();
+  rr(pl.x - bw / 2, py, bw, 74, 14); ctx.lineWidth = 3; ctx.strokeStyle = pl.color; ctx.stroke();
+  txt(pl.name, pl.x, py + 15, 17, '#2a1550', 900);
+  const cardShown = tl.cards.find(c => c.p === p && t >= c.t);
+  if (cardShown) txt(`${pl.icon} ${pl.value}`, pl.x, py + 35, 13, pl.color, 800); else txt('—', pl.x, py + 35, 13, '#bbb', 800);
+  const f = flowersAt(p, t); const pulse = f.since < 0.5 ? 1 + 0.35 * Math.sin(f.since / 0.5 * Math.PI) : 1;
+  ctx.save(); ctx.translate(pl.x, py + 57); ctx.scale(pulse, pulse); txt(`🌸 × ${f.v}`, 0, 0, 17, '#d0457a', 900); ctx.restore();
+}
+
+function drawCards(t) {
+  for (const c of tl.cards) {
+    const u = (t - c.t) / 0.9; if (u < 0 || u > 1) continue;
+    const pl = P[c.p]; const e = ease(u);
+    const x = 640 + (pl.x - 640) * e, y = 330 + (pl.y + 170 - 330) * e, sc = 1.4 - 0.9 * e, rot = (1 - e) * 0.6 * pl.side;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(sc, sc);
+    rr(-40, -56, 80, 112, 10); ctx.fillStyle = '#7b2ff7'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#ffd27a'; ctx.stroke();
+    txt(pl.icon, 0, -14, 34, '#000', 400, 'center', EMO); txt(pl.value.toUpperCase(), 0, 30, 11, '#fff', 900);
+    ctx.restore();
+  }
+}
+
+function drawDice(t) {
+  for (const d of tl.dice) {
+    if (!within(d, t)) continue;
+    const u = (t - d.t) / d.d; const pl = P[d.p];
+    const rollU = clamp(u / 0.55, 0, 1);
+    const sx = pl.x + pl.side * 160, sy = pl.y + 40, ex = 640, ey = 330;
+    const x = sx + (ex - sx) * ease(rollU), y = sy + (ey - sy) * ease(rollU) - Math.abs(Math.sin(rollU * Math.PI * 3)) * 60 * (1 - rollU);
+    const face = rollU < 1 ? 1 + Math.floor((t * 20) % 6) : d.v;
+    const rot = rollU < 1 ? t * 14 : 0; const fade = u > 0.85 ? 1 - (u - 0.85) / 0.15 : 1;
+    const settle = rollU >= 1 ? 1 + 0.25 * Math.sin(clamp((u - 0.55) / 0.15, 0, 1) * Math.PI) : 1;
+    ctx.save(); ctx.globalAlpha = fade; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(settle, settle);
+    ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
+    rr(-34, -34, 68, 68, 14); ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowColor = 'transparent'; ctx.lineWidth = 3; ctx.strokeStyle = '#2a1550'; ctx.stroke();
+    const pips = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] }[face];
+    ctx.fillStyle = face === 1 ? '#e5483b' : '#2a1550'; for (const [a, b] of pips) { ctx.beginPath(); ctx.arc(a * 16, b * 16, 6.5, 0, 7); ctx.fill(); }
+    ctx.restore();
+    if (rollU >= 1) { const a = clamp((u - 0.6) / 0.1, 0, 1) * fade; ctx.globalAlpha = a; rr(ex - 70, ey + 46, 140, 34, 17); ctx.fillStyle = pl.color; ctx.fill(); txt(`${pl.name} rolls ${d.v}!`, ex, ey + 63, 16, '#fff', 900); ctx.globalAlpha = 1; }
+  }
+}
+
+function popFrame(cx, cy, w, h, e, border = '#7b2ff7') {
+  ctx.translate(cx, cy); ctx.scale(e, e);
+  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+  rr(-w / 2, -h / 2, w, h, 22); ctx.fillStyle = '#fffaf2'; ctx.fill(); ctx.shadowColor = 'transparent';
+  ctx.lineWidth = 6; ctx.strokeStyle = border; ctx.stroke();
+}
+const SQNAME = { plus: 'Take 1 flower 🌸', minus: 'Lose 1 flower', gambleM: 'Gamble: Mandatory', gambleC: 'Gamble: Choice', check: 'Checkpoint', refusal: 'Refusal Skill', addict: 'Addiction Test' };
+const DIM = { PHYS: 'Physical', INTEL: 'Intellectual', FIN: 'Financial', SOC: 'Social', EMO: 'Emotional', SPIR: 'Spiritual' };
+function drawPops(t) {
+  for (const pp of tl.pops) {
+    if (!within(pp, t)) continue;
+    const u = t - pp.t, out = pp.t + pp.d - t; const e = Math.min(1, ease(u / 0.25) * 1.08 - (u > 0.25 ? 0.08 * clamp((u - 0.25) / 0.15, 0, 1) : 0), ease(out / 0.2));
+    ctx.save();
+    if (pp.kind === 'square') {
+      const s = T[pp.data.i], k = KIND[s.kind];
+      popFrame(640, 300, 330, 120, e, k[1]);
+      const dim = Object.keys(DIM).find(d => s.bot.includes(d));
+      let title = s.kind === 'plus' ? `+1 ${DIM[dim]}` : s.kind === 'minus' ? `−1 ${DIM[dim]}` : SQNAME[s.kind];
+      let sub = s.kind === 'plus' ? 'Take a flower from the DOW box' : s.kind === 'minus' ? 'Put a flower back in the DOW box' :
+        s.kind === 'gambleM' ? 'You MUST place a bet' : s.kind === 'gambleC' ? 'You MAY bet, or skip it' : s.kind === 'check' ? 'Stop here! Need at least 2 flowers' : s.kind === 'addict' ? 'Draw a slip from the egg' : '';
+      txt(title, 0, -18, 30, k[1], 900); txt(sub, 0, 24, 17, '#4a3d63', 600);
+    } else if (pp.kind === 'laptop') {
+      ctx.translate(640, 310); ctx.scale(e, e);
+      ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 30;
+      rr(-170, -110, 340, 210, 14); ctx.fillStyle = '#2b2b38'; ctx.fill(); ctx.shadowColor = 'transparent';
+      rr(-158, -98, 316, 186, 8); ctx.fillStyle = '#12101c'; ctx.fill();
+      ctx.fillStyle = '#3c3c4c'; ctx.beginPath(); ctx.moveTo(-200, 100); ctx.lineTo(200, 100); ctx.lineTo(220, 122); ctx.lineTo(-220, 122); ctx.closePath(); ctx.fill();
+      txt('🎰 PLACE YOUR BET', 0, -70, 18, '#ffd27a', 900);
+      txt('(pretend points only)', 0, -46, 11, '#9c95b8', 600);
+      const spinning = u < 1.6; const sym = ['🍒', '⭐', '🔔', '🍋', '💎'];
+      for (let r = 0; r < 3; r++) {
+        rr(-120 + r * 84, -30, 72, 64, 8); ctx.fillStyle = '#fff'; ctx.fill();
+        const sIdx = spinning ? Math.floor(t * 18 + r * 2) % 5 : (pp.data.result === 'WIN' ? 1 : [0, 3, 4][r]);
+        txt(sym[sIdx], -84 + r * 84, 2, 34, '#000', 400, 'center', EMO);
+      }
+      if (!spinning) { const win = pp.data.result === 'WIN'; rr(-90, 44, 180, 36, 18); ctx.fillStyle = win ? '#2f9e62' : '#d24a35'; ctx.fill(); txt(win ? 'YOU WIN! +4 🌸' : 'YOU LOSE −1 🌸', 0, 62, 17, '#fff', 900); }
+    } else if (pp.kind === 'check') {
+      popFrame(640, 300, 380, 150, e, '#e09a00');
+      txt('⭐ CHECKPOINT', 0, -44, 26, '#b07800', 900);
+      txt(`${P[pp.data.p].name} has 🌸 × ${pp.data.n}`, 0, -4, 20, '#2a1550', 800);
+      rr(-120, 22, 240, 36, 18); ctx.fillStyle = '#2f9e62'; ctx.fill(); txt('2 or more: PASS ✓', 0, 41, 17, '#fff', 900);
+    } else if (pp.kind === 'card') {
+      const flip = clamp(u / 0.6, 0, 1); const sx = Math.abs(Math.cos(flip * Math.PI));
+      ctx.translate(640, 305); ctx.scale(e, e); ctx.scale(Math.max(0.02, sx), 1);
+      ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 24;
+      rr(-110, -80, 220, 160, 16);
+      if (flip < 0.5) { ctx.fillStyle = '#2e6fd8'; ctx.fill(); ctx.shadowColor = 'transparent'; txt('✋', 0, -20, 40, '#000', 400, 'center', EMO); txt('REFUSAL SKILLS', 0, 32, 16, '#fff', 900); }
+      else { ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowColor = 'transparent'; ctx.lineWidth = 6; ctx.strokeStyle = '#2e6fd8'; ctx.stroke();
+        txt('Refusal Skills card', 0, -48, 13, '#2e6fd8', 800);
+        txt(pp.data.good ? '⬆️' : '↩️', 0, -10, 34, '#000', 400, 'center', EMO);
+        txt(pp.data.text, 0, 38, 28, pp.data.good ? '#2f9e62' : '#d24a35', 900); }
+    } else if (pp.kind === 'egg') {
+      ctx.translate(640, 300); ctx.scale(e, e);
+      const crack = clamp((u - 0.5) / 0.4, 0, 1);
+      ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 20;
+      ctx.fillStyle = '#ffe4cc'; ctx.beginPath(); ctx.ellipse(-crack * 40, 0, 62, 80, -crack * 0.4, Math.PI * 0.5, Math.PI * 1.5); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(crack * 40, 0, 62, 80, crack * 0.4, -Math.PI * 0.5, Math.PI * 0.5); ctx.fill(); ctx.shadowColor = 'transparent';
+      txt('DRUGS', -crack * 40, -10, 15, '#e07a1f', 900);
+      if (crack > 0.2) {
+        const a = clamp((crack - 0.2) / 0.5, 0, 1); ctx.globalAlpha = a; ctx.translate(0, -30 * a);
+        rr(-130, -26, 260, 52, 10); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#2f9e62'; ctx.stroke();
+        txt(pp.data.text, 0, 1, 24, '#2f9e62', 900);
+      }
+    }
+    ctx.restore();
+  }
+}
+
+function drawDeltas(t) {
+  for (const d of tl.deltas) {
+    const u = (t - d.t) / 1.4; if (u < 0 || u > 1) continue;
+    const pl = P[d.p]; const x = pl.x + 50, y = pl.y + 180 - u * 70;
+    ctx.globalAlpha = 1 - u * u; txt(`${d.label} 🌸`, x, y, 26, d.delta > 0 ? '#3bdc7f' : '#ff6b5a', 900); ctx.globalAlpha = 1;
+    // flying flower from/to board centre
+    if (d.delta > 0 && u < 0.7) { const e = ease(u / 0.7); txt('🌸', 640 + (pl.x - 640) * e, 470 + (pl.y + 189 - 470) * e - Math.sin(e * Math.PI) * 80, 30, '#000', 400, 'center', EMO); }
+  }
+}
+
+function drawBubbles(t) {
+  for (const b of tl.bubbles) {
+    if (!within(b, t)) continue;
+    const pl = P[b.p]; const u = t - b.t, out = b.t + b.d - t; const e = Math.min(ease(u / 0.2), ease(out / 0.2));
+    const lines = wrap(b.text, 230, 17, 800); const w = Math.min(260, Math.max(...lines.map(l => ctx.measureText(l).width)) + 34), h = lines.length * 22 + 22;
+    const bx = pl.side > 0 ? pl.x + 48 : pl.x - 48 - w, by = pl.y - 34 - h;
+    ctx.save(); ctx.globalAlpha = e; ctx.translate(bx + w / 2, by + h); ctx.scale(0.8 + 0.2 * e, 0.8 + 0.2 * e); ctx.translate(-(bx + w / 2), -(by + h));
+    ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 12; rr(bx, by, w, h, 16); ctx.fillStyle = '#fff'; ctx.fill(); ctx.shadowColor = 'transparent';
+    ctx.beginPath(); const tx = pl.side > 0 ? bx + 24 : bx + w - 24; ctx.moveTo(tx - 10, by + h - 1); ctx.lineTo(pl.x + pl.side * 28, pl.y - 14); ctx.lineTo(tx + 10, by + h - 1); ctx.fill();
+    lines.forEach((l, i) => txt(l, bx + w / 2, by + 22 + i * 22, 17, '#2a1550', 800));
+    ctx.restore();
+  }
+}
+
+function drawTimer(t) {
+  const st = tl.timer.find(e => e.mode === 'start'); if (!st || t < st.t) return;
+  const fast = tl.timer.find(e => e.mode === 'fast');
+  let secs = 20 * 60 - (t - st.t) * 6;
+  if (fast && t > fast.t) { const before = 20 * 60 - (fast.t - st.t) * 6; const u = clamp((t - fast.t) / fast.d, 0, 1); secs = before - u * (before - 47); }
+  secs = Math.max(0, Math.round(secs));
+  const s = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+  const a = clamp((t - st.t) / 0.4, 0, 1); ctx.globalAlpha = a;
+  rr(1060, 14, 200, 44, 22); ctx.fillStyle = '#fffaf2'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#f39c1f'; ctx.stroke();
+  txt(`⏱️ ${s}`, 1160, 37, 22, '#2a1550', 900); ctx.globalAlpha = 1;
+}
+
+function drawCaption(t) {
+  const c = tl.captions.filter(c => within(c, t)).pop(); if (!c) return;
+  const u = t - c.t, out = c.t + c.d - t; const a = Math.min(1, u / 0.25, out / 0.25);
+  ctx.globalAlpha = a; ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 16;
+  rr(190, 612, 900, c.sub ? 92 : 62, 20); ctx.fillStyle = 'rgba(255,250,242,0.97)'; ctx.fill(); ctx.restore();
+  rr(190, 612, 900, c.sub ? 92 : 62, 20); ctx.lineWidth = 4; ctx.strokeStyle = '#7b2ff7'; ctx.stroke();
+  txt(c.text, 640, 642, 24, '#2a1550', 900); if (c.sub) txt(c.sub, 640, 677, 16.5, '#6a2ad8', 700);
+  ctx.globalAlpha = 1;
+}
+
+function drawTopBar(t) { txt('🎓 The Road to Graduation', 26, 37, 22, '#fff', 900, 'left'); }
+
+function drawTitle(t) {
+  for (const ti of tl.titles) {
+    if (!within(ti, t)) continue;
+    const u = t - ti.t, out = ti.t + ti.d - t; const a = Math.min(1, u / 0.5, out / 0.5);
+    ctx.globalAlpha = a * 0.78; ctx.fillStyle = '#1a0c33'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = a;
+    const e = ease(u / 0.8); ctx.save(); ctx.translate(640, 330); ctx.scale(0.85 + 0.15 * e, 0.85 + 0.15 * e);
+    if (!ti.end) {
+      txt('🎓🌸🎲', 0, -120, 64, '#000', 400, 'center', EMO);
+      txt('The Road to', 0, -40, 44, '#ffd27a', 800); txt('GRADUATION', 0, 22, 92, '#fff', 900);
+      txt('How to Play', 0, 100, 30, '#c9b2ff', 700);
+    } else {
+      txt('🌸', 0, -110, 70, '#000', 400, 'center', EMO);
+      txt('Make good choices.', 0, -24, 54, '#fff', 900); txt('Keep your flowers blooming!', 0, 42, 40, '#ffd27a', 800);
+      txt('The Road to Graduation', 0, 118, 26, '#c9b2ff', 700);
+    }
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
+}
+
+function drawConfetti(t) {
+  for (const c of tl.confetti) {
+    if (!within(c, t)) continue; const u = t - c.t;
+    for (let i = 0; i < 140; i++) {
+      const r1 = Math.sin(i * 12.9898) * 43758.5453 % 1, r2 = Math.sin(i * 78.233) * 12345.678 % 1;
+      const x = (Math.abs(r1) * W + Math.sin(u * 2 + i) * 30), y = -20 + u * (160 + Math.abs(r2) * 220) - Math.abs(r2) * 200;
+      if (y < -20 || y > H) continue;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(u * 5 + i);
+      ctx.fillStyle = ['#ff5d8f', '#ffd27a', '#7b2ff7', '#3bdc7f', '#2f74e0', '#f39c1f'][i % 6]; ctx.fillRect(-5, -3, 10, 6); ctx.restore();
+    }
+  }
+}
+
+function render(t) {
+  ctx.clearRect(0, 0, W, H);
+  drawBackground(t); drawBoard(t); drawPawns(t);
+  for (let p = 0; p < 4; p++) drawPerson(p, t);
+  drawCards(t); drawDice(t); drawPops(t); drawDeltas(t); drawBubbles(t);
+  drawTopBar(t); drawTimer(t); drawCaption(t); drawConfetti(t); drawTitle(t);
+}
+window.DURATION = DURATION; window.SFX = tl.sfx;
+window.frame = (t, q) => { render(t); return cv.toDataURL('image/jpeg', q || 0.92).slice(23); };
+render(0);
+</script></body></html>
