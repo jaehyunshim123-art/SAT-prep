@@ -1,0 +1,14 @@
+s00.png 5
+s01.png 6
+s02.png 8
+s03.png 6
+s04.png 6
+s05.png 8
+s06.png 9
+s07.png 10
+s08.png 6
+s09.png 8
+s10.png 8
+s11.png 8
+s12.png 8
+s13.png 6
