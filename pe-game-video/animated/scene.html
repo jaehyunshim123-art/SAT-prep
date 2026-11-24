@@ -88,7 +88,7 @@ function sfx(name, t = t0) { tl.sfx.push({ t, name }); }
 function caption(text, dur, sub) { tl.captions.push({ t: t0, d: dur, text, sub }); }
 function bubble(p, text, dur) { tl.bubbles.push({ t: t0, d: dur, p, text }); }
 function activeP(p, dur) { tl.active.push({ t: t0, d: dur, p }); }
-function roll(p, v) { tl.dice.push({ t: t0, d: 2.0, p, v }); sfx('dice'); tl.active.push({ t: t0, d: 1.2, p, arm: 1 }); wait(2.0); }
+function roll(p, v) { tl.dice.push({ t: t0, d: 1.1, p, v }); sfx('dice'); tl.active.push({ t: t0, d: 0.8, p, arm: 1 }); wait(1.1); }
 function hopTo(p, target, step = 0.3) {
   while (pos[p] !== target) {
     const from = pos[p], to = from + (target > from ? 1 : -1);
@@ -99,7 +99,7 @@ function hopTo(p, target, step = 0.3) {
 function slideBack(p, target) { tl.pawn[p].push({ t: t0, d: 1.0, from: pos[p], to: target, mode: 'slide' }); sfx('whoosh'); pos[p] = target; wait(1.0); }
 function bridge(p, a, b) {
   tl.bridgesHi.push({ t: t0, d: 1.8, a, b });
-  tl.pawn[p].push({ t: t0, d: 1.2, from: a, to: b, mode: 'bridge' }); sfx('whoosh'); pos[p] = b; wait(1.4);
+  tl.pawn[p].push({ t: t0, d: 0.8, from: a, to: b, mode: 'bridge' }); sfx('whoosh'); pos[p] = b; wait(0.9);
 }
 function flowers(p, delta, label) {
   fl[p] += delta; tl.flowers[p].push({ t: t0, v: fl[p] });
@@ -110,85 +110,35 @@ function cheer(p, dur = 1.2) { tl.cheer.push({ t: t0, d: dur, p }); }
 function hiSq(i, dur) { tl.highlightSq.push({ t: t0, d: dur, i }); }
 function sqPop(i, dur = 2.2) { const s = T[i]; pop('square', { i }, dur); hiSq(i, dur); }
 
-// ===== SCRIPT =====
+// ===== SCRIPT (short overview) =====
 for (let p = 0; p < 4; p++) tl.flowers[p].push({ t: 0, v: 5 });
-tl.titles.push({ t: 0, d: 5.2 });
+tl.titles.push({ t: 0, d: 2.6 });
 at(0.2); sfx('chime');
-at(5.0);
-caption('Meet the players! Each one picks a Value Card.', 6.2, 'Everyone starts with 5 flowers 🌸 from the DOW box.');
-for (let p = 0; p < 4; p++) { tl.cards.push({ t: t0 + p * 0.5, p }); sfx('card', t0 + p * 0.5); }
-wait(2.6);
-for (let p = 0; p < 4; p++) { bubble(p, ['I\'m the Athlete! 🏀', 'Education for me! 📚', 'I value my Future 💰', 'Friendship! 🤝'][p], 2.2); }
-wait(3.6);
-caption('Set a 20-minute timer ⏱️', 2.2, 'When time runs out, the player furthest along wins.');
-tl.timer.push({ t: t0, mode: 'start' }); sfx('chime'); wait(2.6);
+at(2.4);
+caption('Everyone starts with 5 flowers 🌸 and a Value Card.', 3.0, 'Roll, move, and do what the square says!');
+for (let p = 0; p < 4; p++) { tl.cards.push({ t: t0 + p * 0.3, p }); sfx('card', t0 + p * 0.3); }
+tl.timer.push({ t: t0, mode: 'start' }); wait(3.0);
 
-// --- Round 1
-caption('Roll the die and move. Do what the square says!', 6.8, 'Maya lands on +1 Physical: take a flower. Athlete power: roll again!');
-activeP(0, 6.8); roll(0, 3); hopTo(0, 3); sqPop(3); flowers(0, 1, '+1'); cheer(0); bubble(0, 'Athlete power: roll again! 🏀', 2.2); wait(2.2);
-roll(0, 2); hopTo(0, 5); sqPop(5, 1.6); flowers(0, 1, '+1'); wait(1.6);
+caption('+1 square = take a flower. −1 square = lose one.', 3.6, 'Athlete power: on +1 Physical, roll again!');
+activeP(0, 3.6); roll(0, 3); hopTo(0, 3, 0.18); sqPop(3, 1.2); flowers(0, 1, '+1'); cheer(0, 0.9); bubble(0, 'Roll again! 🏀', 1.2); wait(1.2);
 
-caption('Leo lands on +1 Intellectual.', 4.6, 'Education power: take 2 flowers instead of 1!');
-activeP(1, 4.6); roll(1, 5); hopTo(1, 5, 0.22); sqPop(5); flowers(1, 2, '+2'); cheer(1); bubble(1, 'Double flowers! 📚', 2.0); wait(2.3);
+caption('Value cards give special powers.', 3.4, 'Education: double flowers on +1 Intellectual.');
+activeP(1, 3.4); roll(1, 5); hopTo(1, 5, 0.12); sqPop(5, 1.2); flowers(1, 2, '+2'); cheer(1, 0.9); wait(1.3);
 
-caption('Sam lands on −1 Financial.', 4.4, 'Future power: on a −1 Financial square, you keep your flower!');
-activeP(2, 4.4); roll(2, 2); hopTo(2, 2); sqPop(2); bubble(2, 'Future power! I keep my flower 💰', 2.4); sfx('shield'); wait(2.4);
+caption('Gamble squares: Win = short way + 4 flowers.', 3.8, 'Lose = lose 1 flower.');
+activeP(3, 3.8); roll(3, 4); hopTo(3, 4, 0.14); pop('laptop', { result: 'LOSE' }, 2.0); wait(1.5); flowers(3, -1, '−1'); wait(0.7);
 
-caption('Ava lands on Gamble: Mandatory. She MUST bet on the website.', 6.8, 'Win = short way + 4 flowers. Lose = lose 1 flower.');
-activeP(3, 6.8); roll(3, 4); hopTo(3, 4); sqPop(4, 1.4); wait(1.2);
-pop('laptop', { result: 'LOSE' }, 3.0); wait(2.2); flowers(3, -1, '−1'); bubble(3, 'Aww, I lost a flower 😩', 1.6); wait(1.6);
+caption('Checkpoint ⭐ at the end of each grade. Need 2+ flowers!', 4.2, 'Draw a Refusal Skills card: short way or long way.');
+activeP(1, 4.2); roll(1, 6); hopTo(1, 11, 0.12); pop('card', { text: 'SHORT WAY', good: true }, 1.4); sfx('card'); wait(1.3); bridge(1, 11, 15);
 
-// --- Round 2
-caption('Maya lands on +1 Emotional.', 3.8, 'Take 1 flower from the DOW box.');
-activeP(0, 3.8); roll(0, 3); hopTo(0, 8); sqPop(8, 1.4); flowers(0, 1, '+1'); wait(1.4);
+caption('Addiction Test 🥚: not addicted? Skip ahead!', 3.6, 'Addicted? Take the long way.');
+activeP(1, 3.6); roll(1, 1); hopTo(1, 16, 0.15); pop('egg', { text: 'NOT ADDICTED ✓' }, 1.6); sfx('crack'); wait(1.4); bridge(1, 16, 20);
 
-caption('Every grade ends at a checkpoint ⭐. Everyone stops there!', 9.2, 'You need at least 2 flowers to pass. Fewer than 2? Repeat the grade!');
-activeP(1, 9.2); roll(1, 6); hopTo(1, 11, 0.24); sqPop(11, 1.2); wait(1.2);
-pop('check', { p: 1, n: fl[1] }, 2.4); sfx('ding'); wait(2.4);
-pop('card', { text: 'SHORT WAY', good: true }, 2.0); sfx('card'); wait(1.6); bubble(1, 'Short way! 🙌', 1.6); bridge(1, 11, 15);
-
-caption('Sam lands on −1 Social.', 3.6, 'Put 1 flower back in the DOW box.');
-activeP(2, 3.6); roll(2, 5); hopTo(2, 7, 0.24); sqPop(7, 1.4); flowers(2, -1, '−1'); wait(1.5);
-
-caption('Ava lands on Gamble: Choice. She can bet or skip.', 5.4, 'Decision making: Ava chooses NOT to gamble.');
-activeP(3, 5.4); roll(3, 5); hopTo(3, 9, 0.24); sqPop(9, 1.2); wait(1.0); bubble(3, 'I already lost once… I\'ll skip it! 🙅‍♀️', 2.4); wait(2.4);
-
-// --- Round 3
-caption('Maya rolls past the checkpoint ⭐…', 8.6, 'If you roll past a checkpoint, go back to the ⭐ and draw a Refusal Skills card.');
-activeP(0, 8.6); roll(0, 5); hopTo(0, 13, 0.24); bubble(0, 'Oops! Back to the star ⭐', 1.6); wait(0.6); slideBack(0, 11); wait(0.2);
-pop('card', { text: 'LONG WAY', good: false }, 2.2); sfx('card'); wait(2.0); bubble(0, 'Long way this time 😅', 1.4); wait(1.4);
-
-caption('Leo lands on an Addiction Test 🥚', 7.2, 'Draw a slip from the egg. Not addicted? Advance to Second Semester!');
-activeP(1, 7.2); roll(1, 1); hopTo(1, 16); sqPop(16, 1.2); wait(1.0);
-pop('egg', { text: 'NOT ADDICTED ✓' }, 2.6); sfx('crack'); wait(2.2); bridge(1, 16, 20);
-
-caption('Sam lands on a blank square.', 2.6, 'Nothing happens. Next player!');
-activeP(2, 2.6); roll(2, 3); hopTo(2, 10, 0.24); wait(0.0);
-
-caption('Ava reaches the checkpoint ⭐ with 4 flowers.', 8.2, 'Friendship power: say a refusal skill out loud and take the short way!');
-activeP(3, 8.2); roll(3, 2); hopTo(3, 11); pop('check', { p: 3, n: fl[3] }, 1.8); sfx('ding'); wait(1.8);
-bubble(3, '"No thanks! Let\'s go shoot hoops instead." 🏀', 2.8); wait(2.8); cheer(3); bridge(3, 11, 15);
-
-// --- Round 4: Leo wins a gamble
-caption('Leo lands on Gamble: Choice and decides to bet.', 7.4, 'He wins: short way + 4 flowers! (Gambling is risky. Most people lose.)');
-activeP(1, 7.4); roll(1, 5); hopTo(1, 25, 0.24); sqPop(25, 1.2); wait(1.0);
-pop('laptop', { result: 'WIN' }, 3.0); wait(2.2); flowers(1, 4, '+4'); sfx('win'); cheer(1); wait(0.8); bridge(1, 25, 30);
-
-// --- Montage
-const mStart = t0;
-caption('…and the game keeps going!', 6.0, 'Collect flowers, make good choices and race to Graduation 🎓');
-tl.timer.push({ t: t0, mode: 'fast', d: 6.0 });
-const runs = [[0, 22], [2, 18], [3, 26]];
-for (const [p, tg] of runs) { const save = t0; tl.pawn[p].push({ t: t0, d: 5.0, from: pos[p], to: tg, mode: 'run' }); pos[p] = tg; t0 = save; }
-tl.pawn[1].push({ t: t0, d: 2.2, from: 30, to: 35, mode: 'run' }); wait(2.4); pos[1] = 35;
-bridge(1, 35, 39);
-tl.pawn[1].push({ t: t0, d: 2.2, from: 39, to: 47, mode: 'run' }); pos[1] = 47; wait(2.4);
-t0 = Math.max(t0, mStart + 6.0);
-
-caption('Leo reaches Graduation first. Leo wins! 🎓', 5.2, 'If the timer runs out first, the player furthest along wins.');
-tl.confetti.push({ t: t0, d: 5 }); sfx('win'); for (let p = 0; p < 4; p++) cheer(p, 2.5);
-bubble(1, 'I graduated! 🎓', 2.6); hiSq(47, 4.5); wait(2.6); bubble(3, 'Congrats Leo! 🎉', 2.2); bubble(0, 'GG! 👏', 2.2); wait(2.8);
-tl.titles.push({ t: t0, d: 5.5, end: true }); sfx('chime'); wait(5.5);
+caption('First to Graduation wins! 🎓', 3.4, 'Or the furthest player when the 20-minute timer ends.');
+tl.timer.push({ t: t0, mode: 'fast', d: 1.6 });
+tl.pawn[1].push({ t: t0, d: 1.6, from: 20, to: 47, mode: 'run' }); pos[1] = 47; wait(1.6);
+tl.confetti.push({ t: t0, d: 3 }); sfx('win'); for (let p = 0; p < 4; p++) cheer(p, 1.6); hiSq(47, 2); wait(1.8);
+tl.titles.push({ t: t0, d: 2.6, end: true }); sfx('chime'); wait(2.6);
 const DURATION = t0;
 // flowers timeline sanity - sort
 for (const a of tl.flowers) a.sort((x, y) => x.t - y.t);
